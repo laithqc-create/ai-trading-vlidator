@@ -1,0 +1,119 @@
+version: "3.9"
+
+services:
+  # ─── Infrastructure ────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tradevalidator
+      POSTGRES_USER: trader
+      POSTGRES_PASSWORD: trader_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trader -d tradevalidator"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── RAGFlow (The Mentor) ────────────────────────────────
+  # RAGFlow requires 16GB RAM. Run on dedicated VPS if needed.
+  # See: https://github.com/infiniflow/ragflow
+  ragflow:
+    image: infiniflow/ragflow:latest
+    restart: unless-stopped
+    ports:
+      - "9380:9380"
+    volumes:
+      - ragflow_data:/ragflow/logs
+    environment:
+      - RAGFLOW_HTTP_PORT=9380
+    depends_on:
+      - postgres
+    profiles:
+      - full  # run with: docker compose --profile full up
+
+  # ─── Ollama (Local LLM for OpenTrade.ai) ─────────────────
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # GPU support (comment out if no GPU)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+    profiles:
+      - full
+
+  # ─── Main Application ────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://trader:trader_pass@postgres:5432/tradevalidator
+      - REDIS_URL=redis://redis:6379/0
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - RAGFLOW_BASE_URL=http://ragflow:9380
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://trader:trader_pass@postgres:5432/tradevalidator
+      - REDIS_URL=redis://redis:6379/0
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - RAGFLOW_BASE_URL=http://ragflow:9380
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+    command: celery -A workers.celery_app worker --loglevel=info --concurrency=4
+
+volumes:
+  postgres_data:
+  redis_data:
+  ragflow_data:
+  ollama_data:

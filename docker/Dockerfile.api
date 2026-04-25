@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install OpenTrade.ai from GitHub
+RUN pip install --no-cache-dir \
+    "git+https://github.com/satinath-nit/OpenTrade.ai.git"
+
+COPY . .
+
+EXPOSE 8000

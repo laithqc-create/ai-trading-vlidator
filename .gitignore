@@ -1,0 +1,50 @@
+# Environment
+.env
+*.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Alembic
+db/migrations/versions/*.py
+!db/migrations/versions/001_initial.py
+
+# Docker volumes (never commit)
+postgres_data/
+redis_data/
+ragflow_data/
+ollama_data/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets
+*.pem
+*.key
+*.cert
