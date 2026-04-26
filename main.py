@@ -30,7 +30,7 @@ from db.models import (
 from services.user import UserService
 from services.subscription import WhopService, PLAN_TIER_MAP
 from workers.tasks import validate_indicator_task, analyze_ea_task
-from bot.handlers import create_bot_app
+from TG_Bot.main import get_bot, get_dispatcher, on_startup
 from sqlalchemy import select
 
 
@@ -61,12 +61,15 @@ async def lifespan(app: FastAPI):
 
     # Set Telegram webhook if URL is configured
     if settings.TELEGRAM_WEBHOOK_URL:
-        bot_app = create_bot_app()
-        await bot_app.bot.set_webhook(
+        bot = get_bot()
+        dp  = get_dispatcher()
+        await on_startup(bot)
+        await bot.set_webhook(
             url=settings.TELEGRAM_WEBHOOK_URL,
             drop_pending_updates=True,
         )
-        app.state.bot_app = bot_app
+        app.state.bot = bot
+        app.state.dp  = dp
         logger.info(f"Telegram webhook set: {settings.TELEGRAM_WEBHOOK_URL}")
 
     logger.info("AI Trade Validator ready.")
@@ -102,18 +105,21 @@ async def health_check():
 
 @app.post("/webhook/telegram")
 async def telegram_webhook(request: Request):
-    """Receive Telegram updates and dispatch to python-telegram-bot."""
+    """Receive Telegram updates and dispatch to aiogram."""
     try:
         body = await request.json()
-        bot_app = getattr(request.app.state, "bot_app", None)
-        if not bot_app:
-            logger.warning("Bot app not initialized, creating inline")
-            bot_app = create_bot_app()
-            request.app.state.bot_app = bot_app
+        bot = getattr(request.app.state, "bot", None)
+        dp  = getattr(request.app.state, "dp", None)
 
-        from telegram import Update
-        update = Update.de_json(body, bot_app.bot)
-        await bot_app.process_update(update)
+        if not bot or not dp:
+            bot = get_bot()
+            dp  = get_dispatcher()
+            request.app.state.bot = bot
+            request.app.state.dp  = dp
+
+        from aiogram.types import Update as AiogramUpdate
+        update = AiogramUpdate.model_validate(body)
+        await dp.feed_update(bot, update)
         return {"ok": True}
     except Exception as e:
         logger.error(f"Telegram webhook error: {e}")

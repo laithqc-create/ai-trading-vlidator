@@ -1,47 +1,52 @@
-# Web framework
+# ── Telegram Bot Framework ─────────────────────────────────
+aiogram==3.20.0
+aiogram-dialog==2.2.0
+
+# ── Web Framework (webhook server) ─────────────────────────
 fastapi==0.111.0
 uvicorn[standard]==0.30.1
 python-multipart==0.0.9
 
-# Telegram bot
-python-telegram-bot[webhooks]==21.3
-
-# Database
+# ── Database ───────────────────────────────────────────────
 sqlalchemy[asyncio]==2.0.30
 asyncpg==0.29.0
 alembic==1.13.1
 psycopg2-binary==2.9.9
 
-# Async task queue
+# ── Async Task Queue ───────────────────────────────────────
 celery[redis]==5.4.0
 redis==5.0.4
 
-# Market data
+# ── Market Data ────────────────────────────────────────────
 yfinance==0.2.38
 polygon-api-client==1.13.5
 
-# HTTP client
+# ── HTTP Client ────────────────────────────────────────────
 httpx==0.27.0
 aiohttp==3.9.5
 
-# Config & env
-python-dotenv==1.0.1
-pydantic-settings==2.3.3
-
-# Payments
-stripe==10.3.0
-
-# Utils
-loguru==0.7.2
-tenacity==8.3.0
-python-jose[cryptography]==3.3.0
-
-# OpenTrade.ai dependencies (pinned for compatibility)
+# ── AI / LLM ───────────────────────────────────────────────
+openai==1.30.0          # DeepSeek uses OpenAI-compatible API
 langgraph==0.1.19
 langchain==0.2.6
 langchain-community==0.2.6
 langchain-openai==0.1.14
-yfinance==0.2.38
+
+# ── Config ─────────────────────────────────────────────────
+python-dotenv==1.0.1
+pydantic==2.7.0
+pydantic-settings==2.3.3
+
+# ── Payments ───────────────────────────────────────────────
+# (Whop uses plain httpx — no SDK needed)
+
+# ── Technical Analysis (fallback) ─────────────────────────
 pandas==2.2.2
 numpy==1.26.4
 ta==0.11.0
+
+# ── Utils ──────────────────────────────────────────────────
+loguru==0.7.2
+tenacity==8.3.0
+python-jose[cryptography]==3.3.0
+fastapi.middleware.cors  # included in fastapi
