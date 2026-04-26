@@ -13,7 +13,8 @@ Commands:
   /status             — Current plan + usage
 """
 import re
-from datetime import date, datetime
+from collections import defaultdict
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -32,17 +33,37 @@ from services.subscription import SubscriptionService
 from workers.tasks import validate_manual_task
 
 
+# ─── Simple in-memory rate limiter (webhook abuse protection) ────────────────
+# Limits each telegram_id to 20 /check commands per minute
+_rate_buckets: dict = defaultdict(list)
+RATE_LIMIT = 20
+RATE_WINDOW = 60  # seconds
+
+
+def _is_rate_limited(telegram_id: int) -> bool:
+    now = datetime.utcnow()
+    cutoff = now - timedelta(seconds=RATE_WINDOW)
+    _rate_buckets[telegram_id] = [
+        t for t in _rate_buckets[telegram_id] if t > cutoff
+    ]
+    if len(_rate_buckets[telegram_id]) >= RATE_LIMIT:
+        return True
+    _rate_buckets[telegram_id].append(now)
+    return False
+
+
 # ─── Bot Application Factory ──────────────────────────────────────────────────
 
 def create_bot_app() -> Application:
     app = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).build()
 
-    # Register handlers
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("check", cmd_check))
+    app.add_handler(CommandHandler("outcome", cmd_outcome))
     app.add_handler(CommandHandler("add_rule", cmd_add_rule))
     app.add_handler(CommandHandler("my_rules", cmd_my_rules))
     app.add_handler(CommandHandler("history", cmd_history))
+    app.add_handler(CommandHandler("insights", cmd_insights))
     app.add_handler(CommandHandler("connect_indicator", cmd_connect_indicator))
     app.add_handler(CommandHandler("connect_ea", cmd_connect_ea))
     app.add_handler(CommandHandler("subscribe", cmd_subscribe))
@@ -102,6 +123,13 @@ async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     user_tg = update.effective_user
     args = context.args
+
+    # Rate limit check
+    if _is_rate_limited(user_tg.id):
+        await update.message.reply_text(
+            "⏱ Slow down! You're sending too many requests. Please wait a minute.",
+        )
+        return
 
     # Parse arguments
     if not args or len(args) < 2:
@@ -196,6 +224,125 @@ async def cmd_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
         signal=signal_raw,
         price=price,
         ragflow_dataset_id=ragflow_dataset_id,
+    )
+
+
+# ─── /outcome WIN|LOSS [#id] ──────────────────────────────────────────────────
+
+async def cmd_outcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Report the actual outcome of your last (or specific) validation.
+    Usage:
+      /outcome WIN         — marks your last validation as a WIN
+      /outcome LOSS        — marks your last validation as a LOSS
+      /outcome WIN 42      — marks validation #42 as a WIN
+      /outcome LOSS 42 -2.5 — marks #42 as LOSS with -2.5% PnL
+    """
+    user_tg = update.effective_user
+    args = context.args
+
+    if not args:
+        await update.message.reply_text(
+            "📝 *Usage:* `/outcome WIN|LOSS [#id] [pnl%]`\n\n"
+            "*Examples:*\n"
+            "• `/outcome WIN` — last trade won\n"
+            "• `/outcome LOSS` — last trade lost\n"
+            "• `/outcome WIN 42` — trade #42 won\n"
+            "• `/outcome LOSS 42 -2.5` — trade #42 lost, -2.5%",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    outcome_raw = args[0].upper()
+    if outcome_raw not in ("WIN", "LOSS", "SKIP"):
+        await update.message.reply_text(
+            "❌ Outcome must be WIN, LOSS, or SKIP.",
+        )
+        return
+
+    validation_id = None
+    pnl = None
+
+    if len(args) >= 2:
+        try:
+            validation_id = int(args[1].lstrip("#"))
+        except ValueError:
+            pass
+
+    if len(args) >= 3:
+        try:
+            pnl = float(args[2])
+        except ValueError:
+            pass
+
+    async with AsyncSessionLocal() as db:
+        from sqlalchemy import select, desc
+        # Get user
+        user_result = await db.execute(
+            select(User).where(User.telegram_id == user_tg.id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            await update.message.reply_text("Use /start to get started.")
+            return
+
+        if validation_id:
+            # Look up specific validation
+            val_result = await db.execute(
+                select(Validation).where(
+                    Validation.id == validation_id,
+                    Validation.user_id == user.id,
+                )
+            )
+        else:
+            # Get the most recent completed validation
+            val_result = await db.execute(
+                select(Validation)
+                .where(
+                    Validation.user_id == user.id,
+                    Validation.status == ValidationStatus.COMPLETED,
+                )
+                .order_by(Validation.completed_at.desc())
+                .limit(1)
+            )
+
+        validation = val_result.scalar_one_or_none()
+
+        if not validation:
+            await update.message.reply_text(
+                "❌ No validation found. Run `/check TICKER SIGNAL` first.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        # Update outcome
+        validation.user_outcome = outcome_raw
+        if pnl is not None:
+            validation.user_outcome_pnl = pnl
+
+        ticker   = validation.ticker
+        signal   = validation.signal.value if validation.signal else "?"
+        verdict  = validation.verdict or "?"
+        val_id   = validation.id
+
+    outcome_emoji = "✅" if outcome_raw == "WIN" else ("❌" if outcome_raw == "LOSS" else "⏭️")
+    pnl_str = f" ({'+' if pnl and pnl > 0 else ''}{pnl:.2f}%)" if pnl is not None else ""
+
+    # Was the AI correct?
+    ai_correct = (
+        (outcome_raw == "WIN" and verdict == "CONFIRM") or
+        (outcome_raw == "LOSS" and verdict in ("REJECT", "CAUTION"))
+    )
+    accuracy_note = "🎯 AI was correct!" if ai_correct else "📊 Outcome logged for learning."
+
+    await update.message.reply_text(
+        f"{outcome_emoji} *Outcome recorded*\n\n"
+        f"Trade: *{ticker}* {signal} (#{val_id})\n"
+        f"Result: *{outcome_raw}*{pnl_str}\n"
+        f"AI verdict was: *{verdict}*\n\n"
+        f"{accuracy_note}\n\n"
+        f"_This helps improve future validations. Use /history to see your record._",
+        parse_mode=ParseMode.MARKDOWN,
     )
 
 
@@ -546,6 +693,82 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 
+# ─── /insights ────────────────────────────────────────────────────────────────
+
+async def cmd_insights(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Pro feature: Show crowd-sourced win rate insights from all users.
+    """
+    user_tg = update.effective_user
+
+    async with AsyncSessionLocal() as db:
+        from sqlalchemy import select, case
+        from sqlalchemy import func as sqlfunc
+
+        user_result = await db.execute(
+            select(User).where(User.telegram_id == user_tg.id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            await update.message.reply_text("Use /start to get started.")
+            return
+
+        if user.plan != PlanTier.PRO:
+            await update.message.reply_text(
+                "🔒 *Crowd Insights* is a *Pro* feature ($79/mo).\n\n"
+                "It shows anonymized win-rate data from all users:\n"
+                "_\"When AI says CONFIRM on a BUY, users win 71% of the time\"_\n\n"
+                "Use /subscribe to upgrade to Pro.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        # Fetch real stats from DB — count wins per verdict+signal combination
+        result = await db.execute(
+            select(
+                Validation.verdict,
+                Validation.signal,
+                sqlfunc.count(Validation.id).label("total"),
+                sqlfunc.sum(
+                    case((Validation.user_outcome == "WIN", 1), else_=0)
+                ).label("wins"),
+            )
+            .where(Validation.user_outcome.isnot(None))
+            .group_by(Validation.verdict, Validation.signal)
+            .order_by(sqlfunc.count(Validation.id).desc())
+        )
+        rows = result.fetchall()
+
+    if not rows:
+        await update.message.reply_text(
+            "📊 *Crowd Insights*\n\n"
+            "_Not enough data yet. Insights are generated weekly once enough users report outcomes._\n\n"
+            "Help build the dataset by reporting your trade outcomes with `/outcome WIN` or `/outcome LOSS`.",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    lines = ["📊 *Crowd Insights — Community Win Rates*\n"]
+    has_data = False
+    for row in rows:
+        if (row.total or 0) < 5:
+            continue
+        has_data = True
+        win_rate = (row.wins or 0) / row.total * 100
+        emoji = "✅" if win_rate >= 60 else ("⚠️" if win_rate >= 45 else "❌")
+        signal_val = row.signal.value if hasattr(row.signal, "value") else str(row.signal)
+        lines.append(
+            f"{emoji} AI *{row.verdict}* on *{signal_val}*: "
+            f"{win_rate:.0f}% win rate ({row.total} trades)"
+        )
+
+    if not has_data:
+        lines.append("_Not enough trades per category yet (need 5+). Keep reporting outcomes!_")
+
+    lines.append("\n_Data is anonymized. Updated weekly._")
+    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.MARKDOWN)
+
+
 # ─── /help ────────────────────────────────────────────────────────────────────
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -554,17 +777,20 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "*Trading:*\n"
         "`/check TICKER SIGNAL [PRICE]` — Validate a trade\n"
         "  Example: `/check AAPL BUY 175`\n\n"
+        "`/outcome WIN|LOSS [#id] [pnl%]` — Report trade result\n"
+        "  Example: `/outcome WIN` or `/outcome LOSS 42 -2.5`\n\n"
         "*Personal Rules:*\n"
         "`/add_rule <text>` — Add a trading rule to your KB\n"
         "`/my_rules` — List your rules\n\n"
-        "*History & Account:*\n"
+        "*History & Stats:*\n"
         "`/history` — Last 10 validations\n"
+        "`/insights` — Crowd win-rate data ⭐ Pro\n\n"
+        "*Account:*\n"
         "`/status` — Your plan and usage\n"
         "`/subscribe` — Upgrade your plan\n\n"
         "*Integrations:*\n"
         "`/connect_indicator` — TradingView webhook setup\n"
         "`/connect_ea` — EA monitoring script setup\n\n"
-        "*Support:*\n"
         "`/start` — Welcome message\n"
         "`/help` — This help message"
     )

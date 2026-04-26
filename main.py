@@ -11,12 +11,14 @@ Health:
   GET  /health                   — Health check
 """
 import json
+from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import FastAPI, Request, HTTPException, Header, Depends, BackgroundTasks
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from pydantic import BaseModel
 
@@ -30,6 +32,23 @@ from services.subscription import SubscriptionService, PLAN_TIER_MAP
 from workers.tasks import validate_indicator_task, analyze_ea_task
 from bot.handlers import create_bot_app
 from sqlalchemy import select
+
+
+# ─── Webhook rate limiter (per token, in-memory) ──────────────────────────────
+_webhook_buckets: dict = defaultdict(list)
+WEBHOOK_RATE_LIMIT = 60      # max requests
+WEBHOOK_RATE_WINDOW = 60     # per 60 seconds
+
+
+def _check_webhook_rate(token: str) -> bool:
+    """Returns True if request is allowed, False if rate limited."""
+    now = datetime.utcnow()
+    cutoff = now - timedelta(seconds=WEBHOOK_RATE_WINDOW)
+    _webhook_buckets[token] = [t for t in _webhook_buckets[token] if t > cutoff]
+    if len(_webhook_buckets[token]) >= WEBHOOK_RATE_LIMIT:
+        return False
+    _webhook_buckets[token].append(now)
+    return True
 
 
 # ─── Lifespan ─────────────────────────────────────────────────────────────────
@@ -62,6 +81,13 @@ app = FastAPI(
     description="Telegram-based AI trading advisor",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["POST", "GET"],
+    allow_headers=["*"],
 )
 
 
@@ -118,6 +144,10 @@ async def indicator_webhook(
 
     Returns 200 immediately; processing happens async in Celery.
     """
+    # Rate limit: max 60 signals/min per token
+    if not _check_webhook_rate(token):
+        raise HTTPException(429, "Rate limit exceeded. Max 60 signals per minute.")
+
     signal_upper = payload.signal.upper()
     if signal_upper not in ("BUY", "SELL", "HOLD"):
         raise HTTPException(400, f"Invalid signal: {payload.signal}")
@@ -191,12 +221,11 @@ async def ea_webhook(
 ):
     """
     Product 2: Receive EA trade log.
-
-    EA sends JSON like:
-    {"ea_name":"SuperScalper","ticker":"EURUSD","action":"BUY","result":"LOSS","pnl":-2.3}
-
     Only analyzes completed trades (WIN or LOSS), not open positions.
     """
+    if not _check_webhook_rate(token):
+        raise HTTPException(429, "Rate limit exceeded. Max 60 requests per minute.")
+
     action_upper = payload.action.upper()
     if action_upper not in ("BUY", "SELL"):
         raise HTTPException(400, f"Invalid action: {payload.action}")

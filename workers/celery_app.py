@@ -24,12 +24,18 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     task_track_started=True,
-    task_acks_late=True,                # Ack only after completion
-    worker_prefetch_multiplier=1,       # One task at a time per worker
-    task_soft_time_limit=180,           # 3 min soft limit
-    task_time_limit=300,                # 5 min hard limit
-    result_expires=3600,                # Keep results for 1 hour
+    task_acks_late=True,
+    worker_prefetch_multiplier=1,
+    task_soft_time_limit=180,
+    task_time_limit=300,
+    result_expires=3600,
 )
+
+# Auto-discover tasks in all modules
+celery_app.autodiscover_tasks([
+    "workers.tasks",
+    "workers.scheduler",
+])
 
 
 def run_async(coro):

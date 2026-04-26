@@ -63,11 +63,23 @@ class ValidationService:
         """
         logger.info(f"Manual validation: {ticker} {signal} @{price}")
 
+        # Step 0: Enrich with Polygon.io real-time data if available
+        if polygon_data is None:
+            from services.market_data import PolygonService
+            polygon = PolygonService()
+            polygon_data = await polygon.get_snapshot(ticker)
+            if polygon_data and not price:
+                price = polygon_data.get("close")
+
         # Step 1: OpenTrade.ai analysis
         trader_result = await self.trader.analyze(
             ticker=ticker,
             analysis_date=datetime.now().date().isoformat(),
         )
+
+        # Patch current price from Polygon if OpenTrade didn't get it
+        if polygon_data and not trader_result.current_price:
+            trader_result.current_price = polygon_data.get("close")
 
         # Step 2: RAGFlow mentor validation
         mentor_result = await self.mentor.validate_signal(
@@ -78,7 +90,7 @@ class ValidationService:
         )
 
         # Step 3: Combine into final verdict
-        return self._combine_results(
+        result = self._combine_results(
             ticker=ticker,
             signal=signal,
             price=price,
@@ -86,6 +98,14 @@ class ValidationService:
             mentor=mentor_result,
             product=3,
         )
+
+        # Step 4: Append Polygon market context to message if available
+        if polygon_data:
+            result["final_message"] = self._append_polygon_context(
+                result["final_message"], polygon_data
+            )
+
+        return result
 
     # ─── Product 1: Indicator Validator ──────────────────────────────────
 
@@ -400,3 +420,36 @@ class ValidationService:
         empty = 10 - filled
         bar = "█" * filled + "░" * empty
         return f"`[{bar}]` {int(confidence * 100)}%"
+
+    @staticmethod
+    def _append_polygon_context(message: str, polygon_data: dict) -> str:
+        """Append live Polygon.io market data block to the message."""
+        change_pct = polygon_data.get("change_pct")
+        volume     = polygon_data.get("volume")
+        vwap       = polygon_data.get("vwap")
+        high       = polygon_data.get("high")
+        low        = polygon_data.get("low")
+
+        lines = ["\n*📡 Live Market Data (Polygon.io)*"]
+        if high and low:
+            lines.append(f"• Day range: ${low:.2f} — ${high:.2f}")
+        if vwap:
+            lines.append(f"• VWAP: ${vwap:.2f}")
+        if volume:
+            vol_m = volume / 1_000_000
+            lines.append(f"• Volume: {vol_m:.1f}M")
+        if change_pct is not None:
+            arrow = "▲" if change_pct >= 0 else "▼"
+            lines.append(f"• Today: {arrow} {abs(change_pct):.2f}%")
+
+        if len(lines) == 1:
+            return message   # nothing useful to add
+
+        # Insert before disclaimer
+        disclaimer_marker = "\n\n─────────────────────────"
+        if disclaimer_marker in message:
+            return message.replace(
+                disclaimer_marker,
+                "\n".join(lines) + disclaimer_marker,
+            )
+        return message + "\n".join(lines)

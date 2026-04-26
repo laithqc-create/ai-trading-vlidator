@@ -112,6 +112,26 @@ services:
       - ./:/app
     command: celery -A workers.celery_app worker --loglevel=info --concurrency=4
 
+  beat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://trader:trader_pass@postgres:5432/tradevalidator
+      - REDIS_URL=redis://redis:6379/0
+      - RAGFLOW_BASE_URL=http://ragflow:9380
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+    command: celery -A workers.celery_app beat --loglevel=info --scheduler celery.beat:PersistentScheduler
+
 volumes:
   postgres_data:
   redis_data:

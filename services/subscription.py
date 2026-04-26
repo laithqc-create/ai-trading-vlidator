@@ -1,22 +1,26 @@
 """Stripe subscription service."""
 from typing import Optional
 from loguru import logger
-from config.settings import settings
 from db.models import PlanTier
 
-PLAN_PRICE_MAP = {
-    "product1": settings.STRIPE_PRICE_PRODUCT1,
-    "product2": settings.STRIPE_PRICE_PRODUCT2,
-    "product3": settings.STRIPE_PRICE_PRODUCT3,
-    "pro": settings.STRIPE_PRICE_PRO,
-}
-
+# Tier map is static — safe at import time
 PLAN_TIER_MAP = {
     "product1": PlanTier.PRODUCT1,
     "product2": PlanTier.PRODUCT2,
     "product3": PlanTier.PRODUCT3,
     "pro": PlanTier.PRO,
 }
+
+
+def _plan_price_map() -> dict:
+    """Lazy-load price IDs — only reads settings when actually called."""
+    from config.settings import settings
+    return {
+        "product1": settings.STRIPE_PRICE_PRODUCT1,
+        "product2": settings.STRIPE_PRICE_PRODUCT2,
+        "product3": settings.STRIPE_PRICE_PRODUCT3,
+        "pro":      settings.STRIPE_PRICE_PRO,
+    }
 
 
 class SubscriptionService:
@@ -26,9 +30,10 @@ class SubscriptionService:
         """Create a Stripe checkout session. Returns the checkout URL."""
         try:
             import stripe
+            from config.settings import settings
             stripe.api_key = settings.STRIPE_SECRET_KEY
 
-            price_id = PLAN_PRICE_MAP.get(plan)
+            price_id = _plan_price_map().get(plan)
             if not price_id:
                 logger.error(f"Unknown plan: {plan}")
                 return None
@@ -62,6 +67,7 @@ class SubscriptionService:
         """Parse and verify a Stripe webhook event."""
         try:
             import stripe
+            from config.settings import settings
             stripe.api_key = settings.STRIPE_SECRET_KEY
             event = stripe.Webhook.construct_event(
                 payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
