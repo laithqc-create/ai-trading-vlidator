@@ -47,12 +47,12 @@ class User(Base):
     last_name = Column(String(64), nullable=True)
     plan = Column(Enum(PlanTier), default=PlanTier.FREE, nullable=False)
 
-    # Stripe billing
-    stripe_customer_id = Column(String(64), unique=True, nullable=True)
-    stripe_subscription_id = Column(String(64), unique=True, nullable=True)
+    # Whop billing
+    whop_user_id = Column(String(64), unique=True, nullable=True)
+    whop_membership_id = Column(String(64), unique=True, nullable=True)
     plan_expires_at = Column(DateTime, nullable=True)
 
-    # RAGFlow integration — each user gets a personal knowledge dataset
+    # RAGFlow integration
     ragflow_dataset_id = Column(String(128), nullable=True)
 
     # Webhook tokens for Product 1 & 2
@@ -62,6 +62,10 @@ class User(Base):
     # Usage tracking (free tier)
     daily_validation_count = Column(Integer, default=0)
     daily_validation_date = Column(Date, nullable=True)
+
+    # DeepSeek generation tracking (loss leader budget)
+    total_generations = Column(Integer, default=0)
+    total_generation_cost = Column(Float, default=0.0)
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

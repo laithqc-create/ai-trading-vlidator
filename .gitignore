@@ -30,8 +30,8 @@ env/
 logs/
 
 # Alembic
-db/migrations/versions/*.py
-!db/migrations/versions/001_initial.py
+# db/migrations tracked in git
+!db/migrations/versions/*.py
 
 # Docker volumes (never commit)
 postgres_data/

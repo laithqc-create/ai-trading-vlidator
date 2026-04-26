@@ -2,15 +2,21 @@
 Telegram Bot — Main Interface
 
 Commands:
-  /start              — Onboarding + pricing
-  /check AAPL BUY 175 — Product 3: Manual validation
-  /add_rule <text>    — Add personal trading rule to RAGFlow
-  /my_rules           — List active personal rules
-  /history            — Last 10 validations
-  /connect_indicator  — Get webhook URL for TradingView (Product 1)
-  /connect_ea         — Get EA monitoring script (Product 2)
-  /subscribe          — Upgrade plan via Stripe
-  /status             — Current plan + usage
+  /start                — Onboarding + pricing
+  /check TICKER SIGNAL  — Product 3: Manual validation
+  /outcome WIN|LOSS     — Report trade result
+  /generate <strategy>  — Product 1: English → Pine Script (free)
+  /generate_ea <strat>  — Product 2: English → MQL5 EA (free)
+  /share_code           — Product 1: Paste Pine Script source code
+  /my_usage             — Show DeepSeek generation usage & budget
+  /add_rule <text>      — Add personal trading rule to RAGFlow
+  /my_rules             — List active personal rules
+  /history              — Last 10 validations
+  /insights             — Crowd win-rate stats (Pro)
+  /connect_indicator    — Get webhook URL for TradingView (Product 1)
+  /connect_ea           — Get EA monitoring script (Product 2)
+  /subscribe            — Upgrade plan via Whop
+  /status               — Current plan + usage
 """
 import re
 from collections import defaultdict
@@ -29,7 +35,7 @@ from config.settings import settings
 from db.database import AsyncSessionLocal
 from db.models import User, Validation, UserRule, PlanTier, ValidationStatus, SignalType
 from services.user import UserService
-from services.subscription import SubscriptionService
+from services.subscription import WhopService, PLAN_TIER_MAP
 from workers.tasks import validate_manual_task
 
 
@@ -60,6 +66,10 @@ def create_bot_app() -> Application:
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("check", cmd_check))
     app.add_handler(CommandHandler("outcome", cmd_outcome))
+    app.add_handler(CommandHandler("generate", cmd_generate))
+    app.add_handler(CommandHandler("generate_ea", cmd_generate_ea))
+    app.add_handler(CommandHandler("share_code", cmd_share_code))
+    app.add_handler(CommandHandler("my_usage", cmd_my_usage))
     app.add_handler(CommandHandler("add_rule", cmd_add_rule))
     app.add_handler(CommandHandler("my_rules", cmd_my_rules))
     app.add_handler(CommandHandler("history", cmd_history))
@@ -594,7 +604,7 @@ async def cmd_connect_ea(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ─── /subscribe ───────────────────────────────────────────────────────────────
 
 async def cmd_subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show subscription plans with Stripe payment links."""
+    """Show subscription plans with Whop payment links."""
     user_tg = update.effective_user
 
     async with AsyncSessionLocal() as db:
@@ -609,9 +619,10 @@ async def cmd_subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"*💳 Subscription Plans*\n\n"
         f"Current plan: {current} *{current_plan.value.upper()}*\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"1️⃣ *Indicator Validator* — $29/mo\n"
-        f"   ✓ Unlimited TradingView webhook validations\n"
-        f"   ✓ Personal rule storage\n\n"
+        f"1️⃣ *Indicator Validator* — $19/mo\n"
+        f"   ✓ TradingView webhook validation\n"
+        f"   ✓ Share source code storage\n"
+        f"   ✓ Personal rule KB\n\n"
         f"2️⃣ *EA Analyzer* — $49/mo\n"
         f"   ✓ EA trade log analysis\n"
         f"   ✓ Win/loss explanations\n"
@@ -622,18 +633,18 @@ async def cmd_subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"⭐ *Pro (All 3)* — $79/mo\n"
         f"   ✓ Everything above\n"
         f"   ✓ Priority processing\n"
-        f"   ✓ Crowd insights (coming soon)\n\n"
+        f"   ✓ Crowd insights\n\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"Select a plan below to subscribe via Stripe:"
+        f"🆓 *Free for everyone:* /generate (Pine Script) + /generate_ea (MQL5)\n\n"
+        f"Select a plan to pay via *Whop* (241 territories, instant activation):"
     )
 
-    sub_svc = SubscriptionService()
     keyboard_rows = []
     plans = [
-        ("product1", "1️⃣ Indicator — $29/mo"),
+        ("product1", "1️⃣ Indicator Validator — $19/mo"),
         ("product2", "2️⃣ EA Analyzer — $49/mo"),
-        ("product3", "3️⃣ Manual — $19/mo"),
-        ("pro", "⭐ Pro All-in — $79/mo"),
+        ("product3", "3️⃣ Manual Validator — $19/mo"),
+        ("pro", "⭐ Pro Bundle — $79/mo"),
     ]
 
     for plan_id, label in plans:
@@ -769,30 +780,321 @@ async def cmd_insights(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.MARKDOWN)
 
 
+
+# ─── /generate "strategy" ─────────────────────────────────────────────────────
+
+async def cmd_generate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Product 1 (Free): Natural language → Pine Script v6.
+    Usage: /generate Buy when RSI below 30 and volume above average
+    Cost: ~$0.002/call absorbed up to $5/user.
+    """
+    user_tg = update.effective_user
+    strategy = " ".join(context.args).strip() if context.args else ""
+
+    if not strategy:
+        await update.message.reply_text(
+            "*📈 Pine Script Generator — Free*\n\n"
+            "Describe your trading strategy in plain English:\n\n"
+            "`/generate Buy when RSI is below 30 and volume is above 20-day average`\n"
+            "`/generate Sell when price crosses below the 50 EMA`\n"
+            "`/generate Alert when MACD histogram turns positive after being negative`\n\n"
+            "_Generates ready-to-paste Pine Script v6 code for TradingView._",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(telegram_id=user_tg.id)
+
+        if user_svc.is_over_generation_cap(user):
+            await update.message.reply_text(
+                "⚠️ *Free generation limit reached*\n\n"
+                f"You\'ve used your $5.00 free credit (~{user.total_generations} generations).\n\n"
+                "Upgrade to *Pro* ($79/mo) for unlimited generations.\n"
+                "Use /subscribe to upgrade.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+        budget_left = user_svc.generation_budget_remaining(user)
+        spent = user.total_generation_cost or 0.0
+
+    # Show "working" message
+    thinking_msg = await update.message.reply_text(
+        "⏳ *Generating Pine Script v6...*\n_DeepSeek AI is writing your indicator._",
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+    from services.deepseek import DeepSeekService, CODE_DISCLAIMER
+    ds = DeepSeekService()
+    result = await ds.generate_pine_script(strategy)
+
+    if not result["success"]:
+        await thinking_msg.edit_text(
+            f"❌ Generation failed: {result['error']}\n\nPlease try again.",
+        )
+        return
+
+    # Track cost
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(telegram_id=user_tg.id)
+        await user_svc.increment_generation_cost(user, result["cost"])
+        new_spent = user.total_generation_cost or 0.0
+
+    # Delete the "working" message
+    await thinking_msg.delete()
+
+    code = result["code"]
+    # Telegram has 4096 char limit — truncate if massive
+    code_preview = code[:3000] + "\n... (truncated)" if len(code) > 3000 else code
+
+    response = (
+        f"*✅ Pine Script v6 Generated*\n\n"
+        f"*Strategy:* _{strategy[:80]}_\n\n"
+        f"```pine\n{code_preview}\n```"
+        f"{CODE_DISCLAIMER}\n\n"
+        f"_Budget used: ${new_spent:.3f} / $5.00_\n"
+        f"_💡 Want this validated? /subscribe for $19/mo_"
+    )
+
+    # Warn if approaching cap
+    if new_spent >= 4.50:
+        response += f"\n\n⚠️ _Approaching $5 free limit ({new_spent:.2f} spent). Upgrade for unlimited._"
+
+    await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN)
+
+
+# ─── /generate_ea "strategy" ──────────────────────────────────────────────────
+
+async def cmd_generate_ea(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Product 2 (Free): Natural language → MQL5 Expert Advisor.
+    Usage: /generate_ea Place buy stop 10 pips above high when RSI > 50
+    """
+    user_tg = update.effective_user
+    strategy = " ".join(context.args).strip() if context.args else ""
+
+    if not strategy:
+        await update.message.reply_text(
+            "*⚙️ MQL5 EA Generator — Free*\n\n"
+            "Describe your EA strategy in plain English:\n\n"
+            "`/generate_ea Buy when RSI crosses above 50, sell when it crosses below`\n"
+            "`/generate_ea Place buy stop 10 pips above the high of every new candle`\n"
+            "`/generate_ea Scalp with 5 pip TP and 10 pip SL on EURUSD M1`\n\n"
+            "_Generates ready-to-compile MQL5 EA code for MetaTrader 5._",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(telegram_id=user_tg.id)
+
+        if user_svc.is_over_generation_cap(user):
+            await update.message.reply_text(
+                "⚠️ *Free generation limit reached*\n\n"
+                "You\'ve used your $5.00 free credit.\n\n"
+                "Upgrade to *Pro* ($79/mo) for unlimited generations.\n"
+                "Use /subscribe to upgrade.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            return
+
+    thinking_msg = await update.message.reply_text(
+        "⏳ *Generating MQL5 EA...*\n_DeepSeek AI is writing your Expert Advisor._",
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+    from services.deepseek import DeepSeekService, CODE_DISCLAIMER
+    ds = DeepSeekService()
+    result = await ds.generate_mql5(strategy)
+
+    if not result["success"]:
+        await thinking_msg.edit_text(
+            f"❌ Generation failed: {result['error']}\n\nPlease try again.",
+        )
+        return
+
+    # Track cost
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(telegram_id=user_tg.id)
+        await user_svc.increment_generation_cost(user, result["cost"])
+        new_spent = user.total_generation_cost or 0.0
+
+    await thinking_msg.delete()
+
+    code = result["code"]
+    code_preview = code[:3000] + "\n... (truncated)" if len(code) > 3000 else code
+
+    response = (
+        f"*✅ MQL5 EA Generated*\n\n"
+        f"*Strategy:* _{strategy[:80]}_\n\n"
+        f"```mql5\n{code_preview}\n```"
+        f"{CODE_DISCLAIMER}\n\n"
+        f"_Budget used: ${new_spent:.3f} / $5.00_\n"
+        f"_💡 Want this EA monitored & analyzed? /subscribe for $49/mo_"
+    )
+
+    if new_spent >= 4.50:
+        response += f"\n\n⚠️ _Approaching $5 free limit ({new_spent:.2f} spent). Upgrade for unlimited._"
+
+    await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN)
+
+
+# ─── /share_code ──────────────────────────────────────────────────────────────
+
+async def cmd_share_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Product 1: Share Pine Script source code so the system can use it
+    as validation context (bypasses TradingView 3-indicator limit).
+    The code is stored in the user's RAGFlow dataset.
+    """
+    user_tg = update.effective_user
+
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(telegram_id=user_tg.id)
+
+    # Check if code was passed inline or if we need to prompt
+    inline_code = " ".join(context.args).strip() if context.args else ""
+
+    if not inline_code:
+        # Set a flag so next text message is treated as Pine Script
+        context.user_data["awaiting_pine_code"] = True
+        await update.message.reply_text(
+            "*📋 Share Pine Script Source Code*\n\n"
+            "Paste your indicator\'s Pine Script code in the next message.\n\n"
+            "_Your code will be stored in your personal knowledge base and used "
+            "to validate future signals from this indicator._\n\n"
+            "Supports: `.pine` file upload or plain text paste.",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    await _store_pine_code(update, user, inline_code)
+
+
+async def _store_pine_code(update: Update, user, code: str):
+    """Store Pine Script code in the user's RAGFlow dataset."""
+    from ragflow.service import RAGFlowService
+    ragflow = RAGFlowService(settings)
+
+    # Create dataset if needed
+    if not user.ragflow_dataset_id:
+        dataset_id = await ragflow.create_user_dataset(user.telegram_id)
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import select
+            result = await db.execute(
+                select(User).where(User.telegram_id == user.telegram_id)
+            )
+            db_user = result.scalar_one_or_none()
+            if db_user:
+                db_user.ragflow_dataset_id = dataset_id
+    else:
+        dataset_id = user.ragflow_dataset_id
+
+    # Build rule text wrapping the code
+    rule_text = (
+        f"PINE SCRIPT INDICATOR (user-shared):\n"
+        f"The user trades with this indicator. Use this code to understand "
+        f"their entry/exit logic when validating signals.\n\n"
+        f"```pine\n{code[:2000]}\n```"
+    )
+
+    doc_id = await ragflow.add_rule_to_dataset(
+        dataset_id=dataset_id,
+        rule_text=rule_text,
+        rule_id=99000 + (user.id or 0),
+    )
+
+    if doc_id:
+        # Count lines for confirmation
+        lines = len(code.strip().split("\n"))
+        await update.message.reply_text(
+            f"*✅ Pine Script Saved*\n\n"
+            f"_{lines} lines stored in your knowledge base._\n\n"
+            f"Your indicator logic will now be used to validate future signals.\n"
+            f"Use /connect_indicator to link your TradingView webhook.",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+    else:
+        await update.message.reply_text(
+            "❌ Failed to save code. RAGFlow may be unavailable. Please try again.",
+        )
+
+
+# ─── /my_usage ────────────────────────────────────────────────────────────────
+
+async def cmd_my_usage(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the user's DeepSeek generation usage and remaining free budget."""
+    user_tg = update.effective_user
+
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(telegram_id=user_tg.id)
+        spent = user.total_generation_cost or 0.0
+        generations = user.total_generations or 0
+        remaining = user_svc.generation_budget_remaining(user)
+        capped = user_svc.is_over_generation_cap(user)
+
+    # Build usage bar
+    pct = min(spent / settings.DEEPSEEK_FREE_CAP, 1.0)
+    filled = int(pct * 10)
+    bar = "█" * filled + "░" * (10 - filled)
+
+    status = "🔴 Limit reached" if capped else ("🟡 Approaching limit" if pct >= 0.8 else "🟢 Good")
+
+    await update.message.reply_text(
+        f"*📊 Your Free Generation Usage*\n\n"
+        f"Budget: `[{bar}]` ${spent:.3f} / ${settings.DEEPSEEK_FREE_CAP:.2f}\n"
+        f"Generations used: *{generations}*\n"
+        f"Budget remaining: *${remaining:.3f}*\n"
+        f"Status: {status}\n\n"
+        f"*Commands that use budget:*\n"
+        f"• `/generate` — Pine Script (~$0.002 each)\n"
+        f"• `/generate_ea` — MQL5 EA (~$0.002 each)\n\n"
+        f"_At $0.002/generation you can generate ~{int(remaining/0.002):,} more scripts._\n\n"
+        + ("⚠️ Upgrade to *Pro* ($79/mo) for unlimited. Use /subscribe." if capped else
+           "💡 Validations (/check) do NOT consume this budget."),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+
+
 # ─── /help ────────────────────────────────────────────────────────────────────
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "*🤖 AI Trade Validator — Commands*\n\n"
-        "*Trading:*\n"
+        "*🆓 Free for everyone:*\n"
+        "`/generate <strategy>` — English → Pine Script v6\n"
+        "  Example: `/generate Buy when RSI below 30`\n\n"
+        "`/generate_ea <strategy>` — English → MQL5 EA\n"
+        "  Example: `/generate_ea Scalp 5 pip TP on EURUSD M1`\n\n"
+        "`/share_code` — Paste Pine Script source (stores in your KB)\n"
+        "`/my_usage` — View free generation budget ($5 cap)\n\n"
+        "*📈 Trading (Paid):*\n"
         "`/check TICKER SIGNAL [PRICE]` — Validate a trade\n"
         "  Example: `/check AAPL BUY 175`\n\n"
         "`/outcome WIN|LOSS [#id] [pnl%]` — Report trade result\n"
         "  Example: `/outcome WIN` or `/outcome LOSS 42 -2.5`\n\n"
-        "*Personal Rules:*\n"
+        "*📚 Personal Rules:*\n"
         "`/add_rule <text>` — Add a trading rule to your KB\n"
         "`/my_rules` — List your rules\n\n"
-        "*History & Stats:*\n"
+        "*📊 History & Stats:*\n"
         "`/history` — Last 10 validations\n"
         "`/insights` — Crowd win-rate data ⭐ Pro\n\n"
-        "*Account:*\n"
-        "`/status` — Your plan and usage\n"
-        "`/subscribe` — Upgrade your plan\n\n"
-        "*Integrations:*\n"
+        "*⚙️ Integrations:*\n"
         "`/connect_indicator` — TradingView webhook setup\n"
         "`/connect_ea` — EA monitoring script setup\n\n"
-        "`/start` — Welcome message\n"
-        "`/help` — This help message"
+        "*💳 Account:*\n"
+        "`/status` — Your plan and usage\n"
+        "`/subscribe` — Upgrade via Whop (241 territories)\n\n"
+        "`/start` — Welcome · `/help` — This message"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
@@ -816,36 +1118,63 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("subscribe_"):
         plan_id = data.replace("subscribe_", "")
         user_tg = update.effective_user
-        sub_svc = SubscriptionService()
+        from services.subscription import WhopService
+        whop = WhopService()
+        checkout_url = whop.get_checkout_url(plan=plan_id, telegram_id=user_tg.id)
 
-        payment_url = await sub_svc.create_checkout_session(
-            telegram_id=user_tg.id,
-            plan=plan_id,
-        )
-
-        if payment_url:
+        if checkout_url:
+            plan_labels = {
+                "product1": "Indicator Validator ($19/mo)",
+                "product2": "EA Analyzer ($49/mo)",
+                "product3": "Manual Validator ($19/mo)",
+                "pro": "Pro Bundle ($79/mo)",
+            }
             await query.message.reply_text(
-                f"🔗 *Complete your subscription:*\n\n[Click here to pay via Stripe]({payment_url})\n\n"
-                f"_After payment, your plan activates within 30 seconds._",
+                f"🔗 *Complete your subscription on Whop:*\n\n"
+                f"Plan: *{plan_labels.get(plan_id, plan_id)}*\n\n"
+                f"[👉 Click here to subscribe]({checkout_url})\n\n"
+                f"_Whop supports 241 territories. Your plan activates instantly after payment._",
                 parse_mode=ParseMode.MARKDOWN,
                 disable_web_page_preview=True,
             )
         else:
             await query.message.reply_text(
-                "❌ Could not create payment link. Please try again or contact support.",
+                "❌ Could not create payment link. "
+                "Whop product IDs may not be configured yet. Please contact support.",
             )
 
 
 # ─── Text Message Handler ─────────────────────────────────────────────────────
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle plain text messages (try to parse as trade check)."""
+    """Handle plain text messages.
+    1. If awaiting Pine Script after /share_code, capture and store it.
+    2. If looks like a trade (AAPL BUY), route to /check.
+    3. Otherwise show help hint.
+    """
     text = update.message.text.strip()
 
-    # Pattern: "AAPL BUY" or "AAPL BUY 175" or "buy AAPL"
+    # ── Check if we are awaiting Pine Script paste ────────────────
+    if context.user_data.get("awaiting_pine_code"):
+        context.user_data.pop("awaiting_pine_code", None)
+        # Looks like code if it has //@version or common Pine keywords
+        pine_keywords = ["//@version", "indicator(", "strategy(", "plot(", "ta.rsi"]
+        if any(kw in text for kw in pine_keywords) or len(text) > 100:
+            async with AsyncSessionLocal() as db:
+                user_svc = UserService(db)
+                user = await user_svc.get_or_create_user(telegram_id=update.effective_user.id)
+            await _store_pine_code(update, user, text)
+            return
+        else:
+            await update.message.reply_text(
+                "❓ That doesn't look like Pine Script. "
+                "Use /share_code again and paste your indicator code.",
+            )
+            return
+
+    # ── Try to parse as quick trade check ─────────────────────────
     pattern = r"^([A-Z]{1,6}(?:-USD)?)\s+(BUY|SELL|HOLD)(?:\s+(\d+(?:\.\d+)?))?$"
     match = re.match(pattern, text.upper())
-
     if match:
         ticker, signal, price_str = match.groups()
         context.args = [ticker, signal]
@@ -854,6 +1183,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await cmd_check(update, context)
     else:
         await update.message.reply_text(
-            "💬 I didn't understand that. Try `/check AAPL BUY` or type /help.",
+            "💬 I didn't understand that.\n\n"
+            "Try `/check AAPL BUY` or `/generate Buy when RSI below 30`\n"
+            "Type /help to see all commands.",
             parse_mode=ParseMode.MARKDOWN,
         )

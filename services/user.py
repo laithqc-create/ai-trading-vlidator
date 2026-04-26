@@ -94,17 +94,32 @@ class UserService:
         self,
         telegram_id: int,
         plan: PlanTier,
-        stripe_customer_id: Optional[str] = None,
-        stripe_subscription_id: Optional[str] = None,
+        whop_user_id: Optional[str] = None,
+        whop_membership_id: Optional[str] = None,
         expires_at=None,
     ) -> Optional[User]:
         user = await self.get_user_by_telegram_id(telegram_id)
         if user:
             user.plan = plan
-            if stripe_customer_id:
-                user.stripe_customer_id = stripe_customer_id
-            if stripe_subscription_id:
-                user.stripe_subscription_id = stripe_subscription_id
+            if whop_user_id:
+                user.whop_user_id = whop_user_id
+            if whop_membership_id:
+                user.whop_membership_id = whop_membership_id
             if expires_at:
                 user.plan_expires_at = expires_at
         return user
+
+    async def increment_generation_cost(self, user: User, cost: float):
+        """Track DeepSeek API usage against the free cap."""
+        user.total_generations = (user.total_generations or 0) + 1
+        user.total_generation_cost = round((user.total_generation_cost or 0.0) + cost, 4)
+
+    def generation_budget_remaining(self, user: User) -> float:
+        """Returns remaining free generation budget in USD."""
+        from config.settings import settings
+        spent = user.total_generation_cost or 0.0
+        return max(0.0, settings.DEEPSEEK_FREE_CAP - spent)
+
+    def is_over_generation_cap(self, user: User) -> bool:
+        from config.settings import settings
+        return (user.total_generation_cost or 0.0) >= settings.DEEPSEEK_FREE_CAP

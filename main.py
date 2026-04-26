@@ -5,7 +5,7 @@ Webhook endpoints:
   POST /webhook/telegram         — Telegram bot updates
   POST /webhook/indicator/{token} — TradingView indicator signals (Product 1)
   POST /webhook/ea/{token}       — EA trade logs (Product 2)
-  POST /webhook/stripe           — Stripe payment events
+  POST /webhook/whop             — Whop payment events
 
 Health:
   GET  /health                   — Health check
@@ -28,7 +28,7 @@ from db.models import (
     User, Validation, EALog, ValidationStatus, SignalType, PlanTier
 )
 from services.user import UserService
-from services.subscription import SubscriptionService, PLAN_TIER_MAP
+from services.subscription import WhopService, PLAN_TIER_MAP
 from workers.tasks import validate_indicator_task, analyze_ea_task
 from bot.handlers import create_bot_app
 from sqlalchemy import select
@@ -302,107 +302,102 @@ async def ea_webhook(
     }
 
 
-# ─── Stripe Webhook ───────────────────────────────────────────────────────────
+# ─── Whop Webhook ────────────────────────────────────────────────────────────
 
-@app.post("/webhook/stripe")
-async def stripe_webhook(
+@app.post("/webhook/whop")
+async def whop_webhook(
     request: Request,
-    stripe_signature: Optional[str] = Header(None, alias="stripe-signature"),
+    whop_signature: Optional[str] = Header(None, alias="x-whop-signature"),
 ):
-    """Handle Stripe subscription events to update user plans."""
+    """
+    Handle Whop subscription events to update user plans.
+
+    Whop events:
+      subscription.created   — new subscriber
+      subscription.cancelled — cancellation
+      payment.succeeded      — renewal confirmed
+      payment.failed         — payment issue
+    """
     body = await request.body()
 
-    sub_svc = SubscriptionService()
-    event = sub_svc.handle_webhook_event(body, stripe_signature or "")
+    # Verify HMAC signature
+    whop = WhopService()
+    if whop_signature and not whop.verify_webhook_signature(body, whop_signature):
+        raise HTTPException(400, "Invalid Whop webhook signature")
 
-    if not event:
-        raise HTTPException(400, "Invalid Stripe webhook signature")
+    try:
+        payload = json.loads(body)
+    except Exception:
+        raise HTTPException(400, "Invalid JSON payload")
 
-    event_type = event.get("type", "")
-    data = event.get("data", {}).get("object", {})
+    event = payload.get("event", "")
+    data  = payload.get("data", {})
 
-    logger.info(f"Stripe event: {event_type}")
+    logger.info(f"Whop event: {event}")
 
-    if event_type == "checkout.session.completed":
-        await _handle_checkout_completed(data)
+    if event == "subscription.created":
+        await _whop_handle_created(data)
 
-    elif event_type in ("customer.subscription.updated", "customer.subscription.created"):
-        await _handle_subscription_updated(data)
+    elif event == "subscription.cancelled":
+        await _whop_handle_cancelled(data)
 
-    elif event_type == "customer.subscription.deleted":
-        await _handle_subscription_cancelled(data)
-
-    elif event_type == "invoice.payment_failed":
-        await _handle_payment_failed(data)
+    elif event == "payment.failed":
+        await _whop_handle_payment_failed(data)
 
     return {"received": True}
 
 
-async def _handle_checkout_completed(session: dict):
-    metadata = session.get("metadata", {})
+async def _whop_handle_created(data: dict):
+    """User subscribed — activate their plan."""
+    metadata    = data.get("metadata", {})
     telegram_id = int(metadata.get("telegram_id", 0))
-    plan = metadata.get("plan", "")
+    plan_key    = metadata.get("plan", "")
+    whop_uid    = data.get("user_id", "")
+    member_id   = data.get("id", "")
 
-    if not telegram_id or not plan:
+    if not telegram_id or not plan_key:
+        logger.warning(f"Whop subscription.created missing metadata: {data}")
         return
 
-    plan_tier = PLAN_TIER_MAP.get(plan)
+    plan_tier = PLAN_TIER_MAP.get(plan_key)
     if not plan_tier:
+        logger.warning(f"Unknown Whop plan key: {plan_key}")
         return
 
-    customer_id = session.get("customer")
-    subscription_id = session.get("subscription")
+    # Calculate expiry from renewal_period_end
+    expires_ts  = data.get("renewal_period_end")
+    expires_at  = datetime.fromtimestamp(expires_ts) if expires_ts else None
 
     async with AsyncSessionLocal() as db:
         user_svc = UserService(db)
         await user_svc.update_plan(
             telegram_id=telegram_id,
             plan=plan_tier,
-            stripe_customer_id=customer_id,
-            stripe_subscription_id=subscription_id,
+            whop_user_id=whop_uid,
+            whop_membership_id=member_id,
+            expires_at=expires_at,
         )
 
-    logger.info(f"User {telegram_id} upgraded to {plan}")
+    logger.info(f"User {telegram_id} activated plan={plan_key} via Whop")
 
-    # Notify user in Telegram
-    from workers.celery_app import run_async
-    from workers.tasks import _send_telegram_message
     plan_names = {
-        "product1": "Indicator Validator ($29/mo)",
+        "product1": "Indicator Validator ($19/mo)",
         "product2": "EA Analyzer ($49/mo)",
         "product3": "Manual Validator ($19/mo)",
-        "pro": "Pro — All Products ($79/mo)",
+        "pro":      "Pro Bundle ($79/mo)",
     }
+    from workers.tasks import _send_telegram_message
     await _send_telegram_message(
         telegram_id,
         f"🎉 *Subscription activated!*\n\n"
-        f"Plan: *{plan_names.get(plan, plan)}*\n\n"
+        f"Plan: *{plan_names.get(plan_key, plan_key)}*\n\n"
         f"You now have full access. Use /help to see all commands.",
     )
 
 
-async def _handle_subscription_updated(subscription: dict):
-    metadata = subscription.get("metadata", {})
-    telegram_id = int(metadata.get("telegram_id", 0))
-    plan = metadata.get("plan", "")
-    if not telegram_id or not plan:
-        return
-
-    plan_tier = PLAN_TIER_MAP.get(plan, PlanTier.FREE)
-    period_end = subscription.get("current_period_end")
-    expires_at = datetime.fromtimestamp(period_end) if period_end else None
-
-    async with AsyncSessionLocal() as db:
-        user_svc = UserService(db)
-        await user_svc.update_plan(
-            telegram_id=telegram_id,
-            plan=plan_tier,
-            expires_at=expires_at,
-        )
-
-
-async def _handle_subscription_cancelled(subscription: dict):
-    metadata = subscription.get("metadata", {})
+async def _whop_handle_cancelled(data: dict):
+    """User cancelled — downgrade to FREE."""
+    metadata    = data.get("metadata", {})
     telegram_id = int(metadata.get("telegram_id", 0))
     if not telegram_id:
         return
@@ -411,31 +406,27 @@ async def _handle_subscription_cancelled(subscription: dict):
         user_svc = UserService(db)
         await user_svc.update_plan(telegram_id=telegram_id, plan=PlanTier.FREE)
 
-    logger.info(f"User {telegram_id} downgraded to FREE (subscription cancelled)")
+    logger.info(f"User {telegram_id} downgraded to FREE (Whop cancellation)")
 
     from workers.tasks import _send_telegram_message
     await _send_telegram_message(
         telegram_id,
-        "ℹ️ Your subscription has been cancelled. You've been moved to the free plan.\n\n"
+        "ℹ️ Your subscription has been cancelled. Moved to free plan.\n\n"
         "Use /subscribe to re-subscribe anytime.",
     )
 
 
-async def _handle_payment_failed(invoice: dict):
-    customer_id = invoice.get("customer")
-    if not customer_id:
+async def _whop_handle_payment_failed(data: dict):
+    """Payment failed — warn user."""
+    metadata    = data.get("metadata", {})
+    telegram_id = int(metadata.get("telegram_id", 0))
+    if not telegram_id:
         return
 
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(User).where(User.stripe_customer_id == customer_id)
-        )
-        user = result.scalar_one_or_none()
-        if user:
-            from workers.tasks import _send_telegram_message
-            await _send_telegram_message(
-                user.telegram_id,
-                "⚠️ *Payment failed* for your AI Trade Validator subscription.\n\n"
-                "Please update your payment method to continue using premium features.\n"
-                "Use /subscribe to manage your plan.",
-            )
+    from workers.tasks import _send_telegram_message
+    await _send_telegram_message(
+        telegram_id,
+        "⚠️ *Payment failed* on your AI Trade Validator subscription.\n\n"
+        "Please update your payment method on Whop to keep access.\n"
+        "Use /subscribe to manage your plan.",
+    )
