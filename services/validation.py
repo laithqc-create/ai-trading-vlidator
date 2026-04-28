@@ -56,10 +56,12 @@ class ValidationService:
         price: Optional[float],
         user_ragflow_dataset_id: Optional[str],
         polygon_data: Optional[dict] = None,
+        user_description: Optional[str] = None,
     ) -> dict:
         """
         Product 3: User typed /check AAPL BUY 175
         Full Trader + Mentor pipeline.
+        user_description: optional free-text context from extension screenshot popup.
         """
         logger.info(f"Manual validation: {ticker} {signal} @{price}")
 
@@ -82,11 +84,14 @@ class ValidationService:
             trader_result.current_price = polygon_data.get("close")
 
         # Step 2: RAGFlow mentor validation
+        # Pass user description as extra context so the mentor can factor in
+        # the trader's own observations (e.g. "BOS on 1H, waiting for retest")
         mentor_result = await self.mentor.validate_signal(
             ticker=ticker,
             signal=signal,
             trader_analysis=trader_result.to_dict(),
             user_dataset_id=user_ragflow_dataset_id,
+            user_description=user_description,
         )
 
         # Step 3: Combine into final verdict
@@ -103,6 +108,12 @@ class ValidationService:
         if polygon_data:
             result["final_message"] = self._append_polygon_context(
                 result["final_message"], polygon_data
+            )
+
+        # Step 5: Append user description to message if provided
+        if user_description:
+            result["final_message"] = self._append_user_description(
+                result["final_message"], user_description
             )
 
         return result
@@ -420,6 +431,20 @@ class ValidationService:
         empty = 10 - filled
         bar = "█" * filled + "░" * empty
         return f"`[{bar}]` {int(confidence * 100)}%"
+
+    @staticmethod
+    def _append_user_description(message: str, description: str) -> str:
+        """Append user free-text notes to the final Telegram/popup message."""
+        if not description or not description.strip():
+            return message
+        note_block = (
+            "\n\n*\U0001f4dd Your Notes:*\n"
+            + f"_{description.strip()[:300]}_"
+        )
+        disclaimer_marker = "\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+        if disclaimer_marker in message:
+            return message.replace(disclaimer_marker, note_block + disclaimer_marker)
+        return message + note_block
 
     @staticmethod
     def _append_polygon_context(message: str, polygon_data: dict) -> str:

@@ -3,7 +3,7 @@ webhooks/screenshot.py — Screenshot analysis endpoint for the browser extensio
 
 Endpoints:
   POST /webhook/screenshot
-    Accepts: multipart/form-data (screenshot file + ticker + signal + price + user_id)
+    Accepts: multipart/form-data (screenshot file + ticker + signal + price + description + user_id)
     Returns: { request_id, status: "processing" }
 
   GET /webhook/screenshot/result/{request_id}
@@ -90,8 +90,9 @@ async def submit_screenshot(
     screenshot: UploadFile = File(..., description="PNG screenshot of the chart"),
     ticker:     str        = Form(...),
     signal:     str        = Form(...),
-    price:      Optional[str] = Form(None),
-    user_id:    str        = Form(...),
+    price:       Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    user_id:     str           = Form(...),
 ):
     """
     Receive screenshot from browser extension.
@@ -129,11 +130,12 @@ async def submit_screenshot(
     await _redis_set(
         f"screenshot_result:{request_id}",
         {
-            "status":     "processing",
-            "request_id": request_id,
-            "ticker":     ticker,
-            "signal":     signal,
-            "created_at": datetime.utcnow().isoformat(),
+            "status":      "processing",
+            "request_id":  request_id,
+            "ticker":      ticker,
+            "signal":      signal,
+            "description": description or "",
+            "created_at":  datetime.utcnow().isoformat(),
         },
         ttl_seconds=3600,
     )
@@ -149,6 +151,7 @@ async def submit_screenshot(
         ticker=ticker,
         signal=signal,
         price=price,
+        description=description or "",
         user_id=user_id,
     )
 
@@ -186,12 +189,13 @@ async def get_screenshot_result(request_id: str):
 # ── Analysis processor ────────────────────────────────────────────────────────
 
 async def _process_screenshot_analysis(
-    request_id: str,
-    image_b64:  str,
-    ticker:     str,
-    signal:     str,
-    price:      Optional[str],
-    user_id:    str,
+    request_id:  str,
+    image_b64:   str,
+    ticker:      str,
+    signal:      str,
+    price:       Optional[str],
+    description: str,
+    user_id:     str,
 ):
     """
     Run the full AI analysis pipeline on the screenshot.
@@ -220,11 +224,15 @@ async def _process_screenshot_analysis(
             except ValueError:
                 pass
 
+        # Enrich validation with user's description as extra context
+        extra_context = description.strip() if description else None
+
         result = await svc.validate_manual(
             ticker=ticker,
             signal=signal,
             price=price_float,
             user_ragflow_dataset_id=ragflow_dataset_id,
+            user_description=extra_context,
         )
 
         # ── Step 2: Build extension-friendly response ─────────────
@@ -238,6 +246,7 @@ async def _process_screenshot_analysis(
             "request_id":       request_id,
             "ticker":           ticker,
             "signal":           signal,
+            "description":      description or "",
             "verdict":          result["verdict"],
             "confidence_score": result["confidence_score"],
             "reasoning":        reasoning_short,

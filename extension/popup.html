@@ -76,6 +76,21 @@
                step="any" min="0">
       </div>
 
+      <div class="form-group">
+        <label for="descriptionInput">
+          Your Notes
+          <span class="optional">(optional)</span>
+        </label>
+        <textarea id="descriptionInput"
+                  placeholder="Add context about this tradeâ¦ e.g. 'Break of structure on 1H, waiting for retest of 175 zone, earnings next week'"
+                  rows="3"
+                  maxlength="500"
+                  spellcheck="true"></textarea>
+        <div class="char-counter">
+          <span id="charCount">0</span>/500
+        </div>
+      </div>
+
       <div class="disclaimer-box">
         ⚠️ <strong>Disclaimer:</strong> AI analysis is for informational purposes only.
         Not financial advice. Past performance does not guarantee future results.
@@ -125,6 +140,12 @@
         </div>
 
         <div id="reasoningBox" class="reasoning-box"></div>
+
+        <!-- User notes echo-back in result -->
+        <div id="userNotesResult" class="user-notes-result" style="display:none">
+          <div class="user-notes-label">📝 Your notes:</div>
+          <div id="userNotesText" class="user-notes-text"></div>
+        </div>
 
         <div id="indicatorRow" class="indicator-row"></div>
 

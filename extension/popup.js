@@ -34,6 +34,7 @@ let state = {
   requestId:     null,
   pollTimer:     null,
   pollAttempts:  0,
+  description:   "",    // user's optional notes
   settings: {
     apiUrl:      DEFAULT_API_URL,
     botName:     DEFAULT_BOT_NAME,
@@ -103,6 +104,11 @@ function bindEvents() {
   $("submitBtn").addEventListener("click",       submitAnalysis);
   $("tickerInput").addEventListener("input",     () => {
     $("tickerInput").value = $("tickerInput").value.toUpperCase();
+  });
+  $("descriptionInput").addEventListener("input", () => {
+    const len = $("descriptionInput").value.length;
+    $("charCount").textContent = len;
+    $("charCount").style.color = len >= 450 ? "var(--yellow)" : len >= 490 ? "var(--red)" : "";
   });
 
   // Step 3
@@ -210,9 +216,11 @@ async function detectPrice(tab) {
 
 // ── STEP 2 — Submit Analysis ───────────────────────────────────────────────────
 async function submitAnalysis() {
-  const ticker = $("tickerInput").value.trim().toUpperCase();
-  const signal = $("signalSelect").value;
-  const price  = $("priceInput").value.trim();
+  const ticker      = $("tickerInput").value.trim().toUpperCase();
+  const signal      = $("signalSelect").value;
+  const price       = $("priceInput").value.trim();
+  const description = $("descriptionInput").value.trim();
+  state.description = description;
 
   // Validation
   if (!ticker) {
@@ -244,11 +252,12 @@ async function submitAnalysis() {
     const blob     = await resp.blob();
 
     const formData = new FormData();
-    formData.append("screenshot", blob, "chart.png");
-    formData.append("ticker",     ticker);
-    formData.append("signal",     signal);
-    formData.append("price",      price || "");
-    formData.append("user_id",    state.settings.userId);
+    formData.append("screenshot",   blob, "chart.png");
+    formData.append("ticker",       ticker);
+    formData.append("signal",       signal);
+    formData.append("price",        price || "");
+    formData.append("description",  description || "");
+    formData.append("user_id",      state.settings.userId);
 
     const apiResp = await fetch(
       `${state.settings.apiUrl}/webhook/screenshot`,
@@ -355,6 +364,15 @@ function displayResult(data) {
     .trim();
   $("reasoningBox").textContent = cleanReasoning;
 
+  // Show user's notes in result if they added any
+  const notes = state.description.trim();
+  if (notes) {
+    $("userNotesText").textContent     = notes;
+    $("userNotesResult").style.display = "block";
+  } else {
+    $("userNotesResult").style.display = "none";
+  }
+
   // Key indicators row
   const rows = [];
   if (indicators.rsi    != null) rows.push({ label: "RSI",  value: indicators.rsi.toFixed(1) });
@@ -440,8 +458,11 @@ function resetToStep1() {
   $("autoDetected").style.display      = "none";
   $("tickerInput").value               = "";
   $("priceInput").value                = "";
+  $("descriptionInput").value          = "";
+  $("charCount").textContent           = "0";
   $("tickerHint").textContent          = "";
   $("tickerInput").classList.remove("input-error");
+  state.description                    = "";
 
   setStatus("idle");
   showStep("step1");
@@ -451,7 +472,9 @@ function copyResult() {
   const verdict    = $("verdictText").textContent;
   const confidence = $("confidenceValue").textContent;
   const reasoning  = $("reasoningBox").textContent;
-  const text       = `AI Trade Validator Result\nVerdict: ${verdict} (${confidence})\n\n${reasoning}\n\n⚠️ Not financial advice.`;
+  const notes      = state.description.trim();
+  const notesLine  = notes ? `\n\n📝 My notes: ${notes}` : "";
+  const text       = `AI Trade Validator Result\nVerdict: ${verdict} (${confidence})\n\n${reasoning}${notesLine}\n\n⚠️ Not financial advice.`;
 
   navigator.clipboard.writeText(text).then(() => showToast("Copied ✓"));
 }
@@ -468,9 +491,10 @@ async function saveToHistory(requestId, result) {
   const { analysisHistory = [] } = await chrome.storage.local.get("analysisHistory");
   analysisHistory.unshift({
     id:        requestId,
-    ticker:    $("tickerInput").value,
-    signal:    $("signalSelect").value,
-    verdict:   result.verdict,
+    ticker:      $("tickerInput").value,
+    signal:      $("signalSelect").value,
+    description: state.description || "",
+    verdict:     result.verdict,
     confidence: result.confidence_score || result.confidence,
     timestamp: Date.now(),
   });

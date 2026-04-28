@@ -166,11 +166,16 @@ class RAGFlowService:
         signal: str,               # BUY / SELL / HOLD
         trader_analysis: dict,     # OpenTrade.ai result
         user_dataset_id: Optional[str] = None,
+        user_description: Optional[str] = None,
     ) -> dict:
         """
         Ask RAGFlow to validate/critique a trading signal using:
           1. System knowledge base (base rules, patterns)
           2. User's personal rules (if they have a dataset)
+
+        user_description: optional free-text from extension popup.
+          Enriches the RAGFlow query with trader's own observations,
+          e.g. "Break of structure on 1H, waiting for retest of 175 zone".
 
         Returns dict with:
           - mentor_verdict: CONFIRM / CAUTION / REJECT
@@ -179,8 +184,10 @@ class RAGFlowService:
           - relevant_rules: list of matched rules/patterns
           - citations: list of RAGFlow citations
         """
-        # Build a rich question for RAGFlow
-        question = self._build_mentor_question(ticker, signal, trader_analysis)
+        # Build a rich question for RAGFlow (includes user description if given)
+        question = self._build_mentor_question(
+            ticker, signal, trader_analysis, user_description
+        )
 
         # Query both system KB and user KB
         system_result = await self._query_knowledge_base(
@@ -205,8 +212,12 @@ class RAGFlowService:
         ticker: str,
         signal: str,
         analysis: dict,
+        user_description: Optional[str] = None,
     ) -> str:
-        """Build the question to send to RAGFlow for context retrieval."""
+        """
+        Build the question to send to RAGFlow for context retrieval.
+        Incorporates optional user free-text description from extension popup.
+        """
         rsi = analysis.get("rsi", "N/A")
         macd = analysis.get("macd", "N/A")
         bb_pos = analysis.get("bb_position", "N/A")
@@ -217,12 +228,21 @@ class RAGFlowService:
             f"A trader wants to {signal} {ticker} at ${current_price}.\n"
             f"Technical analysis shows: RSI={rsi}, MACD={macd}, BB position={bb_pos}, "
             f"overall technical signal={tech_signal}.\n"
-            f"\n"
-            f"Based on trading rules, historical patterns, and best practices:\n"
+        )
+
+        # Enrich with user's own observations (from extension screenshot notes)
+        if user_description and user_description.strip():
+            question += (
+                f"\nTrader's own analysis and context:\n"
+                f"\"{user_description.strip()[:300]}\"\n"
+            )
+
+        question += (
+            f"\nBased on trading rules, historical patterns, and best practices:\n"
             f"1. Should this {signal} trade on {ticker} be confirmed or rejected?\n"
             f"2. Are there any relevant rules that apply here?\n"
             f"3. What historical patterns match these conditions?\n"
-            f"4. What is the risk level of this trade?\n"
+            f"4. What is the risk level considering the trader's stated context?\n"
         )
         return question
 
