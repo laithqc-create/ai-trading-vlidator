@@ -31,6 +31,7 @@ from services.user import UserService
 from services.subscription import WhopService, PLAN_TIER_MAP
 from workers.tasks import validate_indicator_task, analyze_ea_task
 from TG_Bot.main import get_bot, get_dispatcher, on_startup
+from webhooks.screenshot import router as screenshot_router
 from sqlalchemy import select
 
 
@@ -92,6 +93,9 @@ app.add_middleware(
     allow_methods=["POST", "GET"],
     allow_headers=["*"],
 )
+
+# Screenshot endpoint (browser extension)
+app.include_router(screenshot_router)
 
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
