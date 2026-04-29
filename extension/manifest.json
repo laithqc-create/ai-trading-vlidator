@@ -11,7 +11,8 @@
   ],
   "host_permissions": [
     "https://*.tradingview.com/*",
-    "https://your-api.com/*"
+    "https://*/*",
+    "http://localhost/*"
   ],
   "action": {
     "default_popup": "popup.html",

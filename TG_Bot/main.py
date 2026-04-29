@@ -97,6 +97,7 @@ async def on_startup(bot: Bot):
         BotCommand(command="connect_ea",         description="⚙️ EA monitor setup"),
         BotCommand(command="subscribe",          description="💳 Upgrade plan (Whop)"),
         BotCommand(command="status",             description="👤 My account"),
+        BotCommand(command="link",              description="🔗 Link browser extension"),
         BotCommand(command="help",               description="❓ All commands"),
     ]
 

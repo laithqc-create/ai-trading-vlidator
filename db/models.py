@@ -52,6 +52,10 @@ class User(Base):
     whop_membership_id = Column(String(64), unique=True, nullable=True)
     plan_expires_at = Column(DateTime, nullable=True)
 
+    # Browser extension user tracking
+    ext_user_id = Column(String(64), unique=True, nullable=True, index=True)
+    linked_telegram_id = Column(BigInteger, nullable=True)
+
     # RAGFlow integration
     ragflow_dataset_id = Column(String(128), nullable=True)
 

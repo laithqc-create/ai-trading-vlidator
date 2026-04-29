@@ -324,17 +324,33 @@ def _extract_short_reasoning(full_message: str, result: dict) -> str:
 
 async def _get_user_ragflow_dataset(ext_user_id: str) -> Optional[str]:
     """
-    Try to find this extension user's RAGFlow dataset.
-    Extension users identified by ext_* IDs don't have Telegram accounts,
-    so this returns None unless they've linked their Telegram.
+    Look up the RAGFlow dataset for a browser extension user.
+
+    Extension users who have run /link in the Telegram bot have their
+    ext_user_id stored on their User record. We find them by ext_user_id
+    and return their ragflow_dataset_id so personal rules apply.
+
+    Users who haven't linked get None — analysis still works, just without
+    personal rules (system KB rules still apply).
     """
     try:
         from db.database import AsyncSessionLocal
         from db.models import User
         from sqlalchemy import select
 
-        # Extension users might store their telegram_id in storage
-        # For now return None (analysis still works, just without personal rules)
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(User).where(User.ext_user_id == ext_user_id)
+            )
+            user = result.scalar_one_or_none()
+            if user and user.ragflow_dataset_id:
+                logger.info(
+                    f"Extension user {ext_user_id} linked to "
+                    f"telegram_id={user.telegram_id}, using their RAGFlow KB"
+                )
+                return user.ragflow_dataset_id
+
         return None
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Could not look up ext_user RAGFlow dataset: {e}")
         return None

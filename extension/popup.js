@@ -10,8 +10,8 @@
 "use strict";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const DEFAULT_API_URL  = "https://your-api.com";
-const DEFAULT_BOT_NAME = "@YourBotName";
+const DEFAULT_API_URL  = "";  // Set via Settings or Onboarding page
+const DEFAULT_BOT_NAME = "";  // Set via Settings or Onboarding page
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 60;   // 2 min max
 
@@ -50,7 +50,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadSettings();
   await checkCurrentTab();
   bindEvents();
+  checkApiConfigured();
 });
+
+function checkApiConfigured() {
+  if (!state.settings.apiUrl) {
+    // Show a gentle nudge to complete setup
+    const warning = document.createElement("div");
+    warning.id    = "setupNudge";
+    warning.style.cssText = (
+      "background:#3a2e1e;border:1px solid #f9e2af;border-radius:8px;"
+      "padding:8px 12px;font-size:11px;color:#f9e2af;margin-bottom:10px;"
+      "cursor:pointer;text-align:center;"
+    );
+    warning.innerHTML = "⚠️ API not configured — <strong>click to set up</strong>";
+    warning.onclick   = openSettings;
+    const container   = document.querySelector(".container");
+    const header      = document.querySelector(".header");
+    if (container && header) {
+      container.insertBefore(warning, header.nextSibling);
+    }
+  }
+}
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 async function loadSettings() {

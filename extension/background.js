@@ -16,8 +16,8 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
     await chrome.storage.local.set({
       version:         "1.0.0",
       userId:          null,
-      apiUrl:          "https://your-api.com",
-      botName:         "@YourBotName",
+      apiUrl:          "",  // Configured via onboarding.html
+      botName:         "",  // Configured via onboarding.html
       analysisHistory: [],
     });
 

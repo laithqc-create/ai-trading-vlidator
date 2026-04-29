@@ -560,3 +560,151 @@ async def cb_view_stats(callback: CallbackQuery, user: User):
         reply_markup=back_to_menu_keyboard(),
     )
     await callback.answer()
+
+
+# ─── Unhandled callback handlers ─────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("signal_"))
+async def cb_signal_select(callback: CallbackQuery, state: FSMContext, user: User):
+    """Handle BUY/SELL/HOLD quick-select buttons from signal_selector keyboard."""
+    signal = callback.data.replace("signal_", "")
+    await state.update_data(selected_signal=signal)
+    await callback.answer(f"Signal set to {signal}")
+    # Update the message to show selection
+    signal_emoji = {"BUY": "📈", "SELL": "📉", "HOLD": "⏸️"}.get(signal, "")
+    await callback.message.edit_text(
+        f"Signal selected: {signal_emoji} *{signal}*\n\n"
+        f"Now enter the ticker symbol:",
+        parse_mode="Markdown",
+    )
+
+
+@router.callback_query(F.data == "skip_price")
+async def cb_skip_price(callback: CallbackQuery, state: FSMContext, user: User):
+    """User skipped price entry — dispatch with price=None."""
+    await callback.answer("Using current market price")
+    data = await state.get_data()
+    ticker = data.get("ticker", "")
+    signal = data.get("signal", "BUY")
+    if ticker:
+        await _dispatch_validation(callback.message, state, user, ticker, signal, None)
+    else:
+        await callback.message.answer("Please start with /check TICKER SIGNAL")
+
+
+@router.callback_query(F.data.startswith("share_"))
+async def cb_share_result(callback: CallbackQuery, user: User):
+    """Share result — forward the analysis message."""
+    await callback.answer("Long-press the message above to forward it to others!", show_alert=True)
+
+
+@router.callback_query(F.data == "clear_history_confirm")
+async def cb_clear_history_confirm(callback: CallbackQuery, user: User):
+    """Ask confirmation before clearing history."""
+    from TG_Bot.keyboards.product_kb import confirm_cancel_keyboard
+    await callback.message.answer(
+        "⚠️ *Clear all validation history?*\n\n"
+        "This removes all your recorded validations from the database. "
+        "Your rules and account remain unchanged.",
+        parse_mode="Markdown",
+        reply_markup=confirm_cancel_keyboard("clear_history"),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "confirm_clear_history")
+async def cb_confirm_clear_history(callback: CallbackQuery, user: User):
+    """Execute history clear after confirmation."""
+    from db.database import AsyncSessionLocal
+    from sqlalchemy import delete
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            delete(Validation).where(Validation.user_id == user.id)
+        )
+    await callback.message.edit_text(
+        "🗑️ *History cleared.*\n\nAll validation records removed.",
+        parse_mode="Markdown",
+        reply_markup=back_to_menu_keyboard(),
+    )
+    await callback.answer("History cleared")
+
+
+@router.callback_query(F.data == "cancel_action")
+async def cb_cancel_action(callback: CallbackQuery):
+    """Generic cancel — dismiss the confirmation message."""
+    await callback.message.edit_text(
+        "↩️ Cancelled.",
+        reply_markup=back_to_menu_keyboard(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "view_usage")
+async def cb_view_usage(callback: CallbackQuery, user: User):
+    """Show DeepSeek generation usage from account keyboard."""
+    from TG_Bot.handlers.generate import cmd_my_usage
+    await cmd_my_usage(callback.message, user)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "view_rules")
+async def cb_view_rules(callback: CallbackQuery, user: User):
+    """Show personal rules from account keyboard."""
+    await cmd_my_rules(callback.message, user)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "ea_connect_monitor")
+async def cb_ea_connect_monitor(callback: CallbackQuery, user: User):
+    """Route EA connect monitor button to /connect_ea handler."""
+    await cmd_connect_ea(callback.message, user)
+    await callback.answer()
+
+
+# ─── /link — Connect extension to Telegram account ───────────────────────────
+
+@router.message(Command("link"))
+async def cmd_link(message: Message, user: User):
+    """
+    Link a browser extension user ID to this Telegram account.
+    Extension users can find their ID in the extension's Settings panel.
+
+    Usage: /link ext_abc123def456
+    """
+    args = message.text.split()[1:]
+
+    if not args:
+        await message.answer(
+            "*🔗 Link Browser Extension*\n\n"
+            "This connects your browser extension to your Telegram account "
+            "so your personal trading rules apply to screenshot analyses.\n\n"
+            "*How to find your extension ID:*\n"
+            "1. Click the extension icon in Chrome\n"
+            "2. Click ⚙️ Settings\n"
+            "3. Copy the *Your User ID* value\n\n"
+            "*Then run:*\n"
+            "`/link YOUR_USER_ID`",
+            parse_mode="Markdown",
+        )
+        return
+
+    ext_id = args[0].strip()
+    if len(ext_id) < 8 or len(ext_id) > 64:
+        await message.answer("❌ Invalid extension ID format.")
+        return
+
+    from db.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        from services.user import UserService
+        user_svc = UserService(db)
+        db_user = await user_svc.get_or_create_user(telegram_id=user.telegram_id)
+        db_user.ext_user_id = ext_id
+
+    await message.answer(
+        f"*✅ Extension linked!*\n\n"
+        f"Extension ID: `{ext_id}`\n\n"
+        f"Your personal trading rules will now apply to all screenshot analyses "
+        f"from your browser extension.",
+        parse_mode="Markdown",
+        reply_markup=back_to_menu_keyboard(),
+    )

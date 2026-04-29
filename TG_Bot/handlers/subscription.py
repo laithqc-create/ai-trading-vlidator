@@ -226,3 +226,20 @@ async def cmd_insights(message: Message, user: User):
         parse_mode="Markdown",
         reply_markup=back_to_menu_keyboard(),
     )
+
+
+@router.callback_query(F.data == "confirm_cancel_subscription")
+async def cb_confirm_cancel_subscription(callback: CallbackQuery, user: User):
+    """User confirmed cancellation — direct them to Whop dashboard."""
+    await callback.message.edit_text(
+        "*ℹ️ How to cancel your subscription:*\n\n"
+        "1. Go to [whop.com/dashboard](https://whop.com/dashboard)\n"
+        "2. Find *AI Trade Validator* under your memberships\n"
+        "3. Click *Cancel membership*\n\n"
+        "_Your access continues until the end of the current billing period. "
+        "Your rules and history are always preserved._",
+        parse_mode="Markdown",
+        disable_web_page_preview=True,
+        reply_markup=back_to_menu_keyboard(),
+    )
+    await callback.answer()
