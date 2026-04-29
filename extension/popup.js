@@ -117,8 +117,9 @@ function bindEvents() {
   $("copyResultBtn").addEventListener("click",   copyResult);
   $("retryBtn").addEventListener("click",        resetToStep1);
 
-  // Settings
+  // Settings + History
   $("settingsLink").addEventListener("click",       openSettings);
+  $("historyLink").addEventListener("click",        openHistory);
   $("cancelSettingsBtn").addEventListener("click",  () => showStep("step1"));
   $("saveSettingsBtn").addEventListener("click",    saveSettings);
 }
@@ -477,6 +478,10 @@ function copyResult() {
   const text       = `AI Trade Validator Result\nVerdict: ${verdict} (${confidence})\n\n${reasoning}${notesLine}\n\n⚠️ Not financial advice.`;
 
   navigator.clipboard.writeText(text).then(() => showToast("Copied ✓"));
+}
+
+function openHistory() {
+  chrome.tabs.create({ url: chrome.runtime.getURL("history.html") });
 }
 
 function openSettings() {

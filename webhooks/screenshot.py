@@ -55,24 +55,24 @@ async def _redis_set(key: str, value: dict, ttl_seconds: int = 3600):
     """Store result dict in Redis. Falls back to in-memory if Redis unavailable."""
     import json
     try:
-        import redis.asyncio as aioredis
+        # redis[asyncio] is included in redis>=4.2 — use connection pool
+        from redis.asyncio import from_url as redis_from_url
         from config.settings import settings
-        r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-        await r.setex(key, ttl_seconds, json.dumps(value))
-        await r.aclose()
+        async with redis_from_url(settings.REDIS_URL, decode_responses=True) as r:
+            await r.setex(key, ttl_seconds, json.dumps(value))
     except Exception as e:
         logger.warning(f"Redis unavailable, using in-memory fallback: {e}")
         _memory_store[key] = value
 
 
 async def _redis_get(key: str) -> Optional[dict]:
+    """Retrieve result dict from Redis. Falls back to in-memory."""
     import json
     try:
-        import redis.asyncio as aioredis
+        from redis.asyncio import from_url as redis_from_url
         from config.settings import settings
-        r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-        raw = await r.get(key)
-        await r.aclose()
+        async with redis_from_url(settings.REDIS_URL, decode_responses=True) as r:
+            raw = await r.get(key)
         return json.loads(raw) if raw else None
     except Exception:
         return _memory_store.get(key)

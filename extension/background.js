@@ -21,9 +21,9 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
       analysisHistory: [],
     });
 
-    // Open onboarding tab on first install
+    // Open onboarding page on first install
     chrome.tabs.create({
-      url: "https://t.me/YourBotName?start=ext_installed",
+      url: chrome.runtime.getURL("onboarding.html"),
     });
   }
 

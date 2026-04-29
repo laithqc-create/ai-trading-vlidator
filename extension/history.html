@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Analysis History — AI Trade Validator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1e1e2e; color: #cdd6f4;
+      min-height: 100vh; padding: 24px;
+    }
+    h1 { font-size: 20px; color: #89b4fa; margin-bottom: 4px; }
+    .sub { font-size: 13px; color: #a6adc8; margin-bottom: 20px; }
+    .toolbar {
+      display: flex; gap: 10px; margin-bottom: 16px;
+      align-items: center; flex-wrap: wrap;
+    }
+    input[type="text"] {
+      flex: 1; min-width: 180px;
+      padding: 8px 12px; background: #313244;
+      border: 1px solid #45475a; border-radius: 8px;
+      color: #cdd6f4; font-size: 13px;
+    }
+    input[type="text"]:focus { outline: none; border-color: #89b4fa; }
+    select {
+      padding: 8px 10px; background: #313244;
+      border: 1px solid #45475a; border-radius: 8px;
+      color: #cdd6f4; font-size: 13px;
+    }
+    .btn {
+      padding: 8px 14px; border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary { background: #89b4fa; color: #1e1e2e; }
+    .btn-primary:hover { background: #b4befe; }
+    .btn-danger  { background: #45475a; color: #f38ba8; }
+    .btn-danger:hover  { background: #f38ba8; color: #1e1e2e; }
+    .empty {
+      text-align: center; padding: 60px 20px;
+      color: #6c7086; font-size: 14px;
+    }
+    .empty span { font-size: 36px; display: block; margin-bottom: 10px; }
+    .grid { display: flex; flex-direction: column; gap: 10px; }
+    .card {
+      background: #313244; border-radius: 10px;
+      padding: 14px 16px; border: 1px solid #45475a;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px; align-items: center;
+      cursor: pointer; transition: border-color 0.15s;
+    }
+    .card:hover { border-color: #89b4fa; }
+    .verdict-dot {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .confirm { background: #1e3a2e; }
+    .caution { background: #3a2e1e; }
+    .reject  { background: #3a1e1e; }
+    .card-main strong { font-size: 15px; color: #cdd6f4; }
+    .card-meta {
+      font-size: 11px; color: #a6adc8; margin-top: 2px;
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .signal-tag {
+      background: #45475a; border-radius: 4px;
+      padding: 1px 6px; font-size: 10px; font-weight: 600;
+    }
+    .confidence-tag { color: #89b4fa; font-weight: 600; }
+    .notes-preview {
+      font-size: 11px; color: #6c7086;
+      white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; max-width: 340px;
+      margin-top: 3px;
+    }
+    .card-time { font-size: 11px; color: #6c7086; text-align: right; white-space: nowrap; }
+    .stats-row {
+      display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .stat {
+      background: #313244; border-radius: 8px;
+      padding: 10px 16px; flex: 1; min-width: 80px;
+      text-align: center; border: 1px solid #45475a;
+    }
+    .stat-val { font-size: 22px; font-weight: 700; color: #89b4fa; }
+    .stat-lbl { font-size: 10px; color: #a6adc8; text-transform: uppercase;
+                letter-spacing: 0.05em; margin-top: 2px; }
+    .pagination { display: flex; gap: 8px; justify-content: center;
+                  margin-top: 16px; align-items: center; }
+    .page-btn {
+      padding: 6px 12px; background: #313244; border: 1px solid #45475a;
+      border-radius: 6px; color: #cdd6f4; cursor: pointer; font-size: 12px;
+    }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .page-info { font-size: 12px; color: #a6adc8; }
+  </style>
+</head>
+<body>
+  <h1>📜 Analysis History</h1>
+  <p class="sub" id="subtitle">Loading…</p>
+
+  <div class="stats-row" id="statsRow"></div>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" placeholder="Search ticker or notes…">
+    <select id="filterVerdict">
+      <option value="">All verdicts</option>
+      <option value="CONFIRM">✅ CONFIRM</option>
+      <option value="CAUTION">⚠️ CAUTION</option>
+      <option value="REJECT">❌ REJECT</option>
+    </select>
+    <select id="filterSignal">
+      <option value="">All signals</option>
+      <option value="BUY">📈 BUY</option>
+      <option value="SELL">📉 SELL</option>
+      <option value="HOLD">⏸️ HOLD</option>
+    </select>
+    <button class="btn btn-danger" onclick="clearHistory()">🗑️ Clear All</button>
+  </div>
+
+  <div id="listContainer">
+    <div class="empty"><span>⏳</span>Loading history…</div>
+  </div>
+
+  <div class="pagination" id="pagination"></div>
+
+  <script>
+    const PER_PAGE = 15;
+    let allHistory  = [];
+    let filtered    = [];
+    let currentPage = 1;
+
+    const VERDICT_EMOJI = { CONFIRM: '✅', CAUTION: '⚠️', REJECT: '❌' };
+    const SIGNAL_EMOJI  = { BUY: '📈', SELL: '📉', HOLD: '⏸️' };
+
+    async function load() {
+      const data = await chrome.storage.local.get(['analysisHistory']);
+      allHistory = (data.analysisHistory || []).sort((a, b) => b.timestamp - a.timestamp);
+      renderStats();
+      applyFilters();
+    }
+
+    function renderStats() {
+      const total    = allHistory.length;
+      const confirms = allHistory.filter(h => h.verdict === 'CONFIRM').length;
+      const cautions = allHistory.filter(h => h.verdict === 'CAUTION').length;
+      const rejects  = allHistory.filter(h => h.verdict === 'REJECT').length;
+
+      document.getElementById('subtitle').textContent =
+        `${total} analysis${total !== 1 ? 'es' : ''} stored locally`;
+
+      document.getElementById('statsRow').innerHTML = [
+        [total,    'Total'],
+        [confirms, '✅ Confirm'],
+        [cautions, '⚠️ Caution'],
+        [rejects,  '❌ Reject'],
+      ].map(([v, l]) => `
+        <div class="stat">
+          <div class="stat-val">${v}</div>
+          <div class="stat-lbl">${l}</div>
+        </div>`).join('');
+    }
+
+    function applyFilters() {
+      const search  = document.getElementById('searchInput').value.toLowerCase();
+      const verdict = document.getElementById('filterVerdict').value;
+      const signal  = document.getElementById('filterSignal').value;
+
+      filtered = allHistory.filter(h => {
+        if (verdict && h.verdict !== verdict) return false;
+        if (signal  && h.signal  !== signal)  return false;
+        if (search) {
+          const haystack = `${h.ticker} ${h.description || ''}`.toLowerCase();
+          if (!haystack.includes(search)) return false;
+        }
+        return true;
+      });
+
+      currentPage = 1;
+      render();
+    }
+
+    function render() {
+      const start = (currentPage - 1) * PER_PAGE;
+      const page  = filtered.slice(start, start + PER_PAGE);
+      const totalPages = Math.ceil(filtered.length / PER_PAGE);
+
+      if (filtered.length === 0) {
+        document.getElementById('listContainer').innerHTML =
+          '<div class="empty"><span>🔍</span>No results found.</div>';
+        document.getElementById('pagination').innerHTML = '';
+        return;
+      }
+
+      document.getElementById('listContainer').innerHTML =
+        `<div class="grid">${page.map(itemHTML).join('')}</div>`;
+
+      // Pagination
+      document.getElementById('pagination').innerHTML = `
+        <button class="page-btn" onclick="changePage(${currentPage-1})"
+          ${currentPage === 1 ? 'disabled' : ''}>← Prev</button>
+        <span class="page-info">Page ${currentPage} / ${totalPages} (${filtered.length} results)</span>
+        <button class="page-btn" onclick="changePage(${currentPage+1})"
+          ${currentPage >= totalPages ? 'disabled' : ''}>Next →</button>`;
+    }
+
+    function itemHTML(h) {
+      const cls   = (h.verdict || '').toLowerCase();
+      const emoji = VERDICT_EMOJI[h.verdict] || '🤖';
+      const sig   = SIGNAL_EMOJI[h.signal]   || h.signal;
+      const conf  = h.confidence ? `${Math.round(h.confidence * 100)}%` : '—';
+      const ts    = h.timestamp ? new Date(h.timestamp).toLocaleString() : '—';
+      const notes = h.description ? `📝 ${h.description}` : '';
+      return `
+        <div class="card ${cls}" onclick="viewDetail('${h.id}')">
+          <div class="verdict-dot ${cls}">${emoji}</div>
+          <div class="card-main">
+            <strong>${h.ticker || '—'}</strong>
+            <div class="card-meta">
+              <span class="signal-tag">${sig}</span>
+              <span class="confidence-tag">${conf}</span>
+              <span>${h.verdict || '—'}</span>
+            </div>
+            ${notes ? `<div class="notes-preview">${notes.substring(0, 60)}${notes.length > 60 ? '…' : ''}</div>` : ''}
+          </div>
+          <div class="card-time">${ts}</div>
+        </div>`;
+    }
+
+    async function viewDetail(requestId) {
+      const data = await chrome.storage.local.get([`analysis_${requestId}`]);
+      const result = data[`analysis_${requestId}`];
+      if (!result) return alert('Full result not found. It may have expired.');
+      const info = [
+        `Verdict: ${result.verdict}`,
+        `Confidence: ${Math.round((result.confidence_score || 0) * 100)}%`,
+        '',
+        result.reasoning || result.full_message || 'No details available.',
+      ].join('\n');
+      alert(info);
+    }
+
+    async function clearHistory() {
+      if (!confirm('Clear all analysis history? This cannot be undone.')) return;
+      await chrome.storage.local.set({ analysisHistory: [] });
+      allHistory = [];
+      filtered   = [];
+      renderStats();
+      render();
+    }
+
+    function changePage(p) {
+      const total = Math.ceil(filtered.length / PER_PAGE);
+      if (p < 1 || p > total) return;
+      currentPage = p;
+      render();
+    }
+
+    // Wire up filters
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('filterVerdict').addEventListener('change', applyFilters);
+    document.getElementById('filterSignal').addEventListener('change', applyFilters);
+
+    load();
+  </script>
+</body>
+</html>

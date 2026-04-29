@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome — AI Trade Validator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .card {
+      max-width: 600px;
+      width: 100%;
+      background: #313244;
+      border-radius: 16px;
+      padding: 40px;
+      border: 1px solid #45475a;
+    }
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .logo-row img { width: 56px; height: 56px; border-radius: 12px; }
+    h1 { font-size: 24px; color: #89b4fa; }
+    h1 span { display: block; font-size: 14px; font-weight: 400; color: #a6adc8; margin-top: 2px; }
+    .steps { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+    .step-row {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: #1e1e2e;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .step-num {
+      min-width: 28px;
+      height: 28px;
+      background: #89b4fa;
+      color: #1e1e2e;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .step-text strong { color: #cdd6f4; display: block; margin-bottom: 3px; }
+    .step-text span { font-size: 13px; color: #a6adc8; line-height: 1.5; }
+    .setup-section { margin-bottom: 24px; }
+    .setup-section h2 { font-size: 15px; color: #89b4fa; margin-bottom: 12px; }
+    label { display: block; font-size: 11px; font-weight: 600; color: #a6adc8;
+            text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    input {
+      width: 100%; padding: 10px 12px;
+      background: #1e1e2e; border: 1px solid #45475a;
+      border-radius: 8px; color: #cdd6f4; font-size: 14px;
+      margin-bottom: 12px; transition: border-color 0.15s;
+    }
+    input:focus { outline: none; border-color: #89b4fa; }
+    .btn {
+      width: 100%; padding: 12px;
+      background: #89b4fa; color: #1e1e2e;
+      border: none; border-radius: 8px;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn:hover { background: #b4befe; }
+    .disclaimer {
+      font-size: 11px; color: #6c7086;
+      text-align: center; margin-top: 20px;
+      line-height: 1.6;
+    }
+    .disclaimer a { color: #89b4fa; text-decoration: none; }
+    .saved-msg {
+      display: none;
+      background: #1e3a2e;
+      border: 1px solid rgba(166,227,161,0.3);
+      color: #a6e3a1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-top: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-row">
+      <img src="icons/icon128.png" alt="Logo">
+      <h1>AI Trade Validator
+        <span>Screenshot Analyzer — v1.0.0</span>
+      </h1>
+    </div>
+
+    <div class="steps">
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <strong>Navigate to TradingView</strong>
+          <span>Open any chart on tradingview.com. The extension activates automatically.</span>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <strong>Click the extension icon → 📸 Capture</strong>
+          <span>Your chart is captured. Ticker is auto-detected from the page.</span>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <strong>Confirm details → Submit</strong>
+          <span>Set ticker, signal (BUY/SELL/HOLD), optional price + notes. AI analyses in 30–60s.</span>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          <strong>Get your verdict</strong>
+          <span>✅ CONFIRM / ⚠️ CAUTION / ❌ REJECT with confidence score and reasoning.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <h2>⚙️ Quick Setup (required)</h2>
+      <label for="apiUrl">Your API URL</label>
+      <input type="url" id="apiUrl" placeholder="https://your-domain.com">
+      <label for="botName">Telegram Bot Username</label>
+      <input type="text" id="botName" placeholder="@YourBotName">
+      <button class="btn" onclick="saveSettings()">Save & Start Using Extension</button>
+      <div id="savedMsg" class="saved-msg">✅ Settings saved! You can close this tab.</div>
+    </div>
+
+    <div class="disclaimer">
+      This extension captures screenshots <strong>only on your click</strong> — no automation, no scraping.<br>
+      Analysis is powered by OpenTrade.ai + RAGFlow on your own server.<br>
+      ⚠️ Not financial advice. Past performance does not guarantee future results.<br><br>
+      <a href="https://github.com/laithqc-create/ai-trading-vlidator" target="_blank">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="#" id="privacyLink">Privacy Policy</a>
+      &nbsp;·&nbsp;
+      <a href="#" id="termsLink">Terms of Use</a>
+    </div>
+  </div>
+
+  <script>
+    // Pre-fill from storage
+    chrome.storage.local.get(['apiUrl', 'botName'], (data) => {
+      if (data.apiUrl)  document.getElementById('apiUrl').value  = data.apiUrl;
+      if (data.botName) document.getElementById('botName').value = data.botName;
+    });
+
+    function saveSettings() {
+      const apiUrl  = document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+      const botName = document.getElementById('botName').value.trim();
+      if (!apiUrl) { document.getElementById('apiUrl').style.borderColor = '#f38ba8'; return; }
+      chrome.storage.local.set({ apiUrl, botName }, () => {
+        document.getElementById('savedMsg').style.display = 'block';
+      });
+    }
+  </script>
+</body>
+</html>

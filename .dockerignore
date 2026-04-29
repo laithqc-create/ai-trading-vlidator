@@ -1,0 +1,62 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Git
+.git
+.gitignore
+
+# Node
+node_modules/
+*.js.map
+package-lock.json
+
+# Virtual envs
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Extension (not needed in Docker image)
+extension/
+
+# Docs
+*.md
+DEPLOYMENT.md
+
+# Secrets (never in image)
+.env
+*.env
+
+# Volume data
+postgres_data/
+redis_data/
+ragflow_data/
+ollama_data/
+
+# Generated files
+generate_handoff.js
