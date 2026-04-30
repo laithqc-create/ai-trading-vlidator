@@ -1,151 +1,284 @@
 /**
- * popup.js — AI Trade Validator Extension
+ * popup.js — AI Trade Validator Extension v1.1
  *
- * Flow:
- *   Step 1: Capture TradingView chart screenshot
- *   Step 2: Confirm ticker / signal / price
- *   Step 3: Submit → poll → display result
+ * New 4-step flow:
+ *   Step 1:  Capture screenshot
+ *   Step 2:  Mode select — Validate My Analysis | AI Analyse My Chart
+ *   Step 3a: Validate — user describes their setup, AI validates against market
+ *   Step 3b: Analyse  — user picks patterns/categories, AI scans screenshot
+ *   Step 4:  Result display
+ *
+ * Screenshot persists for 5 hours — user doesn't need to retake each session.
  */
-
 "use strict";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-const DEFAULT_API_URL  = "";  // Set via Settings or Onboarding page
-const DEFAULT_BOT_NAME = "";  // Set via Settings or Onboarding page
-const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_ATTEMPTS = 60;   // 2 min max
+// ── Constants ─────────────────────────────────────────────────────
+const SCREENSHOT_TTL_MS = 5 * 60 * 60 * 1000;  // 5 hours
+const POLL_INTERVAL_MS  = 2500;
+const MAX_POLL          = 72;  // ~3 min max
 
-// Progress messages shown during polling
 const PROGRESS_STAGES = [
   { at:  0, msg: "Queuing analysis…" },
-  { at:  5, msg: "Running OpenTrade.ai technical analysis…" },
-  { at: 15, msg: "Calculating RSI, MACD, Bollinger Bands…" },
-  { at: 25, msg: "Consulting RAGFlow knowledge base…" },
-  { at: 35, msg: "Checking your personal trading rules…" },
-  { at: 45, msg: "Comparing with historical patterns…" },
-  { at: 55, msg: "Generating confidence score…" },
-  { at: 65, msg: "Finalising verdict…" },
-  { at: 75, msg: "Almost there…" },
+  { at:  5, msg: "Reading chart screenshot…" },
+  { at: 12, msg: "Running OpenTrade.ai technical analysis…" },
+  { at: 22, msg: "Calculating RSI, MACD, Bollinger Bands…" },
+  { at: 32, msg: "Checking RAGFlow knowledge base…" },
+  { at: 42, msg: "Matching patterns to historical data…" },
+  { at: 55, msg: "Comparing against your analysis…" },
+  { at: 65, msg: "Generating confidence score…" },
+  { at: 75, msg: "Preparing detailed response…" },
+  { at: 85, msg: "Almost done…" },
 ];
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// Category → patterns map
+const CATEGORIES = {
+  smc:     ["Order Blocks","FVG","Breaker Blocks","Liquidity Sweeps","CHoCH","BOS",
+             "Equal Highs/Lows","Mitigation Blocks","SMT Divergence","Turtle Soup","Silver Bullet"],
+  classic: ["Head and Shoulders","Double Top","Double Bottom","Triangles",
+             "Support/Resistance","Flags/Pennants","Cup and Handle","Wedges","Rounding Bottom"],
+  scalper: ["Killzone Detection","Silver Bullet Setup","Micro Liquidity Sweeps",
+             "Micro Order Blocks","Turtle Soup LTF","Judas Swing"],
+  swing:   ["Market Structure BOS","Market Structure CHoCH","Previous Day Levels",
+             "Previous Week Levels","OTE","Head and Shoulders Swing",
+             "Cup and Handle Swing","AMD"],
+};
+
+// ── State ─────────────────────────────────────────────────────────
 let state = {
-  screenshot:    null,   // base64 data URL
+  screenshot:    null,    // base64 data URL
+  screenshotTs:  null,    // timestamp when captured
   requestId:     null,
   pollTimer:     null,
   pollAttempts:  0,
-  description:   "",    // user's optional notes
-  settings: {
-    apiUrl:      DEFAULT_API_URL,
-    botName:     DEFAULT_BOT_NAME,
-    userId:      null,
-  },
+  mode:          null,    // 'validate' | 'analyse'
+  description:   "",      // validate mode text
+  selectedPatterns: [],   // analyse mode patterns
+  activeCategory: "smc",
+  settings: { apiUrl: "", botName: "", userId: null },
 };
 
-// ── DOM references ────────────────────────────────────────────────────────────
+// ── DOM helper ────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
   await loadSettings();
+  await restoreScreenshot();
   await checkCurrentTab();
   bindEvents();
   checkApiConfigured();
+  initCategoryTabs();
+  initPatternCheckboxes();
 });
 
-function checkApiConfigured() {
-  if (!state.settings.apiUrl) {
-    // Show a gentle nudge to complete setup
-    const warning = document.createElement("div");
-    warning.id    = "setupNudge";
-    warning.style.cssText = (
-      "background:#3a2e1e;border:1px solid #f9e2af;border-radius:8px;"
-      "padding:8px 12px;font-size:11px;color:#f9e2af;margin-bottom:10px;"
-      "cursor:pointer;text-align:center;"
-    );
-    warning.innerHTML = "⚠️ API not configured — <strong>click to set up</strong>";
-    warning.onclick   = openSettings;
-    const container   = document.querySelector(".container");
-    const header      = document.querySelector(".header");
-    if (container && header) {
-      container.insertBefore(warning, header.nextSibling);
-    }
-  }
+// ── Settings ──────────────────────────────────────────────────────
+async function loadSettings() {
+  const s = await chrome.storage.local.get(["apiUrl","botName","userId","savedScreenshot","savedScreenshotTs"]);
+  state.settings.apiUrl  = s.apiUrl  || "";
+  state.settings.botName = s.botName || "";
+  state.settings.userId  = s.userId  || generateUserId();
+  if (!s.userId) await chrome.storage.local.set({ userId: state.settings.userId });
 }
 
-// ── Settings ──────────────────────────────────────────────────────────────────
-async function loadSettings() {
-  const stored = await chrome.storage.local.get([
-    "apiUrl", "botName", "userId",
-  ]);
-
-  state.settings.apiUrl  = stored.apiUrl  || DEFAULT_API_URL;
-  state.settings.botName = stored.botName || DEFAULT_BOT_NAME;
-  state.settings.userId  = stored.userId  || generateUserId();
-
-  if (!stored.userId) {
-    await chrome.storage.local.set({ userId: state.settings.userId });
+async function restoreScreenshot() {
+  const { savedScreenshot, savedScreenshotTs } = await chrome.storage.local.get(
+    ["savedScreenshot","savedScreenshotTs"]
+  );
+  if (!savedScreenshot || !savedScreenshotTs) return;
+  const age = Date.now() - savedScreenshotTs;
+  if (age > SCREENSHOT_TTL_MS) {
+    await chrome.storage.local.remove(["savedScreenshot","savedScreenshotTs"]);
+    return;
   }
+  // Restore from storage
+  state.screenshot   = savedScreenshot;
+  state.screenshotTs = savedScreenshotTs;
+  $("screenshotPreview").src = savedScreenshot;
+  $("previewContainer").style.display = "block";
+  $("nextToStep2Btn").style.display   = "block";
+  updateAgeChip();
+  setStatus("ready");
 }
 
 async function saveSettings() {
   const apiUrl  = $("apiUrlInput").value.trim().replace(/\/$/, "");
   const botName = $("telegramBotInput").value.trim();
-
-  state.settings.apiUrl  = apiUrl  || DEFAULT_API_URL;
-  state.settings.botName = botName || DEFAULT_BOT_NAME;
-
-  await chrome.storage.local.set({
-    apiUrl:  state.settings.apiUrl,
-    botName: state.settings.botName,
-  });
-
+  state.settings.apiUrl  = apiUrl;
+  state.settings.botName = botName;
+  await chrome.storage.local.set({ apiUrl, botName });
   showStep("step1");
   showToast("Settings saved ✓");
+  checkApiConfigured();
 }
 
-// ── Tab detection ─────────────────────────────────────────────────────────────
+// ── Tab detection ─────────────────────────────────────────────────
 async function checkCurrentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const onTV = tab?.url?.includes("tradingview.com");
+  const onTV  = tab?.url?.includes("tradingview.com");
   $("notTVWarning").style.display = onTV ? "none" : "block";
   $("captureBtn").disabled = !onTV;
-  if (!onTV) setStatus("idle");
 }
 
-// ── Event binding ─────────────────────────────────────────────────────────────
+function checkApiConfigured() {
+  const nudge = $("setupNudge");
+  nudge.style.display = state.settings.apiUrl ? "none" : "block";
+}
+
+// ── Event bindings ────────────────────────────────────────────────
 function bindEvents() {
   // Step 1
-  $("captureBtn").addEventListener("click",     captureScreenshot);
-  $("recaptureBtn").addEventListener("click",   captureScreenshot);
-  $("nextToStep2Btn").addEventListener("click", () => showStep("step2"));
+  $("captureBtn").addEventListener("click",    captureScreenshot);
+  $("recaptureBtn").addEventListener("click",  captureScreenshot);
+  $("nextToStep2Btn").addEventListener("click", () => {
+    populateStep3Thumbs();
+    showStep("step2");
+  });
 
   // Step 2
   $("backToStep1Btn").addEventListener("click", () => showStep("step1"));
-  $("submitBtn").addEventListener("click",       submitAnalysis);
-  $("tickerInput").addEventListener("input",     () => {
+
+  // Step 3a
+  $("userAnalysisInput").addEventListener("input", () => {
+    const len = $("userAnalysisInput").value.length;
+    $("analysisCharCount").textContent = len;
+    if (len >= 750) $("analysisCharCount").style.color = "var(--yellow)";
+    else if (len >= 790) $("analysisCharCount").style.color = "var(--red)";
+    else $("analysisCharCount").style.color = "";
+  });
+  $("tickerInput").addEventListener("input", () => {
     $("tickerInput").value = $("tickerInput").value.toUpperCase();
   });
-  $("descriptionInput").addEventListener("input", () => {
-    const len = $("descriptionInput").value.length;
-    $("charCount").textContent = len;
-    $("charCount").style.color = len >= 450 ? "var(--yellow)" : len >= 490 ? "var(--red)" : "";
-  });
+  $("submitValidateBtn").addEventListener("click",  submitValidate);
 
-  // Step 3
-  $("openTelegramBtn").addEventListener("click", openTelegram);
-  $("newAnalysisBtn").addEventListener("click",  resetToStep1);
-  $("copyResultBtn").addEventListener("click",   copyResult);
-  $("retryBtn").addEventListener("click",        resetToStep1);
+  // Step 3b
+  $("submitAnalyseBtn").addEventListener("click",   submitAnalyse);
+  $("selectAllCat").addEventListener("change",      toggleSelectCategory);
+  $("selectAllAll").addEventListener("change",      toggleSelectAll);
 
-  // Settings + History
-  $("settingsLink").addEventListener("click",       openSettings);
-  $("historyLink").addEventListener("click",        openHistory);
-  $("cancelSettingsBtn").addEventListener("click",  () => showStep("step1"));
-  $("saveSettingsBtn").addEventListener("click",    saveSettings);
+  // Step 4
+  $("openTelegramBtn").addEventListener("click",    openTelegram);
+  $("newAnalysisBtn").addEventListener("click",     resetToStep1);
+  $("copyResultBtn").addEventListener("click",      copyResult);
+  $("retryBtn").addEventListener("click",           resetToStep1);
+
+  // Settings
+  $("settingsLink").addEventListener("click", openSettings);
+  $("saveSettingsBtn").addEventListener("click", saveSettings);
+  $("historyLink").addEventListener("click", () =>
+    chrome.tabs.create({ url: chrome.runtime.getURL("history.html") })
+  );
 }
 
-// ── STEP 1 — Screenshot Capture ───────────────────────────────────────────────
+// ── Category tabs ─────────────────────────────────────────────────
+function initCategoryTabs() {
+  document.querySelectorAll(".cat-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".cat-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".pattern-grid").forEach(g => g.classList.remove("active-cat"));
+      tab.classList.add("active");
+      const cat = tab.dataset.cat;
+      state.activeCategory = cat;
+      $(`cat-${cat}`).classList.add("active-cat");
+      // Sync select-all-cat checkbox
+      $("selectAllCat").checked = isCategoryFullySelected(cat);
+    });
+  });
+}
+
+function initPatternCheckboxes() {
+  document.querySelectorAll(".pattern-grid input[type=checkbox]").forEach(cb => {
+    cb.addEventListener("change", () => {
+      updateSelectedPatterns();
+      updateSubmitBtn();
+      updatePatternSummary();
+      // Sync selectAllCat
+      $("selectAllCat").checked = isCategoryFullySelected(state.activeCategory);
+    });
+  });
+}
+
+function isCategoryFullySelected(cat) {
+  const grid = $(`cat-${cat}`);
+  if (!grid) return false;
+  const cbs = grid.querySelectorAll("input[type=checkbox]");
+  return Array.from(cbs).every(c => c.checked);
+}
+
+function toggleSelectCategory() {
+  const checked = $("selectAllCat").checked;
+  const grid    = $(`cat-${state.activeCategory}`);
+  grid.querySelectorAll("input[type=checkbox]").forEach(cb => { cb.checked = checked; });
+  updateSelectedPatterns();
+  updateSubmitBtn();
+  updatePatternSummary();
+}
+
+function toggleSelectAll() {
+  const checked = $("selectAllAll").checked;
+  document.querySelectorAll(".pattern-grid input[type=checkbox]").forEach(cb => {
+    cb.checked = checked;
+  });
+  $("selectAllCat").checked = checked;
+  updateSelectedPatterns();
+  updateSubmitBtn();
+  updatePatternSummary();
+}
+
+function updateSelectedPatterns() {
+  state.selectedPatterns = Array.from(
+    document.querySelectorAll(".pattern-grid input[type=checkbox]:checked")
+  ).map(cb => cb.value);
+}
+
+function updateSubmitBtn() {
+  $("submitAnalyseBtn").disabled = state.selectedPatterns.length === 0;
+  if (state.selectedPatterns.length > 0) {
+    $("submitAnalyseBtn").textContent =
+      `🔍 Analyse ${state.selectedPatterns.length} Pattern${state.selectedPatterns.length > 1 ? "s" : ""}`;
+  } else {
+    $("submitAnalyseBtn").textContent = "🔍 Run Pattern Analysis";
+  }
+}
+
+function updatePatternSummary() {
+  const n       = state.selectedPatterns.length;
+  const summary = $("patternSummary");
+  if (n === 0) { summary.style.display = "none"; return; }
+  summary.style.display = "block";
+  const preview = state.selectedPatterns.slice(0, 4).join(", ");
+  const more    = n > 4 ? ` +${n - 4} more` : "";
+  summary.textContent = `✓ ${n} selected: ${preview}${more}`;
+}
+
+// ── Mode selection ────────────────────────────────────────────────
+function selectMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll(".mode-card").forEach(c => c.classList.remove("selected"));
+  $(`mode${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.add("selected");
+
+  if (mode === "validate") {
+    showStep("step3a");
+  } else {
+    showStep("step3b");
+  }
+}
+
+function populateStep3Thumbs() {
+  const src    = state.screenshot || "";
+  const ticker = $("tickerInput").value || "?";
+  const signal = $("signalSelect").value || "BUY";
+
+  ["step3aThumb","step3bThumb"].forEach(id => {
+    const el = $(id);
+    if (el) el.src = src;
+  });
+  ["step3aTicker","step3bTicker"].forEach(id => {
+    const el = $(id);
+    if (el) el.textContent = `${ticker} · ${signal}`;
+  });
+}
+
+// ── Step 1 — Capture ─────────────────────────────────────────────
 async function captureScreenshot() {
   setStatus("loading");
   $("captureBtn").disabled = true;
@@ -154,51 +287,47 @@ async function captureScreenshot() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    if (!tab.url.includes("tradingview.com")) {
-      showError("step1-error", "Please navigate to a TradingView chart first.");
+    if (!tab?.url?.includes("tradingview.com")) {
+      showToast("Navigate to TradingView first");
       resetCaptureBtn();
       return;
     }
 
-    // Use chrome.tabs.captureVisibleTab (requires activeTab permission)
-    chrome.tabs.captureVisibleTab(
-      tab.windowId,
-      { format: "png", quality: 95 },
-      async (imageUrl) => {
-        if (chrome.runtime.lastError) {
-          showError("step1-error", chrome.runtime.lastError.message);
-          resetCaptureBtn();
-          return;
-        }
-
-        state.screenshot = imageUrl;
-
-        // Show preview
-        $("screenshotPreview").src    = imageUrl;
-        $("previewContainer").style.display = "block";
-        $("nextToStep2Btn").style.display   = "block";
-
-        // Auto-detect ticker from page title + content script
-        const ticker = await detectTicker(tab);
-        const price  = await detectPrice(tab);
-
-        if (ticker) {
-          $("autoDetected").textContent    = `🔍 Detected: ${ticker}`;
-          $("autoDetected").style.display  = "block";
-          $("tickerInput").value           = ticker;
-          $("tickerHint").textContent      = "Auto-detected from chart";
-        }
-        if (price) {
-          $("priceInput").value = price;
-        }
-
-        setStatus("ready");
-        resetCaptureBtn();
+    chrome.tabs.captureVisibleTab(tab.windowId, { format: "png", quality: 95 }, async (imgUrl) => {
+      if (chrome.runtime.lastError) {
+        showToast("Capture failed: " + chrome.runtime.lastError.message);
+        resetCaptureBtn(); return;
       }
-    );
-  } catch (err) {
-    console.error("Capture error:", err);
-    showError("step1-error", err.message);
+
+      state.screenshot   = imgUrl;
+      state.screenshotTs = Date.now();
+
+      // Persist for 5h
+      await chrome.storage.local.set({
+        savedScreenshot:   imgUrl,
+        savedScreenshotTs: state.screenshotTs,
+      });
+
+      $("screenshotPreview").src = imgUrl;
+      $("previewContainer").style.display = "block";
+      $("nextToStep2Btn").style.display   = "block";
+      updateAgeChip();
+
+      // Auto-detect ticker
+      const ticker = await detectTicker(tab);
+      const price  = await detectPrice(tab);
+      if (ticker) {
+        $("autoDetected").textContent   = `🔍 ${ticker}`;
+        $("autoDetected").style.display = "block";
+        $("tickerInput").value = ticker;
+      }
+      if (price) $("priceInput").value = price;
+
+      setStatus("ready");
+      resetCaptureBtn();
+    });
+  } catch (e) {
+    showToast("Error: " + e.message);
     resetCaptureBtn();
   }
 }
@@ -208,111 +337,150 @@ function resetCaptureBtn() {
   $("captureBtn").querySelector(".btn-text").textContent = "Capture TradingView Chart";
 }
 
-// ── Ticker + Price detection ──────────────────────────────────────────────────
+function updateAgeChip() {
+  if (!state.screenshotTs) return;
+  const ageMs  = Date.now() - state.screenshotTs;
+  const ageMin = Math.round(ageMs / 60000);
+  const chip   = $("screenshotAge");
+  if (ageMin < 1)       chip.textContent = "📸 Just captured";
+  else if (ageMin < 60) chip.textContent = `📸 ${ageMin}m ago`;
+  else                  chip.textContent = `📸 ${Math.floor(ageMin/60)}h ${ageMin%60}m ago`;
+
+  const ttlLeft = SCREENSHOT_TTL_MS - (Date.now() - state.screenshotTs);
+  chip.style.color = ttlLeft < 30 * 60000 ? "var(--yellow)" : "";
+}
+
+// ── Ticker/price detection ────────────────────────────────────────
 async function detectTicker(tab) {
   try {
-    // Method 1: Page title (most reliable — TradingView format: "AAPL: Apple Inc.")
     const [{ result: title }] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => document.title,
+      target: { tabId: tab.id }, func: () => document.title,
     });
-    const titleMatch = title.match(/^([A-Z0-9]{1,10}(?:\.[A-Z]{1,5})?)\s*[:\-—]/);
-    if (titleMatch) return titleMatch[1];
-
-    // Method 2: Ask content script
+    const m = title.match(/^([A-Z0-9]{1,10}(?:\.[A-Z]{1,5})?)\s*[:\-—]/);
+    if (m) return m[1];
     const resp = await chrome.tabs.sendMessage(tab.id, { type: "GET_TICKER" });
     return resp?.ticker || null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 async function detectPrice(tab) {
   try {
     const resp = await chrome.tabs.sendMessage(tab.id, { type: "GET_PRICE" });
     return resp?.price || null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-// ── STEP 2 — Submit Analysis ───────────────────────────────────────────────────
-async function submitAnalysis() {
-  const ticker      = $("tickerInput").value.trim().toUpperCase();
-  const signal      = $("signalSelect").value;
-  const price       = $("priceInput").value.trim();
-  const description = $("descriptionInput").value.trim();
-  state.description = description;
+// ── Submit: Validate My Analysis ─────────────────────────────────
+async function submitValidate() {
+  const ticker = $("tickerInput").value.trim().toUpperCase();
+  const signal = $("signalSelect").value;
+  const analysis = $("userAnalysisInput").value.trim();
+  const price  = $("priceInput").value.trim();
+  const sl     = $("slInput").value.trim();
+  const tp     = $("tpInput").value.trim();
 
-  // Validation
-  if (!ticker) {
-    $("tickerInput").classList.add("input-error");
-    $("tickerHint").textContent = "Ticker is required";
-    $("tickerHint").classList.add("hint-error");
-    $("tickerInput").focus();
-    return;
-  }
-  if (!/^[A-Z0-9.]{1,12}$/.test(ticker)) {
-    $("tickerInput").classList.add("input-error");
-    $("tickerHint").textContent = "Invalid ticker format";
-    $("tickerHint").classList.add("hint-error");
+  if (!ticker) { $("tickerInput").focus(); showToast("Enter a ticker"); return; }
+  if (!analysis || analysis.length < 20) {
+    $("userAnalysisInput").focus();
+    showToast("Describe your analysis (min 20 chars)");
     return;
   }
 
-  $("tickerInput").classList.remove("input-error");
-  $("tickerHint").classList.remove("hint-error");
-
-  // Switch to step 3 loading
-  showStep("step3");
+  state.description = analysis;
+  $("step4Label").textContent = "Validating Your Analysis";
+  $("loadingTitle").textContent = "Validating your analysis against live market data…";
+  $("confidenceLabel").textContent = "Market Alignment";
+  showStep("step4");
   showLoading();
   setStatus("loading");
-  startProgressAnimation();
+  startProgress();
 
   try {
-    // Convert base64 screenshot to Blob
-    const resp     = await fetch(state.screenshot);
-    const blob     = await resp.blob();
+    const blob     = await (await fetch(state.screenshot)).blob();
+    const form     = new FormData();
+    form.append("screenshot",   blob, "chart.png");
+    form.append("ticker",       ticker);
+    form.append("signal",       signal);
+    form.append("price",        price || "");
+    form.append("description",  analysis);
+    form.append("sl",           sl || "");
+    form.append("tp",           tp || "");
+    form.append("mode",         "validate");
+    form.append("user_id",      state.settings.userId);
 
-    const formData = new FormData();
-    formData.append("screenshot",   blob, "chart.png");
-    formData.append("ticker",       ticker);
-    formData.append("signal",       signal);
-    formData.append("price",        price || "");
-    formData.append("description",  description || "");
-    formData.append("user_id",      state.settings.userId);
-
-    const apiResp = await fetch(
-      `${state.settings.apiUrl}/webhook/screenshot`,
-      { method: "POST", body: formData }
-    );
-
-    if (!apiResp.ok) {
-      const err = await apiResp.json().catch(() => ({ error: "Server error" }));
-      throw new Error(err.error || `HTTP ${apiResp.status}`);
-    }
-
-    const { request_id } = await apiResp.json();
+    const resp = await fetch(`${state.settings.apiUrl}/webhook/screenshot`, {
+      method: "POST", body: form,
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+    const { request_id } = await resp.json();
     state.requestId = request_id;
-
-    // Begin polling
     state.pollAttempts = 0;
-    state.pollTimer = setInterval(() => pollForResult(request_id), POLL_INTERVAL_MS);
-
-  } catch (err) {
-    console.error("Submit error:", err);
-    stopProgressAnimation();
-    showErrorState(err.message || "Submission failed. Check your API URL in Settings.");
+    state.pollTimer = setInterval(() => pollResult(request_id), POLL_INTERVAL_MS);
+  } catch (e) {
+    stopProgress();
+    showErrorState(e.message);
   }
 }
 
-// ── Polling ───────────────────────────────────────────────────────────────────
-async function pollForResult(requestId) {
-  state.pollAttempts++;
+// ── Submit: AI Pattern Analysis ───────────────────────────────────
+async function submitAnalyse() {
+  const ticker   = $("tickerInput").value.trim().toUpperCase();
+  const signal   = $("signalSelect").value;
+  const patterns = state.selectedPatterns;
 
-  if (state.pollAttempts > MAX_POLL_ATTEMPTS) {
+  if (!ticker) { showStep("step2"); showToast("Enter a ticker"); return; }
+  if (!patterns.length) { showToast("Select at least one pattern"); return; }
+
+  $("step4Label").textContent = "AI Chart Analysis";
+  $("loadingTitle").textContent = `Scanning for ${patterns.length} pattern${patterns.length > 1 ? "s" : ""}…`;
+  $("confidenceLabel").textContent = "Pattern Match Score";
+  showStep("step4");
+  showLoading();
+  setStatus("loading");
+  startProgress();
+
+  try {
+    const blob = await (await fetch(state.screenshot)).blob();
+    const form = new FormData();
+    form.append("screenshot",  blob, "chart.png");
+    form.append("ticker",      ticker);
+    form.append("signal",      signal);
+    form.append("description", buildPatternPrompt(patterns));
+    form.append("patterns",    JSON.stringify(patterns));
+    form.append("mode",        "analyse");
+    form.append("user_id",     state.settings.userId);
+
+    const resp = await fetch(`${state.settings.apiUrl}/webhook/screenshot`, {
+      method: "POST", body: form,
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+    const { request_id } = await resp.json();
+    state.requestId = request_id;
+    state.pollAttempts = 0;
+    state.pollTimer = setInterval(() => pollResult(request_id), POLL_INTERVAL_MS);
+  } catch (e) {
+    stopProgress();
+    showErrorState(e.message);
+  }
+}
+
+function buildPatternPrompt(patterns) {
+  return (
+    `Analyse this chart for the following patterns and structures: ${patterns.join(", ")}. ` +
+    `For each pattern found, describe: (1) where it appears on the chart (price level/zone), ` +
+    `(2) the quality/strength of the setup, (3) the implication for price direction. ` +
+    `If a pattern is NOT present, state that clearly. ` +
+    `Provide drawing instructions so the trader can mark them on their own chart.`
+  );
+}
+
+// ── Polling ───────────────────────────────────────────────────────
+async function pollResult(requestId) {
+  state.pollAttempts++;
+  if (state.pollAttempts > MAX_POLL) {
     clearInterval(state.pollTimer);
-    stopProgressAnimation();
-    showErrorState("Analysis timed out after 2 minutes. Check Telegram for results.");
+    stopProgress();
+    showErrorState("Analysis timed out. Check Telegram for results.");
     return;
   }
 
@@ -320,109 +488,112 @@ async function pollForResult(requestId) {
     const resp = await fetch(
       `${state.settings.apiUrl}/webhook/screenshot/result/${requestId}`
     );
-    if (!resp.ok) return; // transient error — keep polling
-
+    if (!resp.ok) return;
     const data = await resp.json();
-
     if (data.status === "completed") {
       clearInterval(state.pollTimer);
-      stopProgressAnimation();
+      stopProgress();
       displayResult(data);
-
-      // Save to history
       await saveToHistory(requestId, data);
-
-      // Notify background
       chrome.runtime.sendMessage({ type: "analysis_complete" });
     }
-
     if (data.status === "failed") {
       clearInterval(state.pollTimer);
-      stopProgressAnimation();
-      showErrorState(data.error || "Analysis failed. Please try again.");
+      stopProgress();
+      showErrorState(data.error || "Analysis failed.");
     }
-
-  } catch {
-    // Network hiccup — keep polling silently
-  }
+  } catch { /* keep polling */ }
 }
 
-// ── Display Result ────────────────────────────────────────────────────────────
+// ── Display result ────────────────────────────────────────────────
 function displayResult(data) {
-  const verdict    = (data.verdict    || "CAUTION").toUpperCase();
+  const verdict    = (data.verdict || "CAUTION").toUpperCase();
   const confidence = Math.round((data.confidence_score || data.confidence || 0.5) * 100);
-  const reasoning  = data.reasoning  || data.final_message || "Analysis complete.";
-  const indicators = data.trader_analysis || {};
+  const mode       = data.mode || state.mode || "validate";
+  const patterns   = data.pattern_results || null;
+  const reasoning  = data.reasoning || "";
+  const ta         = data.trader_analysis || {};
 
   // Verdict badge
-  const verdictConfig = {
-    CONFIRM: { emoji: "✅", label: "CONFIRM",  cls: "confirm" },
-    CAUTION: { emoji: "⚠️", label: "CAUTION",  cls: "caution" },
-    REJECT:  { emoji: "❌", label: "REJECT",   cls: "reject"  },
-  };
-  const vc = verdictConfig[verdict] || verdictConfig.CAUTION;
+  const vc = {
+    CONFIRM: { emoji: "✅", cls: "confirm" },
+    CAUTION: { emoji: "⚠️", cls: "caution" },
+    REJECT:  { emoji: "❌", cls: "reject"  },
+  }[verdict] || { emoji: "⚠️", cls: "caution" };
 
   $("verdictIcon").textContent = vc.emoji;
-  $("verdictText").textContent = vc.label;
+  $("verdictText").textContent = verdict;
   $("verdictBadge").className  = `verdict-badge ${vc.cls}`;
 
-  // Confidence bar (animate in)
+  // Confidence bar
   $("confidenceValue").textContent = `${confidence}%`;
   setTimeout(() => {
     $("confidenceFill").style.width = `${confidence}%`;
-    $("confidenceFill").style.background = confidence >= 65
-      ? "#a6e3a1" : confidence >= 45 ? "#f9e2af" : "#f38ba8";
-  }, 100);
+    $("confidenceFill").style.background =
+      confidence >= 65 ? "var(--green)" : confidence >= 45 ? "var(--yellow)" : "var(--red)";
+  }, 80);
 
-  // Reasoning — strip Telegram markdown, show plain text summary
-  const cleanReasoning = reasoning
+  // Main result body
+  const clean = reasoning
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/\*(.*?)\*/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
-    .replace(/\n{3,}/g, "\n\n")
-    .split("\n")
-    .slice(0, 8)
-    .join("\n")
     .trim();
-  $("reasoningBox").textContent = cleanReasoning;
+  $("resultBody").textContent = clean.slice(0, 500) + (clean.length > 500 ? "…" : "");
 
-  // Show user's notes in result if they added any
-  const notes = state.description.trim();
-  if (notes) {
-    $("userNotesText").textContent     = notes;
-    $("userNotesResult").style.display = "block";
+  // Pattern cards (analyse mode)
+  if (patterns && patterns.length > 0) {
+    $("patternCards").style.display = "grid";
+    $("patternCards").innerHTML = patterns.map(p => `
+      <div class="pattern-card ${p.found ? 'found' : 'not-found'}">
+        <div class="pc-header">
+          <span class="pc-icon">${p.found ? "✅" : "➖"}</span>
+          <span class="pc-name">${p.name}</span>
+        </div>
+        ${p.found ? `
+          <div class="pc-zone">${p.zone || ""}</div>
+          <div class="pc-note">${p.note || ""}</div>
+          ${p.draw_instruction ? `<div class="pc-draw">✏️ ${p.draw_instruction}</div>` : ""}
+        ` : `<div class="pc-note not-found-note">${p.note || "Not detected on this chart."}</div>`}
+      </div>`).join("");
   } else {
-    $("userNotesResult").style.display = "none";
+    $("patternCards").style.display = "none";
   }
 
-  // Key indicators row
-  const rows = [];
-  if (indicators.rsi    != null) rows.push({ label: "RSI",  value: indicators.rsi.toFixed(1) });
-  if (indicators.macd   != null) rows.push({ label: "MACD", value: indicators.macd.toFixed(3) });
-  if (indicators.bb_position)   rows.push({ label: "BB",   value: indicators.bb_position.replace(/_/g, " ") });
-  if (indicators.current_price) rows.push({ label: "Price", value: `$${indicators.current_price}` });
-
-  if (rows.length) {
-    $("indicatorRow").innerHTML = rows
-      .map(r => `<div class="indicator-chip"><span class="chip-label">${r.label}</span><span class="chip-value">${r.value}</span></div>`)
-      .join("");
+  // User notes echo-back (validate mode)
+  if (mode === "validate" && state.description) {
+    $("userNotesText").textContent     = state.description.slice(0, 300);
+    $("userNotesResult").style.display = "block";
   }
 
-  // Show result
+  // Indicator chips
+  const chips = [];
+  if (ta.rsi   != null) chips.push({ l: "RSI",   v: ta.rsi.toFixed(1) });
+  if (ta.macd  != null) chips.push({ l: "MACD",  v: ta.macd.toFixed(3) });
+  if (ta.bb_position)   chips.push({ l: "BB",    v: ta.bb_position.replace(/_/g, " ") });
+  if (ta.current_price) chips.push({ l: "Price", v: `$${ta.current_price}` });
+
+  $("indicatorRow").innerHTML = chips.map(c =>
+    `<div class="indicator-chip">
+       <span class="chip-label">${c.l}</span>
+       <span class="chip-value">${c.v}</span>
+     </div>`
+  ).join("");
+
   $("loadingContainer").style.display = "none";
   $("resultContainer").style.display  = "block";
   $("errorContainer").style.display   = "none";
   setStatus("done");
 }
 
-// ── UI helpers ────────────────────────────────────────────────────────────────
-function showStep(stepId) {
+// ── Helpers ───────────────────────────────────────────────────────
+function showStep(id) {
   document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
-  $(stepId).classList.add("active");
+  $(id).classList.add("active");
 }
 
 function showLoading() {
-  $("loadingContainer").style.display = "block";
+  $("loadingContainer").style.display = "flex";
   $("resultContainer").style.display  = "none";
   $("errorContainer").style.display   = "none";
 }
@@ -438,115 +609,103 @@ function showErrorState(msg) {
 function setStatus(s) {
   const dot = $("statusDot");
   dot.className = `status-dot ${s}`;
-  dot.title = { idle: "Ready", loading: "Processing…", ready: "Screenshot captured", done: "Done" }[s] || s;
+  dot.title = { idle:"Ready", loading:"Processing…", ready:"Screenshot ready", done:"Done" }[s] || s;
 }
 
-// Progress animation
-let progressInterval = null;
-function startProgressAnimation() {
+let _progressTimer = null;
+function startProgress() {
   $("progressFill").style.width = "0%";
   let pct = 0;
-  progressInterval = setInterval(() => {
-    pct = Math.min(pct + 0.8, 90);
+  _progressTimer = setInterval(() => {
+    pct = Math.min(pct + 0.5, 88);
     $("progressFill").style.width = `${pct}%`;
-
-    // Update label based on stage
-    const stage = [...PROGRESS_STAGES].reverse().find(s => pct >= s.at / MAX_POLL_ATTEMPTS * 100);
-    const attemptPct = (state.pollAttempts / MAX_POLL_ATTEMPTS) * 100;
-    const stageMsg = [...PROGRESS_STAGES].reverse().find(s => attemptPct >= (s.at / MAX_POLL_ATTEMPTS));
-    if (stageMsg) $("progressLabel").textContent = stageMsg.msg;
-  }, 300);
+    const attemptPct = (state.pollAttempts / MAX_POLL) * 100;
+    const stage = [...PROGRESS_STAGES].reverse().find(s => attemptPct >= s.at) || PROGRESS_STAGES[0];
+    $("progressLabel").textContent = stage.msg;
+  }, 250);
 }
 
-function stopProgressAnimation() {
-  clearInterval(progressInterval);
+function stopProgress() {
+  clearInterval(_progressTimer);
   $("progressFill").style.width = "100%";
 }
 
-// ── Actions ───────────────────────────────────────────────────────────────────
 function openTelegram() {
-  const botName = state.settings.botName.replace(/^@/, "");
-  chrome.tabs.create({ url: `https://t.me/${botName}` });
+  const bot = state.settings.botName.replace(/^@/, "") || "YourBotName";
+  chrome.tabs.create({ url: `https://t.me/${bot}` });
+}
+
+function openSettings() {
+  $("apiUrlInput").value      = state.settings.apiUrl;
+  $("telegramBotInput").value = state.settings.botName;
+  $("userIdDisplay").value    = state.settings.userId;
+  showStep("settingsPanel");
 }
 
 function resetToStep1() {
   clearInterval(state.pollTimer);
-  state.screenshot   = null;
   state.requestId    = null;
   state.pollAttempts = 0;
+  state.mode         = null;
+  state.description  = "";
+  state.selectedPatterns = [];
 
-  $("previewContainer").style.display  = "none";
-  $("nextToStep2Btn").style.display    = "none";
-  $("autoDetected").style.display      = "none";
-  $("tickerInput").value               = "";
-  $("priceInput").value                = "";
-  $("descriptionInput").value          = "";
-  $("charCount").textContent           = "0";
-  $("tickerHint").textContent          = "";
+  $("userAnalysisInput").value  = "";
+  $("analysisCharCount").textContent = "0";
   $("tickerInput").classList.remove("input-error");
-  state.description                    = "";
+  document.querySelectorAll(".pattern-grid input[type=checkbox]").forEach(c => c.checked = false);
+  document.querySelectorAll(".mode-card").forEach(c => c.classList.remove("selected"));
+  $("selectAllCat").checked = false;
+  $("selectAllAll").checked = false;
+  updateSubmitBtn();
+  updatePatternSummary();
 
-  setStatus("idle");
+  setStatus(state.screenshot ? "ready" : "idle");
   showStep("step1");
 }
 
 function copyResult() {
-  const verdict    = $("verdictText").textContent;
-  const confidence = $("confidenceValue").textContent;
-  const reasoning  = $("reasoningBox").textContent;
-  const notes      = state.description.trim();
-  const notesLine  = notes ? `\n\n📝 My notes: ${notes}` : "";
-  const text       = `AI Trade Validator Result\nVerdict: ${verdict} (${confidence})\n\n${reasoning}${notesLine}\n\n⚠️ Not financial advice.`;
-
-  navigator.clipboard.writeText(text).then(() => showToast("Copied ✓"));
+  const v = $("verdictText").textContent;
+  const c = $("confidenceValue").textContent;
+  const r = $("resultBody").textContent;
+  const n = state.description ? `\n\nMy analysis: ${state.description}` : "";
+  navigator.clipboard.writeText(
+    `AI Trade Validator\nVerdict: ${v} (${c})\n\n${r}${n}\n\n⚠️ Not financial advice.`
+  ).then(() => showToast("Copied ✓"));
 }
 
-function openHistory() {
-  chrome.tabs.create({ url: chrome.runtime.getURL("history.html") });
-}
-
-function openSettings() {
-  $("apiUrlInput").value         = state.settings.apiUrl;
-  $("telegramBotInput").value    = state.settings.botName;
-  $("userIdDisplay").value       = state.settings.userId;
-  showStep("settingsPanel");
-}
-
-// ── History storage ───────────────────────────────────────────────────────────
 async function saveToHistory(requestId, result) {
   const { analysisHistory = [] } = await chrome.storage.local.get("analysisHistory");
   analysisHistory.unshift({
-    id:        requestId,
+    id:          requestId,
     ticker:      $("tickerInput").value,
     signal:      $("signalSelect").value,
-    description: state.description || "",
+    mode:        state.mode,
+    description: state.description,
+    patterns:    state.selectedPatterns,
     verdict:     result.verdict,
-    confidence: result.confidence_score || result.confidence,
-    timestamp: Date.now(),
+    confidence:  result.confidence_score || result.confidence,
+    timestamp:   Date.now(),
   });
-  // Keep last 50
   await chrome.storage.local.set({
-    analysisHistory: analysisHistory.slice(0, 50),
-    [`analysis_${requestId}`]: result,
+    analysisHistory:             analysisHistory.slice(0, 50),
+    [`analysis_${requestId}`]:   result,
   });
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
 function generateUserId() {
   return "ext_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 }
 
-let toastTimer = null;
+let _toastTimer = null;
 function showToast(msg) {
-  clearTimeout(toastTimer);
-  let toast = document.getElementById("toast");
-  if (!toast) {
-    toast = document.createElement("div");
-    toast.id = "toast";
-    toast.className = "toast";
-    document.body.appendChild(toast);
+  clearTimeout(_toastTimer);
+  let t = document.getElementById("toast");
+  if (!t) {
+    t = Object.assign(document.createElement("div"), { id:"toast", className:"toast" });
+    document.body.appendChild(t);
   }
-  toast.textContent = msg;
-  toast.classList.add("show");
-  toastTimer = setTimeout(() => toast.classList.remove("show"), 2000);
+  t.textContent = msg;
+  t.classList.add("show");
+  _toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
 }

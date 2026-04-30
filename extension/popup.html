@@ -7,211 +7,336 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
+<div class="container">
 
-    <!-- ── Header ──────────────────────────────────────────────── -->
-    <div class="header">
-      <div class="header-left">
-        <img src="icons/icon48.png" class="logo" alt="Logo">
-        <div>
-          <h1>AI Trade Validator</h1>
-          <span class="header-sub">Screenshot Analyzer</span>
+  <!-- ── Header ───────────────────────────────────────────────────── -->
+  <div class="header">
+    <div class="header-left">
+      <img src="icons/icon48.png" class="logo" alt="">
+      <div>
+        <h1>AI Trade Validator</h1>
+        <span class="header-sub">Chart Analyzer</span>
+      </div>
+    </div>
+    <div id="statusDot" class="status-dot idle" title="Ready"></div>
+  </div>
+
+  <!-- ── Not-on-TV warning ────────────────────────────────────────── -->
+  <div id="notTVWarning" class="warning-banner" style="display:none">
+    ⚠️ Navigate to a <strong>TradingView</strong> chart first.
+  </div>
+  <div id="setupNudge" style="display:none"
+       class="warning-banner warning-amber" onclick="openSettings()">
+    ⚙️ API not configured — <strong>click to set up</strong>
+  </div>
+
+  <!-- ══ STEP 1 — CAPTURE ═════════════════════════════════════════ -->
+  <div id="step1" class="step active">
+    <div class="step-label">Step 1 — Capture Chart</div>
+
+    <button id="captureBtn" class="primary-btn capture-btn">
+      <span class="btn-icon">📸</span>
+      <span class="btn-text">Capture TradingView Chart</span>
+    </button>
+
+    <div id="previewContainer" style="display:none">
+      <div class="preview-wrapper">
+        <img id="screenshotPreview" class="preview-img" alt="Chart">
+        <div class="preview-overlay">
+          <button id="recaptureBtn" class="icon-btn" title="Retake">🔄</button>
         </div>
       </div>
-      <div id="statusDot" class="status-dot idle" title="Ready"></div>
-    </div>
-
-    <!-- ── Not on TradingView warning ─────────────────────────── -->
-    <div id="notTVWarning" class="warning-banner" style="display:none">
-      ⚠️ Navigate to a <strong>TradingView</strong> chart first.
-    </div>
-
-    <!-- ══ STEP 1 — Capture ═══════════════════════════════════════ -->
-    <div id="step1" class="step active">
-      <div class="step-label">Step 1 of 3 — Capture Chart</div>
-
-      <button id="captureBtn" class="primary-btn capture-btn">
-        <span class="btn-icon">📸</span>
-        <span class="btn-text">Capture TradingView Chart</span>
-      </button>
-
-      <div id="previewContainer" style="display:none">
-        <div class="preview-wrapper">
-          <img id="screenshotPreview" class="preview-img" alt="Chart preview">
-          <div class="preview-overlay">
-            <button id="recaptureBtn" class="icon-btn" title="Retake">🔄</button>
-          </div>
-        </div>
+      <div class="preview-meta">
         <div id="autoDetected" class="detected-chip" style="display:none"></div>
+        <div id="screenshotAge" class="age-chip"></div>
       </div>
-
-      <button id="nextToStep2Btn" class="primary-btn" style="display:none; margin-top:12px">
-        Continue →
-      </button>
     </div>
 
-    <!-- ══ STEP 2 — Confirm Details ═══════════════════════════════ -->
-    <div id="step2" class="step">
-      <div class="step-label">Step 2 of 3 — Confirm Details</div>
+    <button id="nextToStep2Btn" class="primary-btn" style="display:none;margin-top:10px">
+      Continue →
+    </button>
+  </div>
 
-      <div class="form-group">
-        <label for="tickerInput">Ticker / Symbol</label>
-        <input type="text" id="tickerInput" placeholder="e.g. AAPL, BTCUSD, EURUSD"
-               autocomplete="off" spellcheck="false" maxlength="12">
-        <span class="input-hint" id="tickerHint"></span>
+  <!-- ══ STEP 2 — MODE SELECT ═════════════════════════════════════ -->
+  <div id="step2" class="step">
+    <div class="step-label">Step 2 — What do you need?</div>
+
+    <div class="ticker-row">
+      <div class="form-group flex-1">
+        <label for="tickerInput">Ticker</label>
+        <input type="text" id="tickerInput" placeholder="AAPL" maxlength="12"
+               autocomplete="off" spellcheck="false">
       </div>
-
-      <div class="form-group">
+      <div class="form-group" style="width:110px">
         <label for="signalSelect">Signal</label>
         <select id="signalSelect">
-          <option value="BUY">📈  BUY</option>
-          <option value="SELL">📉  SELL</option>
-          <option value="HOLD">⏸️  HOLD</option>
+          <option value="BUY">📈 BUY</option>
+          <option value="SELL">📉 SELL</option>
+          <option value="HOLD">⏸️ HOLD</option>
         </select>
       </div>
-
-      <div class="form-group">
-        <label for="priceInput">Entry Price <span class="optional">(optional)</span></label>
-        <input type="number" id="priceInput" placeholder="Auto-detected or enter manually"
-               step="any" min="0">
-      </div>
-
-      <div class="form-group">
-        <label for="descriptionInput">
-          Your Notes
-          <span class="optional">(optional)</span>
-        </label>
-        <textarea id="descriptionInput"
-                  placeholder="Add context about this tradeâ¦ e.g. 'Break of structure on 1H, waiting for retest of 175 zone, earnings next week'"
-                  rows="3"
-                  maxlength="500"
-                  spellcheck="true"></textarea>
-        <div class="char-counter">
-          <span id="charCount">0</span>/500
-        </div>
-      </div>
-
-      <div class="disclaimer-box">
-        ⚠️ <strong>Disclaimer:</strong> AI analysis is for informational purposes only.
-        Not financial advice. Past performance does not guarantee future results.
-      </div>
-
-      <div class="btn-row">
-        <button id="backToStep1Btn" class="ghost-btn">← Back</button>
-        <button id="submitBtn" class="primary-btn flex-1">
-          🚀 Submit for AI Analysis
-        </button>
-      </div>
     </div>
 
-    <!-- ══ STEP 3 — Results ════════════════════════════════════════ -->
-    <div id="step3" class="step">
-      <div class="step-label">Step 3 of 3 — Analysis Result</div>
-
-      <!-- Loading state -->
-      <div id="loadingContainer">
-        <div class="loading-ring">
-          <div></div><div></div><div></div><div></div>
-        </div>
-        <p class="loading-title">AI is analyzing your chart…</p>
-        <p class="loading-sub">Usually 30–60 seconds</p>
-        <div class="progress-bar">
-          <div id="progressFill" class="progress-fill"></div>
-        </div>
-        <p id="progressLabel" class="progress-label">Queuing analysis…</p>
-      </div>
-
-      <!-- Result state -->
-      <div id="resultContainer" style="display:none">
-
-        <div id="verdictBadge" class="verdict-badge">
-          <span id="verdictIcon"></span>
-          <span id="verdictText"></span>
-        </div>
-
-        <div class="confidence-section">
-          <div class="confidence-label">
-            <span>Confidence</span>
-            <span id="confidenceValue" class="confidence-pct"></span>
-          </div>
-          <div class="confidence-track">
-            <div id="confidenceFill" class="confidence-fill"></div>
-          </div>
-        </div>
-
-        <div id="reasoningBox" class="reasoning-box"></div>
-
-        <!-- User notes echo-back in result -->
-        <div id="userNotesResult" class="user-notes-result" style="display:none">
-          <div class="user-notes-label">📝 Your notes:</div>
-          <div id="userNotesText" class="user-notes-text"></div>
-        </div>
-
-        <div id="indicatorRow" class="indicator-row"></div>
-
-        <div class="result-actions">
-          <button id="openTelegramBtn" class="secondary-btn full-width">
-            💬 View Full Analysis in Telegram
-          </button>
-          <div class="btn-row" style="margin-top:8px">
-            <button id="copyResultBtn" class="ghost-btn flex-1">📋 Copy</button>
-            <button id="newAnalysisBtn" class="primary-btn flex-1">🔄 New</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Error state -->
-      <div id="errorContainer" style="display:none">
-        <div class="error-icon">❌</div>
-        <p id="errorMessage" class="error-msg"></p>
-        <button id="retryBtn" class="primary-btn" style="margin-top:12px">🔄 Retry</button>
-      </div>
+    <div class="mode-cards">
+      <button class="mode-card" id="modeValidate" onclick="selectMode('validate')">
+        <div class="mode-icon">🧠</div>
+        <div class="mode-title">Validate My Analysis</div>
+        <div class="mode-desc">You explain your view — AI checks it against live market data</div>
+      </button>
+      <button class="mode-card" id="modeAnalyse" onclick="selectMode('analyse')">
+        <div class="mode-icon">🔍</div>
+        <div class="mode-title">AI Analyse My Chart</div>
+        <div class="mode-desc">Choose patterns to detect — AI scans your screenshot</div>
+      </button>
     </div>
 
-    <!-- ── Settings panel ──────────────────────────────────────── -->
-    <div id="settingsPanel" class="step">
-      <div class="step-label">⚙️ Settings</div>
-
-      <div class="form-group">
-        <label for="apiUrlInput">API Base URL</label>
-        <input type="url" id="apiUrlInput" placeholder="https://your-api.com">
-      </div>
-
-      <div class="form-group">
-        <label for="telegramBotInput">Telegram Bot Username</label>
-        <input type="text" id="telegramBotInput" placeholder="@YourBotName">
-      </div>
-
-      <div class="form-group">
-        <label for="userIdDisplay">Your User ID</label>
-        <input type="text" id="userIdDisplay" readonly>
-      </div>
-
-      <div class="btn-row">
-        <button id="cancelSettingsBtn" class="ghost-btn">Cancel</button>
-        <button id="saveSettingsBtn" class="primary-btn flex-1">💾 Save</button>
-      </div>
-    </div>
-
-    <!-- ── Footer ──────────────────────────────────────────────── -->
-    <div class="footer">
-      <button id="settingsLink" class="footer-btn">⚙️ Settings</button>
-      <span class="footer-sep">|</span>
-      <button id="historyLink" class="footer-btn">📜 History</button>
-      <span class="footer-sep">|</span>
-      <a id="helpLink" href="#" class="footer-btn">❓ Help</a>
-      <span class="footer-sep">|</span>
-      <span id="versionLabel" class="footer-version">v1.0.0</span>
-    </div>
-
-    <!-- ── Legal Disclaimer ────────────────────────────────────── -->
-    <div class="legal-disclaimer">
-      This extension captures screenshots <strong>only on user click</strong>.
-      No automated scraping. Not financial advice.
-      <a id="termsLink" href="#" class="legal-link">Terms</a>
-    </div>
-
+    <button id="backToStep1Btn" class="ghost-btn full-width" style="margin-top:8px">
+      ← Back
+    </button>
   </div>
-  <script src="popup.js"></script>
+
+  <!-- ══ STEP 3A — VALIDATE MY ANALYSIS ══════════════════════════ -->
+  <div id="step3a" class="step">
+    <div class="step-label">Validate My Analysis</div>
+
+    <div class="analysis-preview-row">
+      <img id="step3aThumb" class="thumb-img" alt="">
+      <div id="step3aTicker" class="thumb-ticker"></div>
+    </div>
+
+    <div class="form-group">
+      <label for="userAnalysisInput">
+        Describe your trade setup
+        <span class="optional">(required)</span>
+      </label>
+      <textarea id="userAnalysisInput" rows="5" maxlength="800"
+        placeholder="E.g. 'Price swept equal highs above 175, then dropped back below — I see a liquidity sweep + BOS on the 15m. Expecting continuation down to the 4H FVG at 168. Planning a short entry on this candle close with SL above the sweep high at 176.50.'"
+        spellcheck="true"></textarea>
+      <div class="char-counter"><span id="analysisCharCount">0</span>/800</div>
+    </div>
+
+    <div class="optional-row">
+      <div class="form-group flex-1">
+        <label for="priceInput">Entry Price <span class="optional">(opt)</span></label>
+        <input type="number" id="priceInput" placeholder="175.50" step="any" min="0">
+      </div>
+      <div class="form-group flex-1">
+        <label for="slInput">Stop Loss <span class="optional">(opt)</span></label>
+        <input type="number" id="slInput" placeholder="176.50" step="any" min="0">
+      </div>
+      <div class="form-group flex-1">
+        <label for="tpInput">Take Profit <span class="optional">(opt)</span></label>
+        <input type="number" id="tpInput" placeholder="168.00" step="any" min="0">
+      </div>
+    </div>
+
+    <div class="disclaimer-box">
+      ⚠️ AI analysis is for informational purposes only. Not financial advice.
+    </div>
+
+    <div class="btn-row">
+      <button class="ghost-btn" onclick="showStep('step2')">← Back</button>
+      <button id="submitValidateBtn" class="primary-btn flex-1">
+        🚀 Validate My Analysis
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 3B — AI ANALYSE: PATTERN PICKER ════════════════════ -->
+  <div id="step3b" class="step">
+    <div class="step-label">AI Chart Analysis — Select Patterns</div>
+
+    <div class="analysis-preview-row">
+      <img id="step3bThumb" class="thumb-img" alt="">
+      <div id="step3bTicker" class="thumb-ticker"></div>
+    </div>
+
+    <!-- Category tabs -->
+    <div class="cat-tabs" id="catTabs">
+      <button class="cat-tab active" data-cat="smc">SMC / ICT</button>
+      <button class="cat-tab" data-cat="classic">Classic TA</button>
+      <button class="cat-tab" data-cat="scalper">Scalper</button>
+      <button class="cat-tab" data-cat="swing">Swing</button>
+    </div>
+
+    <!-- Select all row -->
+    <div class="select-all-row">
+      <label class="checkbox-label select-all-label">
+        <input type="checkbox" id="selectAllCat"> Select entire category
+      </label>
+      <label class="checkbox-label select-all-label">
+        <input type="checkbox" id="selectAllAll"> Select ALL patterns
+      </label>
+    </div>
+
+    <!-- SMC / ICT -->
+    <div class="pattern-grid active-cat" id="cat-smc">
+      <label class="checkbox-label"><input type="checkbox" value="Order Blocks"> Order Blocks</label>
+      <label class="checkbox-label"><input type="checkbox" value="FVG"> Fair Value Gaps (FVG)</label>
+      <label class="checkbox-label"><input type="checkbox" value="Breaker Blocks"> Breaker Blocks</label>
+      <label class="checkbox-label"><input type="checkbox" value="Liquidity Sweeps"> Liquidity Sweeps</label>
+      <label class="checkbox-label"><input type="checkbox" value="CHoCH"> CHoCH</label>
+      <label class="checkbox-label"><input type="checkbox" value="BOS"> BOS</label>
+      <label class="checkbox-label"><input type="checkbox" value="Equal Highs/Lows"> Equal Highs/Lows</label>
+      <label class="checkbox-label"><input type="checkbox" value="Mitigation Blocks"> Mitigation Blocks</label>
+      <label class="checkbox-label"><input type="checkbox" value="SMT Divergence"> SMT Divergence</label>
+      <label class="checkbox-label"><input type="checkbox" value="Turtle Soup"> Turtle Soup</label>
+      <label class="checkbox-label"><input type="checkbox" value="Silver Bullet"> Silver Bullet</label>
+    </div>
+
+    <!-- Classic TA -->
+    <div class="pattern-grid" id="cat-classic">
+      <label class="checkbox-label"><input type="checkbox" value="Head and Shoulders"> Head & Shoulders</label>
+      <label class="checkbox-label"><input type="checkbox" value="Double Top"> Double Top</label>
+      <label class="checkbox-label"><input type="checkbox" value="Double Bottom"> Double Bottom</label>
+      <label class="checkbox-label"><input type="checkbox" value="Triangles"> Triangles (Sym/Asc/Desc)</label>
+      <label class="checkbox-label"><input type="checkbox" value="Support/Resistance"> Support &amp; Resistance</label>
+      <label class="checkbox-label"><input type="checkbox" value="Flags/Pennants"> Flags &amp; Pennants</label>
+      <label class="checkbox-label"><input type="checkbox" value="Cup and Handle"> Cup &amp; Handle</label>
+      <label class="checkbox-label"><input type="checkbox" value="Wedges"> Wedges (Rising/Falling)</label>
+      <label class="checkbox-label"><input type="checkbox" value="Rounding Bottom"> Rounding Bottom</label>
+    </div>
+
+    <!-- Scalper -->
+    <div class="pattern-grid" id="cat-scalper">
+      <label class="checkbox-label"><input type="checkbox" value="Killzone Detection"> Killzone Detection</label>
+      <label class="checkbox-label"><input type="checkbox" value="Silver Bullet Setup"> Silver Bullet Setup</label>
+      <label class="checkbox-label"><input type="checkbox" value="Micro Liquidity Sweeps"> Micro Liquidity Sweeps</label>
+      <label class="checkbox-label"><input type="checkbox" value="Micro Order Blocks"> Micro Order Blocks</label>
+      <label class="checkbox-label"><input type="checkbox" value="Turtle Soup LTF"> Turtle Soup (LTF)</label>
+      <label class="checkbox-label"><input type="checkbox" value="Judas Swing"> Judas Swing Trap</label>
+    </div>
+
+    <!-- Swing -->
+    <div class="pattern-grid" id="cat-swing">
+      <label class="checkbox-label"><input type="checkbox" value="Market Structure BOS"> Market Structure BOS</label>
+      <label class="checkbox-label"><input type="checkbox" value="Market Structure CHoCH"> Market Structure CHoCH</label>
+      <label class="checkbox-label"><input type="checkbox" value="Previous Day Levels"> Previous Day Levels</label>
+      <label class="checkbox-label"><input type="checkbox" value="Previous Week Levels"> Previous Week Levels</label>
+      <label class="checkbox-label"><input type="checkbox" value="OTE"> OTE (Optimal Trade Entry)</label>
+      <label class="checkbox-label"><input type="checkbox" value="Head and Shoulders Swing"> Head &amp; Shoulders</label>
+      <label class="checkbox-label"><input type="checkbox" value="Cup and Handle Swing"> Cup &amp; Handle</label>
+      <label class="checkbox-label"><input type="checkbox" value="AMD"> Accumulation-Manipulation-Distribution</label>
+    </div>
+
+    <!-- Selection summary -->
+    <div id="patternSummary" class="pattern-summary" style="display:none"></div>
+
+    <div class="disclaimer-box" style="margin-top:10px">
+      ⚠️ AI pattern analysis is informational only. Not financial advice.
+    </div>
+
+    <div class="btn-row" style="margin-top:10px">
+      <button class="ghost-btn" onclick="showStep('step2')">← Back</button>
+      <button id="submitAnalyseBtn" class="primary-btn flex-1" disabled>
+        🔍 Run Pattern Analysis
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 4 — RESULTS ═════════════════════════════════════════ -->
+  <div id="step4" class="step">
+    <div class="step-label" id="step4Label">Analysis Result</div>
+
+    <!-- Loading -->
+    <div id="loadingContainer">
+      <div class="loading-ring"><div></div><div></div><div></div><div></div></div>
+      <p class="loading-title" id="loadingTitle">AI is analysing your chart…</p>
+      <p class="loading-sub">This takes 30–90 seconds</p>
+      <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+      <p id="progressLabel" class="progress-label">Queuing analysis…</p>
+    </div>
+
+    <!-- Result -->
+    <div id="resultContainer" style="display:none">
+
+      <!-- Verdict -->
+      <div id="verdictBadge" class="verdict-badge">
+        <span id="verdictIcon"></span>
+        <span id="verdictText"></span>
+      </div>
+
+      <!-- Confidence -->
+      <div class="confidence-section">
+        <div class="confidence-label">
+          <span id="confidenceLabel">Market Alignment</span>
+          <span id="confidenceValue" class="confidence-pct"></span>
+        </div>
+        <div class="confidence-track">
+          <div id="confidenceFill" class="confidence-fill"></div>
+        </div>
+      </div>
+
+      <!-- Mode-specific result body -->
+      <div id="resultBody" class="result-body"></div>
+
+      <!-- Pattern cards (for analyse mode) -->
+      <div id="patternCards" class="pattern-cards-grid" style="display:none"></div>
+
+      <!-- User notes echo-back -->
+      <div id="userNotesResult" class="user-notes-result" style="display:none">
+        <div class="user-notes-label">📝 Your analysis:</div>
+        <div id="userNotesText" class="user-notes-text"></div>
+      </div>
+
+      <!-- Indicator chips -->
+      <div id="indicatorRow" class="indicator-row"></div>
+
+      <!-- Actions -->
+      <div class="result-actions">
+        <button id="openTelegramBtn" class="secondary-btn full-width">
+          💬 Full Analysis in Telegram
+        </button>
+        <div class="btn-row" style="margin-top:8px">
+          <button id="copyResultBtn" class="ghost-btn flex-1">📋 Copy</button>
+          <button id="newAnalysisBtn" class="primary-btn flex-1">🔄 New</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="errorContainer" style="display:none">
+      <div class="error-icon">❌</div>
+      <p id="errorMessage" class="error-msg"></p>
+      <button id="retryBtn" class="primary-btn" style="margin-top:12px">🔄 Retry</button>
+    </div>
+  </div>
+
+  <!-- ══ SETTINGS ══════════════════════════════════════════════════ -->
+  <div id="settingsPanel" class="step">
+    <div class="step-label">⚙️ Settings</div>
+    <div class="form-group">
+      <label>API Base URL</label>
+      <input type="url" id="apiUrlInput" placeholder="https://your-domain.com">
+    </div>
+    <div class="form-group">
+      <label>Telegram Bot Username</label>
+      <input type="text" id="telegramBotInput" placeholder="@YourBotName">
+    </div>
+    <div class="form-group">
+      <label>Your Extension ID</label>
+      <input type="text" id="userIdDisplay" readonly>
+      <span class="input-hint">Use <code>/link YOUR_ID</code> in Telegram to connect</span>
+    </div>
+    <div class="btn-row">
+      <button class="ghost-btn" onclick="showStep('step1')">Cancel</button>
+      <button id="saveSettingsBtn" class="primary-btn flex-1">💾 Save</button>
+    </div>
+  </div>
+
+  <!-- ── Footer ────────────────────────────────────────────────── -->
+  <div class="footer">
+    <button id="settingsLink" class="footer-btn">⚙️ Settings</button>
+    <span class="footer-sep">|</span>
+    <button id="historyLink" class="footer-btn">📜 History</button>
+    <span class="footer-sep">|</span>
+    <span class="footer-version">v1.0.0</span>
+  </div>
+  <div class="legal-disclaimer">
+    Screenshots captured only on user click. Not financial advice.
+  </div>
+
+</div><!-- .container -->
+<script src="popup.js"></script>
 </body>
 </html>
