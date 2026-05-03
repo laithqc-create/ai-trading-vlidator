@@ -45,7 +45,7 @@ class User(Base):
     username = Column(String(64), nullable=True)
     first_name = Column(String(64), nullable=True)
     last_name = Column(String(64), nullable=True)
-    plan = Column(Enum(PlanTier), default=PlanTier.FREE, nullable=False)
+    plan = Column(Enum(PlanTier, values_callable=lambda x: [e.value for e in x]), default=PlanTier.FREE, nullable=False)
 
     # Whop billing
     whop_user_id = Column(String(64), unique=True, nullable=True)
@@ -100,14 +100,14 @@ class Validation(Base):
     # What was validated
     product = Column(Integer, nullable=False)  # 1, 2, or 3
     ticker = Column(String(20), nullable=False)
-    signal = Column(Enum(SignalType), nullable=True)
+    signal = Column(Enum(SignalType, values_callable=lambda x: [e.value for e in x]), nullable=True)
     price = Column(Float, nullable=True)
 
     # Source data
     source_payload = Column(JSON, nullable=True)   # raw webhook or user input
 
     # Results
-    status = Column(Enum(ValidationStatus), default=ValidationStatus.PENDING)
+    status = Column(Enum(ValidationStatus, values_callable=lambda x: [e.value for e in x]), default=ValidationStatus.PENDING)
     confidence_score = Column(Float, nullable=True)        # 0.0 - 1.0
     verdict = Column(String(20), nullable=True)            # CONFIRM / REJECT / CAUTION
     trader_analysis = Column(JSON, nullable=True)          # OpenTrade.ai full result
