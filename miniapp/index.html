@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Trade Genius</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset & Root ────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg:        #0a0a0f;
+      --bg2:       #111118;
+      --bg3:       #1a1a24;
+      --surface:   #1e1e2c;
+      --surface2:  #252535;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #e8e8f0;
+      --muted:     #7070a0;
+      --dim:       #404060;
+      --gold:      #f5c842;
+      --gold2:     #e8a020;
+      --blue:      #4a9eff;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --purple:    #8b5cf6;
+      --orange:    #f97316;
+      --nav-h:     68px;
+      --header-h:  56px;
+    }
+
+    html, body {
+      height: 100%; height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────── */
+    #app {
+      display: flex; flex-direction: column;
+      height: 100dvh;
+    }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .header {
+      height: var(--header-h);
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 16px;
+      justify-content: space-between;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 10;
+    }
+    .header-logo {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .header-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--gold), var(--gold2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .header-name {
+      font-family: 'Space Mono', monospace;
+      font-weight: 700; font-size: 15px;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+    .header-plan {
+      background: linear-gradient(135deg, var(--gold), var(--gold2));
+      color: #000;
+      font-size: 10px; font-weight: 700;
+      padding: 3px 8px; border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .header-btn {
+      width: 32px; height: 32px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; font-size: 16px; cursor: pointer;
+    }
+
+    /* ── Scroll area ─────────────────────────────────────────── */
+    .content {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: calc(var(--nav-h) + 8px);
+    }
+    .content::-webkit-scrollbar { display: none; }
+
+    /* ── Pages ───────────────────────────────────────────────── */
+    .page { display: none; padding: 16px; }
+    .page.active { display: block; }
+
+    /* ── Bottom Nav ──────────────────────────────────────────── */
+    .nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 4px; cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .nav-icon {
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; transition: transform 0.2s;
+    }
+    .nav-label {
+      font-size: 10px; font-weight: 500;
+      color: var(--muted); transition: color 0.2s;
+      letter-spacing: 0.3px;
+    }
+    .nav-item.active .nav-icon { transform: translateY(-1px); }
+    .nav-item.active .nav-label { color: var(--gold); }
+    .nav-item.active::after {
+      content: '';
+      position: absolute; top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 24px; height: 2px;
+      background: linear-gradient(90deg, var(--gold), var(--gold2));
+      border-radius: 0 0 3px 3px;
+    }
+
+    /* ── Section Headers ─────────────────────────────────────── */
+    .section-title {
+      font-size: 11px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 10px;
+    }
+    .section { margin-bottom: 24px; }
+
+    /* ── Hero banner ─────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #1a1528 0%, #0f1a2e 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -40px; right: -40px;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, rgba(245,200,66,0.12) 0%, transparent 70%);
+    }
+    .hero-greeting {
+      font-size: 12px; color: var(--muted); margin-bottom: 4px;
+    }
+    .hero-name {
+      font-size: 22px; font-weight: 700;
+      font-family: 'Space Mono', monospace;
+      background: linear-gradient(135deg, var(--text), var(--gold));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+    .hero-stats {
+      display: flex; gap: 16px;
+    }
+    .hero-stat { display: flex; flex-direction: column; gap: 2px; }
+    .hero-stat-val {
+      font-size: 18px; font-weight: 700;
+      font-family: 'Space Mono', monospace;
+      color: var(--green);
+    }
+    .hero-stat-lbl { font-size: 10px; color: var(--muted); }
+
+    /* ── Product Cards ───────────────────────────────────────── */
+    .products-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .product-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .product-card:active { transform: scale(0.97); }
+    .product-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      border-radius: 14px 14px 0 0;
+    }
+    .product-card.p1::before { background: linear-gradient(90deg, var(--blue), #60a5fa); }
+    .product-card.p2::before { background: linear-gradient(90deg, var(--purple), #a78bfa); }
+    .product-card.p3::before { background: linear-gradient(90deg, var(--green), #4ade80); }
+    .product-card.pfree::before { background: linear-gradient(90deg, var(--gold), var(--gold2)); }
+
+    .product-card-icon { font-size: 26px; margin-bottom: 10px; }
+    .product-card-name {
+      font-size: 13px; font-weight: 600;
+      color: var(--text); margin-bottom: 4px; line-height: 1.3;
+    }
+    .product-card-price {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; color: var(--muted);
+    }
+    .product-card-price.free { color: var(--gold); }
+    .product-card-badge {
+      position: absolute; top: 12px; right: 10px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px 6px;
+      font-size: 9px; font-weight: 700;
+      color: var(--muted); letter-spacing: 0.3px;
+    }
+    .product-card-badge.new { color: var(--green); border-color: rgba(34,197,94,0.3); }
+    .product-card-badge.free { color: var(--gold); border-color: rgba(245,200,66,0.3); }
+
+    /* ── Quick Action Row ────────────────────────────────────── */
+    .quick-actions {
+      display: flex; gap: 8px; margin-bottom: 20px;
+      overflow-x: auto; padding-bottom: 4px;
+    }
+    .quick-actions::-webkit-scrollbar { display: none; }
+    .qa-btn {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 8px 14px;
+      font-size: 12px; font-weight: 500; color: var(--text);
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .qa-btn:active { background: var(--surface2); transform: scale(0.97); }
+    .qa-btn .qa-icon { font-size: 14px; }
+
+    /* ── Activity Feed ───────────────────────────────────────── */
+    .feed-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+    .feed-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .feed-icon.confirm { background: rgba(34,197,94,0.15); }
+    .feed-icon.caution { background: rgba(249,115,22,0.15); }
+    .feed-icon.reject  { background: rgba(239,68,68,0.15); }
+    .feed-icon.gen     { background: rgba(245,200,66,0.15); }
+    .feed-body { flex: 1; min-width: 0; }
+    .feed-title {
+      font-size: 13px; font-weight: 600;
+      color: var(--text); margin-bottom: 2px;
+    }
+    .feed-sub { font-size: 11px; color: var(--muted); }
+    .feed-right { text-align: right; flex-shrink: 0; }
+    .feed-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 6px;
+      font-family: 'Space Mono', monospace;
+    }
+    .feed-badge.confirm { background: rgba(34,197,94,0.15); color: var(--green); }
+    .feed-badge.caution { background: rgba(249,115,22,0.15); color: var(--orange); }
+    .feed-badge.reject  { background: rgba(239,68,68,0.15);  color: var(--red); }
+    .feed-time { font-size: 10px; color: var(--dim); margin-top: 3px; }
+
+    /* ── Generate Page ───────────────────────────────────────── */
+    .gen-tabs {
+      display: flex; gap: 6px; margin-bottom: 16px;
+    }
+    .gen-tab {
+      flex: 1; padding: 10px 6px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; text-align: center;
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .gen-tab.active {
+      background: rgba(245,200,66,0.12);
+      border-color: rgba(245,200,66,0.35);
+      color: var(--gold);
+    }
+
+    .textarea-wrap { position: relative; margin-bottom: 12px; }
+    .gen-textarea {
+      width: 100%; min-height: 120px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px;
+      color: var(--text); font-family: 'Sora', sans-serif;
+      font-size: 13px; line-height: 1.6; resize: none;
+      outline: none; transition: border-color 0.2s;
+    }
+    .gen-textarea:focus { border-color: rgba(245,200,66,0.4); }
+    .gen-textarea::placeholder { color: var(--dim); }
+    .char-count {
+      position: absolute; bottom: 10px; right: 12px;
+      font-size: 10px; color: var(--dim);
+    }
+
+    .example-chips {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;
+    }
+    .example-chip {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 6px 12px;
+      font-size: 11px; color: var(--muted);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .example-chip:active {
+      background: rgba(245,200,66,0.1);
+      border-color: rgba(245,200,66,0.3);
+      color: var(--gold);
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      width: 100%; padding: 14px;
+      border: none; border-radius: 12px;
+      font-family: 'Sora', sans-serif;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center;
+      justify-content: center; gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold), var(--gold2));
+      color: #000;
+    }
+    .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-outline:active { background: var(--surface); }
+
+    /* ── Budget Bar ──────────────────────────────────────────── */
+    .budget-bar {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px;
+      margin-bottom: 16px;
+    }
+    .budget-row {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 8px;
+    }
+    .budget-label { font-size: 12px; color: var(--muted); }
+    .budget-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 13px; color: var(--text); font-weight: 700;
+    }
+    .budget-track {
+      height: 4px; background: var(--surface2);
+      border-radius: 4px; overflow: hidden;
+    }
+    .budget-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, var(--gold), var(--gold2));
+      transition: width 0.4s;
+    }
+
+    /* ── Code result ─────────────────────────────────────────── */
+    .code-result {
+      display: none;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-top: 14px;
+      overflow: hidden;
+    }
+    .code-result.show { display: block; }
+    .code-header {
+      display: flex; justify-content: space-between;
+      align-items: center; padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 11px; font-weight: 700;
+      color: var(--gold); letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .code-copy {
+      font-size: 11px; color: var(--muted);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px 10px; cursor: pointer;
+    }
+    .code-body {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; line-height: 1.7;
+      color: #c9d1d9; padding: 14px;
+      max-height: 260px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-all;
+    }
+
+    /* ── Profile Page ────────────────────────────────────────── */
+    .profile-avatar {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, var(--gold), var(--gold2));
+      border-radius: 22px; margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 700; color: #000;
+      font-family: 'Space Mono', monospace;
+    }
+    .profile-name {
+      text-align: center;
+      font-size: 20px; font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .profile-sub {
+      text-align: center;
+      font-size: 12px; color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .profile-stats {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px; margin-bottom: 20px;
+    }
+    .pstat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 10px;
+      text-align: center;
+    }
+    .pstat-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 20px; font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .pstat-lbl { font-size: 10px; color: var(--muted); }
+
+    .menu-list { display: flex; flex-direction: column; gap: 6px; }
+    .menu-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .menu-item:active { background: var(--surface2); }
+    .menu-item-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--bg3); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .menu-item-text { flex: 1; }
+    .menu-item-title { font-size: 14px; font-weight: 500; }
+    .menu-item-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .menu-item-arrow { color: var(--dim); font-size: 12px; }
+
+    /* ── Market page ─────────────────────────────────────────── */
+    .market-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px;
+      margin-bottom: 10px;
+    }
+    .market-card-top {
+      display: flex; justify-content: space-between;
+      align-items: flex-start; margin-bottom: 12px;
+    }
+    .market-ticker {
+      font-family: 'Space Mono', monospace;
+      font-size: 16px; font-weight: 700;
+    }
+    .market-name { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .market-price {
+      font-family: 'Space Mono', monospace;
+      font-size: 16px; font-weight: 700;
+      text-align: right;
+    }
+    .market-change {
+      font-size: 11px; font-weight: 600;
+      text-align: right; margin-top: 2px;
+    }
+    .market-change.up { color: var(--green); }
+    .market-change.down { color: var(--red); }
+    .market-indicators {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .indicator-pill {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px 8px;
+      font-size: 10px; font-weight: 600;
+      font-family: 'Space Mono', monospace;
+    }
+    .indicator-pill.bull { color: var(--green); border-color: rgba(34,197,94,0.2); }
+    .indicator-pill.bear { color: var(--red);   border-color: rgba(239,68,68,0.2); }
+    .indicator-pill.neutral { color: var(--muted); }
+
+    /* ── Loading spinner ─────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: calc(var(--nav-h) + 12px);
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--surface2); color: var(--text);
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 13px; font-weight: 500;
+      opacity: 0; transition: all 0.25s;
+      pointer-events: none; z-index: 999; white-space: nowrap;
+      border: 1px solid var(--border);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Skeleton loader ─────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── Animations ──────────────────────────────────────────── */
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Partnership page ────────────────────────────────────── */
+    .partner-banner {
+      background: linear-gradient(135deg, #1a0f2e, #0f1a2e);
+      border: 1px solid rgba(139,92,246,0.3);
+      border-radius: 16px; padding: 20px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .partner-banner-icon { font-size: 36px; margin-bottom: 8px; }
+    .partner-banner-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .partner-banner-sub { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .partner-stat-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin: 16px 0;
+    }
+    .partner-stat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px;
+      text-align: center;
+    }
+    .partner-stat-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 20px; font-weight: 700; color: var(--purple);
+    }
+    .partner-stat-lbl { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-logo">
+      <div class="header-icon">📊</div>
+      <span class="header-name">Trade Genius</span>
+    </div>
+    <div class="header-right">
+      <div class="header-plan" id="planBadge">FREE</div>
+      <div class="header-btn" onclick="showPage('profile')">👤</div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="content">
+
+    <!-- ── PRODUCTS PAGE ─────────────────────────────────── -->
+    <div class="page active" id="page-products">
+
+      <!-- Hero -->
+      <div class="hero fade-in">
+        <div class="hero-greeting">Welcome back,</div>
+        <div class="hero-name" id="heroName">Trader</div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="statValidations">0</div>
+            <div class="hero-stat-lbl">Validations</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="statGenerations">0</div>
+            <div class="hero-stat-lbl">Generations</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="statAccuracy" style="color:var(--gold)">—</div>
+            <div class="hero-stat-lbl">Accuracy</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <div class="qa-btn" onclick="showPage('generate')">
+          <span class="qa-icon">⚡</span> Quick Generate
+        </div>
+        <div class="qa-btn" onclick="openTelegram('/check')">
+          <span class="qa-icon">🔍</span> Check Trade
+        </div>
+        <div class="qa-btn" onclick="openTelegram('/add_rule')">
+          <span class="qa-icon">📚</span> Add Rule
+        </div>
+        <div class="qa-btn" onclick="openTelegram('/history')">
+          <span class="qa-icon">📜</span> History
+        </div>
+      </div>
+
+      <!-- Products -->
+      <div class="section">
+        <div class="section-title">Products</div>
+        <div class="products-grid">
+          <div class="product-card p1 fade-in" onclick="openProduct('indicator')" style="animation-delay:0.05s">
+            <div class="product-card-badge">PAID</div>
+            <div class="product-card-icon">📊</div>
+            <div class="product-card-name">Indicator Validator</div>
+            <div class="product-card-price">$19 / mo</div>
+          </div>
+          <div class="product-card p2 fade-in" onclick="openProduct('ea')" style="animation-delay:0.1s">
+            <div class="product-card-badge">PAID</div>
+            <div class="product-card-icon">🤖</div>
+            <div class="product-card-name">EA Analyzer</div>
+            <div class="product-card-price">$49 / mo</div>
+          </div>
+          <div class="product-card p3 fade-in" onclick="openProduct('manual')" style="animation-delay:0.15s">
+            <div class="product-card-badge">PAID</div>
+            <div class="product-card-icon">🔍</div>
+            <div class="product-card-name">Manual Validator</div>
+            <div class="product-card-price">$19 / mo</div>
+          </div>
+          <div class="product-card pfree fade-in" onclick="showPage('generate')" style="animation-delay:0.2s">
+            <div class="product-card-badge free">FREE</div>
+            <div class="product-card-icon">⚡</div>
+            <div class="product-card-name">AI Code Generator</div>
+            <div class="product-card-price free">Free · $5 cap</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="section">
+        <div class="section-title">Recent Activity</div>
+        <div id="activityFeed">
+          <div class="feed-item fade-in">
+            <div class="feed-icon gen">⚡</div>
+            <div class="feed-body">
+              <div class="feed-title">Pine Script Generated</div>
+              <div class="feed-sub">RSI + Volume strategy</div>
+            </div>
+            <div class="feed-right">
+              <div class="feed-badge" style="background:rgba(245,200,66,0.12);color:var(--gold)">GEN</div>
+              <div class="feed-time">Just now</div>
+            </div>
+          </div>
+          <div style="text-align:center;color:var(--dim);font-size:12px;padding:16px 0">
+            Run /check or /generate to see your activity here
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GENERATE PAGE ──────────────────────────────────── -->
+    <div class="page" id="page-generate">
+
+      <div class="section-title" style="margin-bottom:16px">AI Code Generator</div>
+
+      <!-- Budget -->
+      <div class="budget-bar">
+        <div class="budget-row">
+          <span class="budget-label">Free Budget Used</span>
+          <span class="budget-val" id="budgetVal">$0.000 / $5.00</span>
+        </div>
+        <div class="budget-track">
+          <div class="budget-fill" id="budgetFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="gen-tabs">
+        <div class="gen-tab active" id="tab-pine" onclick="switchGenTab('pine')">
+          📈 Pine Script
+        </div>
+        <div class="gen-tab" id="tab-mql5" onclick="switchGenTab('mql5')">
+          ⚙️ MQL5 EA
+        </div>
+      </div>
+
+      <!-- Examples -->
+      <div class="example-chips" id="exampleChips">
+        <div class="example-chip" onclick="fillExample(this)">RSI below 30 + volume spike</div>
+        <div class="example-chip" onclick="fillExample(this)">MACD crossover with EMA filter</div>
+        <div class="example-chip" onclick="fillExample(this)">Bollinger Band squeeze breakout</div>
+        <div class="example-chip" onclick="fillExample(this)">Support/resistance with alerts</div>
+      </div>
+
+      <!-- Input -->
+      <div class="textarea-wrap">
+        <textarea class="gen-textarea" id="strategyInput" maxlength="600"
+          placeholder="Describe your trading strategy in plain English...
+
+Example: Buy when RSI drops below 30 and volume is 1.5x above the 20-day average, sell when RSI crosses above 60."
+          oninput="updateCharCount()"></textarea>
+        <div class="char-count"><span id="charCount">0</span>/600</div>
+      </div>
+
+      <button class="btn btn-primary" id="generateBtn" onclick="runGenerate()">
+        <span id="generateBtnText">⚡ Generate Code</span>
+      </button>
+
+      <!-- Result -->
+      <div class="code-result" id="codeResult">
+        <div class="code-header">
+          <span class="code-lang" id="codeLang">PINE SCRIPT v6</span>
+          <button class="code-copy" onclick="copyCode()">Copy</button>
+        </div>
+        <div class="code-body" id="codeBody"></div>
+      </div>
+    </div>
+
+    <!-- ── MARKET PAGE ────────────────────────────────────── -->
+    <div class="page" id="page-market">
+      <div class="section-title" style="margin-bottom:16px">Market Overview</div>
+
+      <div class="market-card">
+        <div class="market-card-top">
+          <div>
+            <div class="market-ticker">AAPL</div>
+            <div class="market-name">Apple Inc.</div>
+          </div>
+          <div>
+            <div class="market-price">$178.50</div>
+            <div class="market-change up">▲ +1.24%</div>
+          </div>
+        </div>
+        <div class="market-indicators">
+          <div class="indicator-pill bull">RSI 42 ↑</div>
+          <div class="indicator-pill bull">MACD Bullish</div>
+          <div class="indicator-pill neutral">BB: Within</div>
+          <div class="indicator-pill bull">SMA Above</div>
+        </div>
+      </div>
+
+      <div class="market-card">
+        <div class="market-card-top">
+          <div>
+            <div class="market-ticker">EURUSD</div>
+            <div class="market-name">Euro / US Dollar</div>
+          </div>
+          <div>
+            <div class="market-price">1.0842</div>
+            <div class="market-change down">▼ -0.31%</div>
+          </div>
+        </div>
+        <div class="market-indicators">
+          <div class="indicator-pill bear">RSI 61 ↓</div>
+          <div class="indicator-pill bear">MACD Bearish</div>
+          <div class="indicator-pill bear">BB: Upper</div>
+          <div class="indicator-pill neutral">SMA Below</div>
+        </div>
+      </div>
+
+      <div class="market-card">
+        <div class="market-card-top">
+          <div>
+            <div class="market-ticker">BTC</div>
+            <div class="market-name">Bitcoin</div>
+          </div>
+          <div>
+            <div class="market-price">$62,440</div>
+            <div class="market-change up">▲ +2.87%</div>
+          </div>
+        </div>
+        <div class="market-indicators">
+          <div class="indicator-pill bull">RSI 55</div>
+          <div class="indicator-pill bull">MACD Bullish</div>
+          <div class="indicator-pill neutral">BB: Mid</div>
+          <div class="indicator-pill bull">Volume ↑</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;color:var(--dim);font-size:11px;margin-top:8px">
+        Data is illustrative. Use /check for live analysis.
+      </div>
+    </div>
+
+    <!-- ── PARTNERSHIP PAGE ───────────────────────────────── -->
+    <div class="page" id="page-partnership">
+
+      <div class="partner-banner">
+        <div class="partner-banner-icon">🤝</div>
+        <div class="partner-banner-title">Partner Program</div>
+        <div class="partner-banner-sub">
+          Earn 30% recurring commission on every subscriber you refer. 
+          Instant payouts via Whop's affiliate system.
+        </div>
+      </div>
+
+      <div class="partner-stat-row">
+        <div class="partner-stat">
+          <div class="partner-stat-val">30%</div>
+          <div class="partner-stat-lbl">Commission Rate</div>
+        </div>
+        <div class="partner-stat">
+          <div class="partner-stat-val">∞</div>
+          <div class="partner-stat-lbl">Earning Potential</div>
+        </div>
+        <div class="partner-stat">
+          <div class="partner-stat-val">$0</div>
+          <div class="partner-stat-lbl">Join Fee</div>
+        </div>
+        <div class="partner-stat">
+          <div class="partner-stat-val">24h</div>
+          <div class="partner-stat-lbl">Payout Speed</div>
+        </div>
+      </div>
+
+      <div class="section-title">How it works</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+        <div class="menu-item" style="cursor:default">
+          <div class="menu-item-icon">🔗</div>
+          <div class="menu-item-text">
+            <div class="menu-item-title">Get your referral link</div>
+            <div class="menu-item-sub">Unique link tracked by Whop</div>
+          </div>
+        </div>
+        <div class="menu-item" style="cursor:default">
+          <div class="menu-item-icon">📢</div>
+          <div class="menu-item-text">
+            <div class="menu-item-title">Share with traders</div>
+            <div class="menu-item-sub">Discord, Twitter, YouTube, Telegram</div>
+          </div>
+        </div>
+        <div class="menu-item" style="cursor:default">
+          <div class="menu-item-icon">💰</div>
+          <div class="menu-item-text">
+            <div class="menu-item-title">Earn 30% every month</div>
+            <div class="menu-item-sub">For every active subscriber you referred</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="openTelegram('/subscribe')">
+        🚀 Join Partner Program
+      </button>
+    </div>
+
+    <!-- ── PROFILE PAGE ───────────────────────────────────── -->
+    <div class="page" id="page-profile">
+
+      <div class="profile-avatar" id="profileAvatar">?</div>
+      <div class="profile-name" id="profileName">Trader</div>
+      <div class="profile-sub" id="profileSub">FREE Plan · Trade Genius</div>
+
+      <div class="profile-stats">
+        <div class="pstat">
+          <div class="pstat-val" id="ps1">0</div>
+          <div class="pstat-lbl">Validations</div>
+        </div>
+        <div class="pstat">
+          <div class="pstat-val" id="ps2">0</div>
+          <div class="pstat-lbl">Generations</div>
+        </div>
+        <div class="pstat">
+          <div class="pstat-val" id="ps3" style="color:var(--gold)">—%</div>
+          <div class="pstat-lbl">Accuracy</div>
+        </div>
+      </div>
+
+      <div class="section-title">Account</div>
+      <div class="menu-list">
+        <div class="menu-item" onclick="openTelegram('/subscribe')">
+          <div class="menu-item-icon">💳</div>
+          <div class="menu-item-text">
+            <div class="menu-item-title">Upgrade Plan</div>
+            <div class="menu-item-sub">$19–$79/mo via Whop</div>
+          </div>
+          <div class="menu-item-arrow">›</div>
+        </div>
+        <div class="menu-item" onclick="openTelegram('/my_rules')">
+          <div class="menu-item-icon">📚</div>
+          <div class="menu-item-text">
+            <div class="menu-item-title">My Trading Rules</div>
+            <div class="menu-item-sub">Personal RAGFlow knowledge base</div>
+          </div>
+          <div class="menu-item-arrow">›</div>
+        </div>
+        <div class="menu-item" onclick="openTelegram('/history')">
+          <div class="menu-item-icon">📜</div>
+          <div class="menu-item-text">
+            <div class="menu-item-title">Validation History</div>
+            <div class="menu-item-sub">Last 10 analyses</div>
+          </div>
+          <div class="menu-item-arrow">›</div>
+        </div>
+        <div class="menu-item" onclick="openTelegram('/my_usage')">
+          <div class="menu-item-icon">⚡</div>
+          <div class="menu-item-text">
+            <div class="menu-item-title">Generation Budget</div>
+            <div class="menu-item-sub">Free $5 cap tracker</div>
+          </div>
+          <div class="menu-item-arrow">›</div>
+        </div>
+        <div class="menu-item" onclick="openTelegram('/connect_indicator')">
+          <div class="menu-item-icon">🔌</div>
+          <div class="menu-item-text">
+            <div class="menu-item-title">Connect TradingView</div>
+            <div class="menu-item-sub">Webhook setup</div>
+          </div>
+          <div class="menu-item-arrow">›</div>
+        </div>
+        <div class="menu-item" onclick="openTelegram('/connect_ea')">
+          <div class="menu-item-icon">⚙️</div>
+          <div class="menu-item-text">
+            <div class="menu-item-title">Connect EA Monitor</div>
+            <div class="menu-item-sub">MT4/MT5 log monitoring</div>
+          </div>
+          <div class="menu-item-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="nav">
+    <div class="nav-item active" id="nav-products" onclick="showPage('products')">
+      <div class="nav-icon">📦</div>
+      <div class="nav-label">Products</div>
+    </div>
+    <div class="nav-item" id="nav-generate" onclick="showPage('generate')">
+      <div class="nav-icon">⚡</div>
+      <div class="nav-label">Generate</div>
+    </div>
+    <div class="nav-item" id="nav-market" onclick="showPage('market')">
+      <div class="nav-icon">📈</div>
+      <div class="nav-label">Market</div>
+    </div>
+    <div class="nav-item" id="nav-partnership" onclick="showPage('partnership')">
+      <div class="nav-icon">🤝</div>
+      <div class="nav-label">Partners</div>
+    </div>
+    <div class="nav-item" id="nav-profile" onclick="showPage('profile')">
+      <div class="nav-icon">👤</div>
+      <div class="nav-label">Profile</div>
+    </div>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ── Telegram WebApp init ──────────────────────────────────────
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.setHeaderColor('#0a0a0f');
+  tg.setBackgroundColor('#0a0a0f');
+}
+
+// ── User data ─────────────────────────────────────────────────
+const user = tg?.initDataUnsafe?.user || {};
+const firstName = user.first_name || 'Trader';
+const lastName  = user.last_name  || '';
+const initials  = (firstName[0] || 'T').toUpperCase();
+
+// Populate user info
+document.getElementById('heroName').textContent    = firstName;
+document.getElementById('profileName').textContent = `${firstName} ${lastName}`.trim();
+document.getElementById('profileSub').textContent  = 'FREE Plan · Trade Genius';
+document.getElementById('profileAvatar').textContent = initials;
+
+// ── Navigation ────────────────────────────────────────────────
+let currentPage = 'products';
+
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  const navEl = document.getElementById(`nav-${page}`);
+  if (navEl) navEl.classList.add('active');
+  currentPage = page;
+  // Scroll to top
+  document.querySelector('.content').scrollTop = 0;
+}
+
+// ── Product modal actions ─────────────────────────────────────
+function openProduct(type) {
+  const map = {
+    indicator: '/connect_indicator',
+    ea:        '/connect_ea',
+    manual:    '/check',
+  };
+  const cmd = map[type];
+  if (cmd) openTelegram(cmd);
+}
+
+// ── Telegram command bridge ───────────────────────────────────
+function openTelegram(cmd) {
+  if (tg) {
+    tg.sendData(JSON.stringify({ action: 'command', command: cmd }));
+  }
+  showToast(`Opening ${cmd} in chat...`);
+}
+
+// ── Generator ────────────────────────────────────────────────
+let genMode = 'pine';
+
+function switchGenTab(mode) {
+  genMode = mode;
+  document.querySelectorAll('.gen-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${mode}`).classList.add('active');
+
+  const examples = {
+    pine: ['RSI below 30 + volume spike', 'MACD crossover with EMA filter',
+           'Bollinger Band squeeze', 'Support/resistance alerts'],
+    mql5: ['Scalp 5 pip TP 10 pip SL', 'Buy on BOS confirmation',
+           'RSI trend-following EA', 'Grid EA on ranging market'],
+  };
+  const chips = document.getElementById('exampleChips');
+  chips.innerHTML = examples[mode].map(e =>
+    `<div class="example-chip" onclick="fillExample(this)">${e}</div>`
+  ).join('');
+  document.getElementById('strategyInput').value = '';
+  document.getElementById('charCount').textContent = '0';
+  document.getElementById('codeResult').classList.remove('show');
+}
+
+function fillExample(el) {
+  document.getElementById('strategyInput').value = el.textContent;
+  updateCharCount();
+}
+
+function updateCharCount() {
+  const len = document.getElementById('strategyInput').value.length;
+  document.getElementById('charCount').textContent = len;
+}
+
+async function runGenerate() {
+  const strategy = document.getElementById('strategyInput').value.trim();
+  if (!strategy || strategy.length < 10) {
+    showToast('Describe your strategy first');
+    return;
+  }
+
+  const btn = document.getElementById('generateBtn');
+  const btnText = document.getElementById('generateBtnText');
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="spinner"></span> Generating...';
+  document.getElementById('codeResult').classList.remove('show');
+
+  // Send to Telegram bot via sendData
+  if (tg) {
+    tg.sendData(JSON.stringify({
+      action: 'generate',
+      mode: genMode,
+      strategy: strategy,
+    }));
+  }
+
+  // Show placeholder result after delay (actual result comes via bot message)
+  await delay(1500);
+
+  // Demo code while waiting for real response
+  const demoCode = genMode === 'pine'
+    ? `//@version=6\nindicator("AI Strategy", overlay=true)\n\n// Generated from: ${strategy.slice(0,40)}...\nrsiLen = input.int(14, "RSI Length")\nrsiVal = ta.rsi(close, rsiLen)\nvolAvg = ta.sma(volume, 20)\n\nbuySignal = rsiVal < 30 and volume > volAvg * 1.5\nplotshape(buySignal, style=shape.triangleup, color=color.green)\nalertcondition(buySignal, "Buy Signal")`
+    : `// MQL5 EA — Generated\n// Strategy: ${strategy.slice(0,40)}...\n\n#include <Trade\\Trade.mqh>\nCTrade trade;\n\ninput int RSI_Period = 14;\ninput double LotSize = 0.01;\ninput int TP_Pips = 20;\ninput int SL_Pips = 40;\n\nvoid OnTick() {\n   double rsi = iRSI(Symbol(), PERIOD_CURRENT, RSI_Period, PRICE_CLOSE);\n   if (rsi < 30 && PositionsTotal() == 0)\n      trade.Buy(LotSize);\n}`;
+
+  document.getElementById('codeLang').textContent =
+    genMode === 'pine' ? 'PINE SCRIPT v6' : 'MQL5 EA';
+  document.getElementById('codeBody').textContent = demoCode;
+  document.getElementById('codeResult').classList.add('show');
+
+  btn.disabled = false;
+  btnText.innerHTML = '⚡ Generate Code';
+  showToast('Code generated! Check Telegram for full version.');
+
+  // Update budget display
+  updateBudget(0.002);
+}
+
+function copyCode() {
+  const code = document.getElementById('codeBody').textContent;
+  navigator.clipboard?.writeText(code).then(() => showToast('Code copied!'));
+}
+
+// ── Budget tracker ────────────────────────────────────────────
+let totalSpent = 0;
+
+function updateBudget(cost) {
+  totalSpent += cost;
+  const pct = Math.min(totalSpent / 5.0 * 100, 100);
+  document.getElementById('budgetVal').textContent =
+    `$${totalSpent.toFixed(3)} / $5.00`;
+  document.getElementById('budgetFill').style.width = `${pct}%`;
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Utils ─────────────────────────────────────────────────────
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Haptic feedback ───────────────────────────────────────────
+document.querySelectorAll('.product-card, .qa-btn, .menu-item, .btn').forEach(el => {
+  el.addEventListener('click', () => tg?.HapticFeedback?.impactOccurred('light'));
+});
+</script>
+</body>
+</html>

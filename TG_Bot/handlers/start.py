@@ -8,6 +8,7 @@ Handles:
   /status           — Account overview
 """
 from aiogram import Router, F
+from aiogram.types import WebAppInfo, MenuButtonWebApp, MenuButtonDefault
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
@@ -186,6 +187,95 @@ async def cb_back_to_menu(callback: CallbackQuery, state: FSMContext):
         reply_markup=main_menu_keyboard(),
     )
     await callback.answer()
+
+# ─── /app — Open Mini App ─────────────────────────────────────────────────────
+
+@router.message(Command("app"))
+async def cmd_app(message: Message, user: User):
+    """Open the Trade Genius Mini App."""
+    from config.settings import settings
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+
+    base = settings.TELEGRAM_WEBHOOK_URL.rsplit("/webhook", 1)[0] if settings.TELEGRAM_WEBHOOK_URL else ""
+
+    if not base:
+        await message.answer(
+            "⚠️ Mini App URL not configured yet.\n\n"
+            "Set `TELEGRAM_WEBHOOK_URL` in your .env to enable the Mini App.\n\n"
+            "For now, use the bot commands directly — all features work!",
+            parse_mode="Markdown",
+        )
+        return
+
+    webapp_url = f"{base}/app"
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="🚀 Open Trade Genius App",
+            web_app=WebAppInfo(url=webapp_url),
+        )
+    ]])
+
+    await message.answer(
+        "📱 *Trade Genius Mini App*\n\n"
+        "Tap the button below to open the full trading dashboard:\n\n"
+        "• 📦 4 products overview\n"
+        "• ⚡ AI code generator\n"
+        "• 📈 Market overview\n"
+        "• 🤝 Partner program\n"
+        "• 👤 Your profile & stats",
+        parse_mode="Markdown",
+        reply_markup=keyboard,
+    )
+
+
+# ─── WebApp data handler ──────────────────────────────────────────────────────
+
+@router.message(F.web_app_data)
+async def handle_webapp_data(message: Message, state: FSMContext, user: User):
+    """
+    Receive data sent from the Mini App via Telegram.sendData().
+    The Mini App sends JSON: { action, command, mode, strategy }
+    """
+    import json
+    try:
+        data = json.loads(message.web_app_data.data)
+    except Exception:
+        return
+
+    action = data.get("action", "")
+
+    if action == "command":
+        # User tapped a button in the Mini App that maps to a bot command
+        cmd = data.get("command", "")
+        cmd_map = {
+            "/check":               "Use /check TICKER SIGNAL to validate a trade",
+            "/connect_indicator":   cmd_connect_indicator,
+            "/connect_ea":          cmd_connect_ea,
+            "/my_rules":            cmd_my_rules,
+            "/history":             cmd_history,
+            "/subscribe":           cmd_subscribe,
+            "/my_usage":            cmd_my_usage,
+            "/add_rule":            None,
+        }
+        handler = cmd_map.get(cmd)
+        if callable(handler):
+            await handler(message, user)
+        elif isinstance(handler, str):
+            await message.answer(handler, parse_mode="Markdown")
+        return
+
+    if action == "generate":
+        # User submitted strategy from Mini App generator
+        from TG_Bot.handlers.generate import _run_pine_generation, _run_mql5_generation
+        mode     = data.get("mode", "pine")
+        strategy = data.get("strategy", "").strip()
+        if not strategy:
+            return
+        if mode == "mql5":
+            await _run_mql5_generation(message, state, user, strategy)
+        else:
+            await _run_pine_generation(message, state, user, strategy)
+
 
 
 @router.callback_query(F.data == "show_plans")
