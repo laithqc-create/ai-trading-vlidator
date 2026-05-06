@@ -17,6 +17,14 @@ from TG_Bot.keyboards.main_menu import main_menu_keyboard
 from TG_Bot.keyboards.product_kb import account_keyboard, subscription_plans_keyboard, back_to_menu_keyboard
 from db.models import User, PlanTier
 from config.settings import settings
+from TG_Bot.handlers.validate import (
+    cmd_connect_indicator,
+    cmd_connect_ea,
+    cmd_my_rules,
+    cmd_history,
+)
+from TG_Bot.handlers.generate import cmd_my_usage
+from TG_Bot.handlers.subscription import cmd_subscribe
 
 router = Router(name="start")
 

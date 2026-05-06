@@ -109,7 +109,85 @@ async def health_check():
     return {"status": "ok", "service": "ai-trade-validator"}
 
 
-# ─── Telegram Webhook ─────────────────────────────────────────────────────────
+# ─── Mini App API ─────────────────────────────────────────────────────────────
+
+@app.get("/api/user/stats")
+async def api_user_stats(request: Request):
+    """
+    Return live stats for the Mini App hero section.
+    Identifies user via X-Telegram-User-Id header (set by Mini App JS).
+    Falls back to zeros if user not found.
+    """
+    telegram_id_str = request.headers.get("X-Telegram-User-Id", "")
+    if not telegram_id_str or not telegram_id_str.isdigit():
+        return {"validations": 0, "generations": 0, "accuracy": 0}
+
+    telegram_id = int(telegram_id_str)
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create(telegram_id=telegram_id)
+        if user is None:
+            return {"validations": 0, "generations": 0, "accuracy": 0}
+
+        # Count total validations from DB
+        from sqlalchemy import func
+        from db.models import Validation
+        total_q = await db.execute(
+            select(func.count()).where(Validation.user_id == user.id)
+        )
+        total_validations = total_q.scalar() or 0
+
+        # Count wins for accuracy
+        wins_q = await db.execute(
+            select(func.count()).where(
+                Validation.user_id == user.id,
+                Validation.outcome == "win",
+            )
+        )
+        wins = wins_q.scalar() or 0
+        accuracy = round((wins / total_validations * 100) if total_validations > 0 else 0)
+
+    return {
+        "validations": total_validations,
+        "generations": user.total_generations or 0,
+        "accuracy": accuracy,
+    }
+
+
+@app.get("/api/user/plan")
+async def api_user_plan(request: Request):
+    """
+    Return the user's current plan for the Mini App profile tab.
+    Identifies user via X-Telegram-User-Id header.
+    """
+    telegram_id_str = request.headers.get("X-Telegram-User-Id", "")
+    if not telegram_id_str or not telegram_id_str.isdigit():
+        return {"plan": "free", "plan_label": "Free", "expires_at": None}
+
+    telegram_id = int(telegram_id_str)
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create(telegram_id=telegram_id)
+        if user is None:
+            return {"plan": "free", "plan_label": "Free", "expires_at": None}
+
+    plan_labels = {
+        "free":     "Free",
+        "product1": "Indicator Validator",
+        "product2": "EA Analyzer",
+        "product3": "Manual Validator",
+        "pro":      "Pro Bundle",
+    }
+    expires = user.plan_expires_at.isoformat() if user.plan_expires_at else None
+
+    return {
+        "plan":       user.plan.value,
+        "plan_label": plan_labels.get(user.plan.value, "Free"),
+        "expires_at": expires,
+    }
+
+
+
 
 @app.post("/webhook/telegram")
 async def telegram_webhook(request: Request):

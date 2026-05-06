@@ -994,6 +994,43 @@ document.getElementById('profileName').textContent = `${firstName} ${lastName}`.
 document.getElementById('profileSub').textContent  = 'FREE Plan · Trade Genius';
 document.getElementById('profileAvatar').textContent = initials;
 
+// ── Live data from API ─────────────────────────────────────────
+async function loadUserData() {
+  const telegramId = user.id;
+  if (!telegramId) return;
+
+  const headers = { 'X-Telegram-User-Id': String(telegramId) };
+
+  try {
+    const [statsRes, planRes] = await Promise.all([
+      fetch('/api/user/stats', { headers }),
+      fetch('/api/user/plan',  { headers }),
+    ]);
+
+    if (statsRes.ok) {
+      const stats = await statsRes.json();
+      document.getElementById('statValidations').textContent = stats.validations ?? 0;
+      document.getElementById('statGenerations').textContent = stats.generations ?? 0;
+      document.getElementById('statAccuracy').textContent    = stats.accuracy > 0 ? `${stats.accuracy}%` : '—';
+      document.getElementById('ps1').textContent = stats.validations ?? 0;
+      document.getElementById('ps2').textContent = stats.generations ?? 0;
+      document.getElementById('ps3').textContent = stats.accuracy > 0 ? `${stats.accuracy}%` : '—%';
+    }
+
+    if (planRes.ok) {
+      const plan = await planRes.json();
+      const label = plan.plan_label || 'Free';
+      document.getElementById('planBadge').textContent = label.toUpperCase();
+      document.getElementById('profileSub').textContent = `${label} · Trade Genius`;
+    }
+  } catch (e) {
+    // Silently fail — defaults (zeros) are already shown
+    console.warn('Could not load live user data:', e);
+  }
+}
+
+loadUserData();
+
 // ── Navigation ────────────────────────────────────────────────
 let currentPage = 'products';
 

@@ -78,8 +78,8 @@ def create_bot() -> Bot:
 
 
 async def on_startup(bot: Bot):
-    """Called when bot starts — set commands menu."""
-    from aiogram.types import BotCommand, BotCommandScopeDefault
+    """Called when bot starts — set commands menu and Mini App button."""
+    from aiogram.types import BotCommand, BotCommandScopeDefault, MenuButtonWebApp, WebAppInfo
 
     commands = [
         BotCommand(command="start",              description="🏠 Main menu"),
@@ -102,6 +102,22 @@ async def on_startup(bot: Bot):
     ]
 
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+
+    # Register "Open App" Mini App button in chat (only if webhook URL is configured)
+    from config.settings import settings
+    if settings.TELEGRAM_WEBHOOK_URL:
+        base = settings.TELEGRAM_WEBHOOK_URL.rsplit("/webhook", 1)[0]
+        try:
+            await bot.set_chat_menu_button(
+                menu_button=MenuButtonWebApp(
+                    text="Open App",
+                    web_app=WebAppInfo(url=f"{base}/app"),
+                )
+            )
+            logger.info("Mini App menu button registered.")
+        except Exception as e:
+            logger.warning(f"Could not set Mini App menu button: {e}")
+
     logger.info(f"Bot @{(await bot.get_me()).username} started. {len(commands)} commands registered.")
 
 

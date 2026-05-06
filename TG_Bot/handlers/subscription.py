@@ -97,6 +97,9 @@ async def show_subscription_plans(message: Message, user: User):
 async def cb_subscribe(callback: CallbackQuery, user: User):
     plan_id = callback.data.replace("subscribe_", "")
 
+    # Acknowledge immediately to prevent duplicate taps / timeout spinners
+    await callback.answer()
+
     from services.subscription import WhopService
     whop = WhopService()
     checkout_url = whop.get_checkout_url(plan=plan_id, telegram_id=user.telegram_id)
@@ -118,7 +121,6 @@ async def cb_subscribe(callback: CallbackQuery, user: User):
             "Whop product IDs may not be configured yet. Please contact support.",
             reply_markup=back_to_menu_keyboard(),
         )
-    await callback.answer()
 
 
 @router.callback_query(F.data == "compare_plans")
