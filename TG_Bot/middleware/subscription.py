@@ -81,11 +81,10 @@ class SubscriptionMiddleware(BaseMiddleware):
                 first_name=tg_user.first_name,
                 last_name=tg_user.last_name,
             )
-            await db.commit()   # commit the potential new-user insert
-            await db.refresh(user)
+            await db.commit()   # commit new-user insert if any
+            await db.refresh(user)  # re-attach after commit
             # Inject into handler kwargs
             data["user"]      = user
             data["user_plan"] = user.plan
             data["db"]        = db
-
             return await handler(event, data)

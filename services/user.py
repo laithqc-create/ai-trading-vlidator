@@ -38,11 +38,14 @@ class UserService:
             await self.db.flush()
             logger.info(f"New user created: telegram_id={telegram_id}")
 
-            # Auto-create RAGFlow dataset for new user
-            ragflow = RAGFlowService(settings)
-            dataset_id = await ragflow.create_user_dataset(telegram_id)
-            if dataset_id:
-                user.ragflow_dataset_id = dataset_id
+            # Auto-create RAGFlow dataset (non-critical — never block user creation)
+            try:
+                ragflow = RAGFlowService(settings)
+                dataset_id = await ragflow.create_user_dataset(telegram_id)
+                if dataset_id:
+                    user.ragflow_dataset_id = dataset_id
+            except Exception as ragflow_err:
+                logger.warning(f"RAGFlow dataset creation skipped: {ragflow_err}")
 
         else:
             # Update name if changed
