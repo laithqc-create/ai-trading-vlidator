@@ -125,7 +125,7 @@ async def api_user_stats(request: Request):
     telegram_id = int(telegram_id_str)
     async with AsyncSessionLocal() as db:
         user_svc = UserService(db)
-        user = await user_svc.get_or_create(telegram_id=telegram_id)
+        user = await user_svc.get_user_by_telegram_id(telegram_id=telegram_id)
         if user is None:
             return {"validations": 0, "generations": 0, "accuracy": 0}
 
@@ -147,9 +147,11 @@ async def api_user_stats(request: Request):
         wins = wins_q.scalar() or 0
         accuracy = round((wins / total_validations * 100) if total_validations > 0 else 0)
 
+        generations = user.total_generations or 0
+
     return {
         "validations": total_validations,
-        "generations": user.total_generations or 0,
+        "generations": generations,
         "accuracy": accuracy,
     }
 
@@ -167,22 +169,24 @@ async def api_user_plan(request: Request):
     telegram_id = int(telegram_id_str)
     async with AsyncSessionLocal() as db:
         user_svc = UserService(db)
-        user = await user_svc.get_or_create(telegram_id=telegram_id)
+        user = await user_svc.get_user_by_telegram_id(telegram_id=telegram_id)
         if user is None:
             return {"plan": "free", "plan_label": "Free", "expires_at": None}
 
-    plan_labels = {
-        "free":     "Free",
-        "product1": "Indicator Validator",
-        "product2": "EA Analyzer",
-        "product3": "Manual Validator",
-        "pro":      "Pro Bundle",
-    }
-    expires = user.plan_expires_at.isoformat() if user.plan_expires_at else None
+        plan_labels = {
+            "free":     "Free",
+            "product1": "Indicator Validator",
+            "product2": "EA Analyzer",
+            "product3": "Manual Validator",
+            "pro":      "Pro Bundle",
+        }
+        expires = user.plan_expires_at.isoformat() if user.plan_expires_at else None
+        plan_val   = user.plan.value
+        plan_label = plan_labels.get(plan_val, "Free")
 
     return {
-        "plan":       user.plan.value,
-        "plan_label": plan_labels.get(user.plan.value, "Free"),
+        "plan":       plan_val,
+        "plan_label": plan_label,
         "expires_at": expires,
     }
 
