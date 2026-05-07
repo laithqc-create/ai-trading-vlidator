@@ -137,6 +137,13 @@ async def run_polling():
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
+    # Always delete any active webhook before polling — prevents conflict errors
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        logger.info("Webhook deleted — polling mode ready.")
+    except Exception as e:
+        logger.warning(f"Could not delete webhook: {e}")
+
     logger.info("Starting polling mode...")
     await dp.start_polling(
         bot,
