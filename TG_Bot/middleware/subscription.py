@@ -71,9 +71,9 @@ class SubscriptionMiddleware(BaseMiddleware):
                 await event.answer("⏱ Rate limit hit. Wait a moment.", show_alert=True)
             return
 
-        # Fetch or create user in DB — inject into handler data
+        # Fetch or create user — use a short-lived session just for the lookup
+        from services.user import UserService
         async with AsyncSessionLocal() as db:
-            from services.user import UserService
             user_svc = UserService(db)
             user = await user_svc.get_or_create_user(
                 telegram_id=telegram_id,
@@ -81,10 +81,14 @@ class SubscriptionMiddleware(BaseMiddleware):
                 first_name=tg_user.first_name,
                 last_name=tg_user.last_name,
             )
-            await db.commit()   # commit new-user insert if any
-            await db.refresh(user)  # re-attach after commit
-            # Inject into handler kwargs
+            await db.commit()
+            # expire_on_commit=False means user fields are still readable after commit
+            user_id    = user.id
+            user_plan  = user.plan
+
+        # Give the handler a FRESH session — prevents "session already closed" errors
+        async with AsyncSessionLocal() as handler_db:
             data["user"]      = user
-            data["user_plan"] = user.plan
-            data["db"]        = db
+            data["user_plan"] = user_plan
+            data["db"]        = handler_db
             return await handler(event, data)
