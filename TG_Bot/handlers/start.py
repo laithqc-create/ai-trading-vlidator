@@ -33,29 +33,31 @@ router = Router(name="start")
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext, user: User):
-    await state.clear()  # Reset any active FSM state
+    await state.clear()
 
-    name = message.from_user.first_name or "Trader"
-    plan_emoji = {"free": "🆓", "product1": "1️⃣", "product2": "2️⃣",
-                  "product3": "3️⃣", "pro": "⭐"}.get(user.plan.value, "🆓")
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    base = settings.TELEGRAM_WEBHOOK_URL.rsplit("/webhook", 1)[0] if settings.TELEGRAM_WEBHOOK_URL else ""
 
-    text = (
-        f"👋 *Welcome to AI Trade Validator, {name}!*\n\n"
-        f"I use two AI systems to validate your trades:\n"
-        f"• 🤖 *OpenTrade.ai* — Technical analysis (RSI, MACD, Bollinger Bands)\n"
-        f"• 📚 *RAGFlow* — Rules & historical pattern matching\n\n"
-        f"Your plan: {plan_emoji} *{user.plan.value.upper()}*\n\n"
-        f"*Choose a product below or use these free tools:*\n"
-        f"• 🆓 `/generate` — English → Pine Script\n"
-        f"• 🆓 `/generate_ea` — English → MQL5 EA\n\n"
-        f"_Use the menu buttons below to get started._"
-    )
-
-    await message.answer(
-        text,
-        parse_mode="Markdown",
-        reply_markup=main_menu_keyboard(),
-    )
+    if base:
+        webapp_url = f"{base}/app"
+        # Launch Mini App immediately — no welcome message, just the button
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(
+                text="🚀 Open Trade Genius",
+                web_app=WebAppInfo(url=webapp_url),
+            )
+        ]])
+        await message.answer(
+            "👇",
+            reply_markup=keyboard,
+        )
+    else:
+        # Fallback when no URL configured — show simple prompt
+        name = message.from_user.first_name or "Trader"
+        await message.answer(
+            f"👋 *Welcome, {name}!*\n\nSet `TELEGRAM_WEBHOOK_URL` in .env to enable the Mini App.",
+            parse_mode="Markdown",
+        )
 
 
 # ─── Menu button routing ───────────────────────────────────────────────────────

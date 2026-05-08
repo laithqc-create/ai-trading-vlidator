@@ -108,13 +108,14 @@ async def on_startup(bot: Bot):
     if settings.TELEGRAM_WEBHOOK_URL:
         base = settings.TELEGRAM_WEBHOOK_URL.rsplit("/webhook", 1)[0]
         try:
+            # Set globally (no chat_id) so it applies to ALL chats including new users
             await bot.set_chat_menu_button(
                 menu_button=MenuButtonWebApp(
                     text="Open App",
                     web_app=WebAppInfo(url=f"{base}/app"),
                 )
             )
-            logger.info("Mini App menu button registered.")
+            logger.info(f"Mini App menu button registered → {base}/app")
         except Exception as e:
             logger.warning(f"Could not set Mini App menu button: {e}")
 
