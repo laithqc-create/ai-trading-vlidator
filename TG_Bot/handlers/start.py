@@ -64,16 +64,12 @@ async def cmd_start(message: Message, state: FSMContext, user: User):
 
 @router.message(F.text == "📊 Indicator Validator")
 async def menu_indicator(message: Message, user: User):
-    from TG_Bot.keyboards.strategy_kb import strategy_selector
-    text = (
-        "*📊 Indicator Validator*\n\n"
-        "Choose how you want to connect your TradingView indicator:\n\n"
-        "🔌 *Webhook* — Requires paid TradingView ($15-30/mo)\n"
-        "📄 *Share Code* — Free! Paste your Pine Script source\n"
-        "🤖 *AI Generate* — Free! Describe your strategy in English\n\n"
-        "_All three methods feed into the same AI validation pipeline._"
+    from TG_Bot.keyboards.strategy_kb import platform_selector
+    await message.answer(
+        "*📊 Indicator Validator*\n\nSelect your trading platform:",
+        parse_mode="Markdown",
+        reply_markup=platform_selector(),
     )
-    await message.answer(text, parse_mode="Markdown", reply_markup=strategy_selector())
 
 
 @router.message(F.text == "🤖 EA Analyzer")

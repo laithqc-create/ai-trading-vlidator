@@ -8,26 +8,26 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
-def strategy_selector() -> InlineKeyboardMarkup:
-    """
-    Product 1 — Three entry methods:
-      Button 1: Webhook (paid TradingView users)
-      Button 2: Share Source Code (free TradingView users, bypass 3-indicator limit)
-      Button 3: AI Generate Pine Script (everyone, free loss leader)
-    """
+def platform_selector() -> InlineKeyboardMarkup:
+    """Step 1 — Choose your trading platform."""
     buttons = [
-        [InlineKeyboardButton(
-            text="🔌 Connect via Webhook",
-            callback_data="strategy_webhook",
-        )],
-        [InlineKeyboardButton(
-            text="📄 Share Source Code",
-            callback_data="strategy_source",
-        )],
-        [InlineKeyboardButton(
-            text="🤖 AI Generate Pine Script (Free)",
-            callback_data="strategy_generate",
-        )],
+        [InlineKeyboardButton(text="📊 TradingView",           callback_data="platform_tradingview")],
+        [InlineKeyboardButton(text="🤖 MetaTrader (MT4/MT5)",  callback_data="platform_metatrader")],
+        [InlineKeyboardButton(text="📈 cTrader",                callback_data="platform_ctrader")],
+        [InlineKeyboardButton(text="🎯 TakeProfit.com",         callback_data="platform_takeprofit")],
+        [InlineKeyboardButton(text="⚡ MatchTrader",             callback_data="platform_matchtrader")],
+        [InlineKeyboardButton(text="💹 DAX Trader",              callback_data="platform_daxtrader")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def strategy_selector() -> InlineKeyboardMarkup:
+    """TradingView sub-menu — three entry methods."""
+    buttons = [
+        [InlineKeyboardButton(text="🔌 Connect via Webhook",        callback_data="strategy_webhook")],
+        [InlineKeyboardButton(text="📄 Share Source Code",           callback_data="strategy_source")],
+        [InlineKeyboardButton(text="🤖 AI Generate Pine Script (Free)", callback_data="strategy_generate")],
+        [InlineKeyboardButton(text="◀️ Back to Platforms",           callback_data="back_to_platforms")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

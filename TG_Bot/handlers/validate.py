@@ -708,3 +708,116 @@ async def cmd_link(message: Message, user: User):
         parse_mode="Markdown",
         reply_markup=back_to_menu_keyboard(),
     )
+
+
+# ─── Platform selection callbacks ─────────────────────────────────────────────
+
+@router.callback_query(F.data == "back_to_platforms")
+async def cb_back_to_platforms(callback: CallbackQuery, user: User):
+    from TG_Bot.keyboards.strategy_kb import platform_selector
+    await callback.answer()
+    await callback.message.edit_text(
+        "*📊 Indicator Validator*\n\nSelect your trading platform:",
+        parse_mode="Markdown",
+        reply_markup=platform_selector(),
+    )
+
+
+@router.callback_query(F.data == "platform_tradingview")
+async def cb_platform_tradingview(callback: CallbackQuery, user: User):
+    from TG_Bot.keyboards.strategy_kb import strategy_selector
+    await callback.answer()
+    await callback.message.edit_text(
+        "*📊 TradingView Indicator*\n\n"
+        "Choose how to connect your TradingView indicator:\n\n"
+        "🔌 *Webhook* — Requires paid TradingView ($15-30/mo)\n"
+        "📄 *Share Code* — Free! Paste your Pine Script source\n"
+        "🤖 *AI Generate* — Free! Describe in English\n\n"
+        "_All methods feed the same AI validation pipeline._",
+        parse_mode="Markdown",
+        reply_markup=strategy_selector(),
+    )
+
+
+@router.callback_query(F.data == "platform_metatrader")
+async def cb_platform_metatrader(callback: CallbackQuery, user: User):
+    from TG_Bot.keyboards.strategy_kb import platform_coming_soon
+    await callback.answer()
+    await callback.message.edit_text(
+        "*🤖 MetaTrader (MT4/MT5) Indicator*\n\n"
+        "Connect your MetaTrader indicator via our EA monitor:\n\n"
+        "1️⃣ Download our MT4/MT5 indicator file\n"
+        "2️⃣ Install it in MetaEditor\n"
+        "3️⃣ It sends signals here automatically\n\n"
+        "Use /connect_indicator to get your personal webhook URL.\n\n"
+        "_Works with any MT4/MT5 broker._",
+        parse_mode="Markdown",
+        reply_markup=_back_keyboard(),
+    )
+
+
+@router.callback_query(F.data == "platform_ctrader")
+async def cb_platform_ctrader(callback: CallbackQuery, user: User):
+    await callback.answer()
+    await callback.message.edit_text(
+        "*📈 cTrader Indicator*\n\n"
+        "Connect your cTrader cBot or indicator:\n\n"
+        "1️⃣ Get your webhook URL via /connect_indicator\n"
+        "2️⃣ Add our HTTP request call to your cAlgo indicator\n"
+        "3️⃣ Signals are validated automatically\n\n"
+        "_Compatible with all cTrader brokers._",
+        parse_mode="Markdown",
+        reply_markup=_back_keyboard(),
+    )
+
+
+@router.callback_query(F.data == "platform_takeprofit")
+async def cb_platform_takeprofit(callback: CallbackQuery, user: User):
+    await callback.answer()
+    await callback.message.edit_text(
+        "*🎯 TakeProfit.com Indicator*\n\n"
+        "Connect your TakeProfit.com strategy:\n\n"
+        "1️⃣ Get your webhook URL via /connect_indicator\n"
+        "2️⃣ Add it as a notification webhook in TakeProfit.com\n"
+        "3️⃣ Every signal gets AI-validated instantly\n\n"
+        "_Works with TakeProfit.com alert webhooks._",
+        parse_mode="Markdown",
+        reply_markup=_back_keyboard(),
+    )
+
+
+@router.callback_query(F.data == "platform_matchtrader")
+async def cb_platform_matchtrader(callback: CallbackQuery, user: User):
+    await callback.answer()
+    await callback.message.edit_text(
+        "*⚡ MatchTrader Indicator*\n\n"
+        "Connect your MatchTrader strategy:\n\n"
+        "1️⃣ Get your webhook URL via /connect_indicator\n"
+        "2️⃣ Configure it in your MatchTrader webhook settings\n"
+        "3️⃣ Signals validated in real-time\n\n"
+        "_Compatible with all MatchTrader prop firms._",
+        parse_mode="Markdown",
+        reply_markup=_back_keyboard(),
+    )
+
+
+@router.callback_query(F.data == "platform_daxtrader")
+async def cb_platform_daxtrader(callback: CallbackQuery, user: User):
+    await callback.answer()
+    await callback.message.edit_text(
+        "*💹 DAX Trader Indicator*\n\n"
+        "Connect your DAX Trader indicator:\n\n"
+        "1️⃣ Get your webhook URL via /connect_indicator\n"
+        "2️⃣ Add webhook in DAX Trader alert settings\n"
+        "3️⃣ AI validates every signal automatically\n\n"
+        "_Works with DAX Trader alert system._",
+        parse_mode="Markdown",
+        reply_markup=_back_keyboard(),
+    )
+
+
+def _back_keyboard():
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="◀️ Back to Platforms", callback_data="back_to_platforms")
+    ]])
