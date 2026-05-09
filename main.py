@@ -63,7 +63,8 @@ async def lifespan(app: FastAPI):
 
     # Set Telegram webhook only in production (APP_ENV=production)
     # In development, the polling bot handles updates instead
-    if settings.TELEGRAM_WEBHOOK_URL and settings.APP_ENV == "production":
+    # Only set webhook in production — dev uses polling bot instead
+    if settings.APP_ENV == "production" and settings.TELEGRAM_WEBHOOK_URL:
         bot = get_bot()
         dp  = get_dispatcher()
         await on_startup(bot)
@@ -75,7 +76,11 @@ async def lifespan(app: FastAPI):
         app.state.dp  = dp
         logger.info(f"Telegram webhook set: {settings.TELEGRAM_WEBHOOK_URL}")
     else:
-        logger.info("Dev mode: skipping webhook registration (polling bot handles updates)")
+        # Dev mode — delete any stale webhook so polling bot can run cleanly
+        bot = get_bot()
+        await on_startup(bot)
+        await bot.delete_webhook(drop_pending_updates=True)
+        logger.info(f"Dev mode: webhook cleared, polling bot handles updates")
 
     logger.info("AI Trade Validator ready.")
     yield
