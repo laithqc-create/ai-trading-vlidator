@@ -20,10 +20,19 @@ MINIAPP_DIR = Path(__file__).parent
 
 @router.get("/app", response_class=HTMLResponse)
 async def serve_miniapp():
-    """Serve the Telegram Mini App."""
+    """Serve the Mini App with no-cache headers so updates load immediately."""
     html_file = MINIAPP_DIR / "index.html"
     if html_file.exists():
-        return FileResponse(html_file, media_type="text/html")
+        content = html_file.read_text(encoding="utf-8")
+        return HTMLResponse(
+            content=content,
+            media_type="text/html",
+            headers={
+                "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                "Pragma": "no-cache",
+                "Expires": "0",
+            },
+        )
     return HTMLResponse("<h1>Mini App not found</h1>", status_code=404)
 
 
