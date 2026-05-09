@@ -112,7 +112,7 @@ async def on_startup(bot: Bot):
             await bot.set_chat_menu_button(
                 menu_button=MenuButtonWebApp(
                     text="Open App",
-                    web_app=WebAppInfo(url=f"{base}/app?v={int(__import__("time").time())}"),
+                    web_app=WebAppInfo(url=f"{base}/app?v=1778314063"),
                 )
             )
             logger.info(f"Mini App menu button registered → {base}/app")

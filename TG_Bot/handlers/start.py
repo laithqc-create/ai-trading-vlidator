@@ -39,7 +39,7 @@ async def cmd_start(message: Message, state: FSMContext, user: User):
     base = settings.TELEGRAM_WEBHOOK_URL.rsplit("/webhook", 1)[0] if settings.TELEGRAM_WEBHOOK_URL else ""
 
     if base:
-        webapp_url = f"{base}/app?v={int(__import__("time").time())}"
+        webapp_url = f"{base}/app?v=1778314063"
         # Launch Mini App immediately — no welcome message, just the button
         keyboard = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(
@@ -213,7 +213,7 @@ async def cmd_app(message: Message, user: User):
         )
         return
 
-    webapp_url = f"{base}/app?v={int(__import__("time").time())}"
+    webapp_url = f"{base}/app?v=1778314063"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(
             text="🚀 Open Trade Genius App",

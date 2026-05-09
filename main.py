@@ -137,11 +137,11 @@ async def api_user_stats(request: Request):
         )
         total_validations = total_q.scalar() or 0
 
-        # Count wins for accuracy
+        # Count wins for accuracy using user_outcome field
         wins_q = await db.execute(
             select(func.count()).where(
                 Validation.user_id == user.id,
-                Validation.outcome == "win",
+                Validation.user_outcome == "WIN",
             )
         )
         wins = wins_q.scalar() or 0
