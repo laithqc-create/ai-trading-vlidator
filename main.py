@@ -61,8 +61,9 @@ async def lifespan(app: FastAPI):
     logger.info("Starting AI Trade Validator...")
     await init_db()
 
-    # Set Telegram webhook if URL is configured
-    if settings.TELEGRAM_WEBHOOK_URL:
+    # Set Telegram webhook only in production (APP_ENV=production)
+    # In development, the polling bot handles updates instead
+    if settings.TELEGRAM_WEBHOOK_URL and settings.APP_ENV == "production":
         bot = get_bot()
         dp  = get_dispatcher()
         await on_startup(bot)
@@ -73,6 +74,8 @@ async def lifespan(app: FastAPI):
         app.state.bot = bot
         app.state.dp  = dp
         logger.info(f"Telegram webhook set: {settings.TELEGRAM_WEBHOOK_URL}")
+    else:
+        logger.info("Dev mode: skipping webhook registration (polling bot handles updates)")
 
     logger.info("AI Trade Validator ready.")
     yield
