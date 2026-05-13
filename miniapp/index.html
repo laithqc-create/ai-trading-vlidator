@@ -1176,114 +1176,180 @@ function openProduct(type) {
 
 function showPlatformScreen() {
   document.getElementById('platform-screen').classList.add('active');
-}
-
-function hidePlatformScreen() {
-  document.getElementById('platform-screen').classList.remove('active');
-  // Reset sub-views for next open
-  setTimeout(() => {
-    document.getElementById('platform-list').style.display = 'block';
-    document.getElementById('platform-grid-view').style.display = 'none';
-    document.getElementById('platform-detail').style.display = 'none';
-  }, 300);
-}
-
-function selectPlatform(platform) {
-  const info = {
-    tradingview: {
-      title: '📊 TradingView',
-      steps: [
-        { icon: '🔌', label: 'Connect via Webhook', sub: 'Requires paid TradingView ($15-30/mo)', action: '/connect_indicator' },
-        { icon: '📄', label: 'Share Source Code', sub: 'Free — paste your Pine Script', action: '/share_code' },
-        { icon: '🤖', label: 'AI Generate Pine Script', sub: 'Free — describe in English', action: '/generate' },
-      ]
-    },
-    metatrader: {
-      title: '🤖 MetaTrader (MT4/MT5)',
-      steps: [
-        { icon: '📥', label: 'Download MT Indicator', sub: 'Get our .ex4 / .ex5 file', action: null },
-        { icon: '🔗', label: 'Get Your Webhook URL', sub: 'Links signals to your account', action: '/connect_indicator' },
-        { icon: '✅', label: 'Signals Validated Auto', sub: 'Works with any MT broker', action: null },
-      ]
-    },
-    ctrader: {
-      title: '📈 cTrader',
-      steps: [
-        { icon: '🔗', label: 'Get Your Webhook URL', sub: 'Add to your cAlgo indicator', action: '/connect_indicator' },
-        { icon: '💻', label: 'Add HTTP Call to cBot', sub: 'One line of code', action: null },
-        { icon: '✅', label: 'Signals Auto-Validated', sub: 'All cTrader brokers supported', action: null },
-      ]
-    },
-    takeprofit: {
-      title: '🎯 TakeProfit.com',
-      steps: [
-        { icon: '🔗', label: 'Get Your Webhook URL', sub: 'From your account settings', action: '/connect_indicator' },
-        { icon: '⚙️', label: 'Add as Alert Webhook', sub: 'In TakeProfit.com dashboard', action: null },
-        { icon: '✅', label: 'Every Signal Validated', sub: 'Instant AI analysis', action: null },
-      ]
-    },
-    matchtrader: {
-      title: '⚡ MatchTrader',
-      steps: [
-        { icon: '🔗', label: 'Get Your Webhook URL', sub: 'From your account settings', action: '/connect_indicator' },
-        { icon: '⚙️', label: 'Add to MatchTrader Webhooks', sub: 'Prop firm compatible', action: null },
-        { icon: '✅', label: 'Real-time Validation', sub: 'All MatchTrader firms', action: null },
-      ]
-    },
-    daxtrader: {
-      title: '💹 DAX Trader',
-      steps: [
-        { icon: '🔗', label: 'Get Your Webhook URL', sub: 'From your account settings', action: '/connect_indicator' },
-        { icon: '⚙️', label: 'Add to DAX Alert Settings', sub: 'In your DAX dashboard', action: null },
-        { icon: '✅', label: 'Auto Signal Validation', sub: 'All DAX alert types', action: null },
-      ]
-    },
-  };
-
-  const p = info[platform];
-  if (!p) return;
-
-  document.getElementById('platform-detail-title').textContent = p.title;
-  const list = document.getElementById('platform-steps');
-  list.innerHTML = p.steps.map(s => `
-    <div class="platform-step ${s.action ? 'clickable' : ''}" ${s.action ? `onclick="openTelegram('${s.action}')"` : ''}>
-      <div class="pstep-icon">${s.icon}</div>
-      <div class="pstep-text">
-        <div class="pstep-label">${s.label}</div>
-        <div class="pstep-sub">${s.sub}</div>
-      </div>
-      ${s.action ? '<div class="pstep-arrow">›</div>' : ''}
-    </div>
-  `).join('');
-
-  document.getElementById('platform-list').style.display = 'none';
-  document.getElementById('platform-detail').style.display = 'block';
-}
-
-function showPlatformGrid() {
-  document.getElementById('platform-list').style.display = 'none';
-  document.getElementById('platform-grid-view').style.display = 'block';
-  document.getElementById('platform-detail').style.display = 'none';
-}
-
-function backToConnectList() {
   document.getElementById('platform-list').style.display = 'block';
   document.getElementById('platform-grid-view').style.display = 'none';
   document.getElementById('platform-detail').style.display = 'none';
 }
 
-function backToPlatformList() {
+function hidePlatformScreen() {
+  document.getElementById('platform-screen').classList.remove('active');
+}
+
+function showWebhookPlatformGrid() {
   document.getElementById('platform-list').style.display = 'none';
   document.getElementById('platform-grid-view').style.display = 'block';
   document.getElementById('platform-detail').style.display = 'none';
 }
 
-// ── Telegram command bridge ───────────────────────────────────
-function openTelegram(cmd) {
-  if (tg) {
-    tg.sendData(JSON.stringify({ action: 'command', command: cmd }));
+function backToIndicatorOptions() {
+  document.getElementById('platform-list').style.display = 'block';
+  document.getElementById('platform-grid-view').style.display = 'none';
+  document.getElementById('platform-detail').style.display = 'none';
+}
+
+async function loadWebhookPlatform(platform) {
+  const telegramId = user.id;
+  if (!telegramId) {
+    showToast('Telegram user not found');
+    return;
   }
-  showToast(`Opening ${cmd} in chat...`);
+
+  const labels = {
+    tradingview: 'TradingView',
+    metatrader: 'MetaTrader',
+    ctrader: 'cTrader',
+    matchtrader: 'MatchTrader',
+    daxtrader: 'DAX Trader',
+    takeprofit: 'TakeProfit.com',
+  };
+
+  document.getElementById('platform-detail-title').textContent = `${labels[platform] || 'Platform'} Webhook`;
+  document.getElementById('platform-steps').innerHTML = `
+    <div class="platform-step">
+      <div class="pstep-text">
+        <div class="pstep-label">Loading setup...</div>
+        <div class="pstep-sub">Fetching your personal webhook URL</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('platform-list').style.display = 'none';
+  document.getElementById('platform-grid-view').style.display = 'none';
+  document.getElementById('platform-detail').style.display = 'block';
+
+  try {
+    const res = await fetch(`/api/integrations/indicator-webhook?platform=${encodeURIComponent(platform)}`, {
+      headers: { 'X-Telegram-User-Id': String(telegramId) },
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.detail || 'Could not load setup');
+    }
+
+    if (!data.ok && data.requires_upgrade) {
+      document.getElementById('platform-steps').innerHTML = `
+        <div class="platform-step clickable" onclick="openTelegram('/subscribe')">
+          <div class="pstep-text">
+            <div class="pstep-label">Upgrade Required</div>
+            <div class="pstep-sub">${data.message}</div>
+          </div>
+          <div class="pstep-arrow">&rsaquo;</div>
+        </div>
+      `;
+      return;
+    }
+
+    const payloadText = JSON.stringify(data.example_payload, null, 2)
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    const actionsHtml = (data.actions || []).map((item, index) => `
+      <div class="platform-step">
+        <div class="pstep-icon">${index + 1}</div>
+        <div class="pstep-text">
+          <div class="pstep-label">${item}</div>
+        </div>
+      </div>
+    `).join('');
+
+    const notesHtml = (data.notes || []).map((item) => `
+      <div class="platform-step">
+        <div class="pstep-text">
+          <div class="pstep-sub">${item}</div>
+        </div>
+      </div>
+    `).join('');
+
+    const rawPayloadText = JSON.stringify(data.example_payload, null, 2);
+    const escapedPayloadArg = JSON.stringify(rawPayloadText);
+    const escapedUrlArg = JSON.stringify(data.webhook_url || '');
+
+    document.getElementById('platform-steps').innerHTML = `
+      <div class="platform-step">
+        <div class="pstep-text">
+          <div class="pstep-label">Your Webhook URL</div>
+          <div class="pstep-sub" style="word-break:break-all">${data.webhook_url}</div>
+          <div style="margin-top:10px">
+            <button class="btn btn-primary" onclick='copyText(${escapedUrlArg}, "Webhook URL")'>Copy Webhook URL</button>
+          </div>
+        </div>
+      </div>
+      <div class="platform-step">
+        <div class="pstep-text">
+          <div class="pstep-label">Your action</div>
+        </div>
+      </div>
+      ${actionsHtml}
+      <div class="platform-step">
+        <div class="pstep-text">
+          <div class="pstep-label">Alert message format</div>
+          <div class="pstep-sub"><pre style="white-space:pre-wrap;margin:8px 0 0">${payloadText}</pre></div>
+          <div style="margin-top:10px">
+            <button class="btn btn-primary" onclick='copyText(${escapedPayloadArg}, "JSON Template")'>Copy JSON Template</button>
+          </div>
+        </div>
+      </div>
+      ${notesHtml}
+    `;
+  } catch (err) {
+    document.getElementById('platform-steps').innerHTML = `
+      <div class="platform-step">
+        <div class="pstep-text">
+          <div class="pstep-label">Could not load setup</div>
+          <div class="pstep-sub">${err.message || 'Please try again.'}</div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function openTelegram(cmd) {
+
+  if (!tg?.sendData) {
+    showToast('Open this Mini App from Telegram to continue');
+    return;
+  }
+
+  tg.sendData(JSON.stringify({ action: 'command', command: cmd }));
+  showToast(`Sent ${cmd}. Check the chat for the next step.`);
+}
+
+function openFlow(flow, label) {
+  if (!tg?.sendData) {
+    showToast('Open this Mini App from Telegram to continue');
+    return;
+  }
+
+  tg.sendData(JSON.stringify({ action: 'flow', flow }));
+  showToast(`Opening ${label} in chat...`);
+}
+
+async function copyText(value, label) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+    } else {
+      const el = document.createElement('textarea');
+      el.value = value;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+    showToast(`${label} copied`);
+  } catch {
+    showToast(`Could not copy ${label.toLowerCase()}`);
+  }
 }
 
 // ── Generator ────────────────────────────────────────────────
@@ -1400,83 +1466,102 @@ document.querySelectorAll('.product-card, .qa-btn, .menu-item, .btn').forEach(el
 <!-- ── Platform Selector Screen ─────────────────────────────── -->
 <div id="platform-screen" class="platform-screen">
   <div class="platform-header">
-    <button class="platform-back" onclick="hidePlatformScreen()">‹ Back</button>
-    <div class="platform-title">Select Platform</div>
+    <button class="platform-back" onclick="hidePlatformScreen()">&lsaquo; Back</button>
+    <div class="platform-title">Indicator Validator</div>
   </div>
 
   <div id="platform-list">
-    <div class="platform-subtitle">Choose how to connect your indicator</div>
+    <div class="platform-subtitle">Choose how you want to use Indicator Validator</div>
 
-    <!-- Primary action card -->
-    <div class="connect-card" onclick="showPlatformGrid()">
+    <div class="connect-card" onclick="showWebhookPlatformGrid()">
       <div class="connect-card-left">
-        <div class="connect-card-icon">🔌</div>
+        <div class="connect-card-icon">1</div>
         <div class="connect-card-text">
-          <div class="connect-card-title">Connect your indicator via Webhook</div>
-          <div class="connect-card-sub">Supports TradingView, MT4/5, cTrader &amp; more</div>
+          <div class="connect-card-title">Connect Indicator Webhook</div>
+          <div class="connect-card-sub">System responds based on your favorite indicator alerts</div>
         </div>
       </div>
-      <div class="connect-card-arrow">›</div>
+      <div class="connect-card-arrow">&rsaquo;</div>
     </div>
 
-    <!-- More options coming soon -->
-    <div class="connect-card connect-card-dim">
+    <div class="connect-card" onclick="openTelegram('/share_code')">
       <div class="connect-card-left">
-        <div class="connect-card-icon">📄</div>
+        <div class="connect-card-icon">2</div>
         <div class="connect-card-text">
           <div class="connect-card-title">Share Source Code</div>
-          <div class="connect-card-sub">Paste your Pine Script — Free</div>
+          <div class="connect-card-sub">Get a JSON version you can paste into our bridge indicator without needing a paid TradingView plan</div>
         </div>
       </div>
-      <div class="connect-card-arrow">›</div>
+      <div class="connect-card-arrow">&rsaquo;</div>
     </div>
 
-    <div class="connect-card connect-card-dim">
+    <div class="connect-card" onclick="openFlow('indicator_bridge', 'Bridge Indicator')">
       <div class="connect-card-left">
-        <div class="connect-card-icon">🤖</div>
+        <div class="connect-card-icon">3</div>
         <div class="connect-card-text">
-          <div class="connect-card-title">AI Generate Pine Script</div>
-          <div class="connect-card-sub">Describe your strategy in English — Free</div>
+          <div class="connect-card-title">Get Bridge Indicator</div>
+          <div class="connect-card-sub">Turn any strategy into an indicator or visualize your Pine Script after you get the JSON version</div>
         </div>
       </div>
-      <div class="connect-card-arrow">›</div>
+      <div class="connect-card-arrow">&rsaquo;</div>
+    </div>
+
+    <div class="connect-card" onclick="openFlow('indicator_our_indicator', 'Our Indicator')">
+      <div class="connect-card-left">
+        <div class="connect-card-icon">4</div>
+        <div class="connect-card-text">
+          <div class="connect-card-title">Get Our Indicator</div>
+          <div class="connect-card-sub">AI chart monitoring for SMC and ICT patterns, market structure, time and session analysis, classical patterns, strategy models, and key levels</div>
+        </div>
+      </div>
+      <div class="connect-card-arrow">&rsaquo;</div>
+    </div>
+
+    <div class="connect-card" onclick="openFlow('indicator_extension', 'Browser Extension')">
+      <div class="connect-card-left">
+        <div class="connect-card-icon">5</div>
+        <div class="connect-card-text">
+          <div class="connect-card-title">Get Browser Extension</div>
+          <div class="connect-card-sub">Do what our indicator does using screenshots you provide instead of following the market live</div>
+        </div>
+      </div>
+      <div class="connect-card-arrow">&rsaquo;</div>
     </div>
   </div>
 
-  <!-- Platform grid (shown after tapping webhook card) -->
   <div id="platform-grid-view" style="display:none">
-    <button class="platform-back-sub" onclick="backToConnectList()">‹ Back</button>
-    <div class="platform-subtitle">Select your trading platform</div>
+    <button class="platform-back-sub" onclick="backToIndicatorOptions()">&lsaquo; Back</button>
+    <div class="platform-subtitle">Choose your preferred platform</div>
     <div class="platform-grid">
-      <div class="platform-btn" onclick="selectPlatform('tradingview')">
+      <div class="platform-btn" onclick="loadWebhookPlatform('tradingview')">
         <div class="platform-btn-icon">📊</div>
         <div class="platform-btn-name">TradingView</div>
       </div>
-      <div class="platform-btn" onclick="selectPlatform('metatrader')">
+      <div class="platform-btn" onclick="loadWebhookPlatform('metatrader')">
         <div class="platform-btn-icon">🤖</div>
-        <div class="platform-btn-name">MetaTrader MT4/MT5</div>
+        <div class="platform-btn-name">MetaTrader</div>
       </div>
-      <div class="platform-btn" onclick="selectPlatform('ctrader')">
+      <div class="platform-btn" onclick="loadWebhookPlatform('ctrader')">
         <div class="platform-btn-icon">📈</div>
         <div class="platform-btn-name">cTrader</div>
       </div>
-      <div class="platform-btn" onclick="selectPlatform('takeprofit')">
-        <div class="platform-btn-icon">🎯</div>
-        <div class="platform-btn-name">TakeProfit.com</div>
-      </div>
-      <div class="platform-btn" onclick="selectPlatform('matchtrader')">
+      <div class="platform-btn" onclick="loadWebhookPlatform('matchtrader')">
         <div class="platform-btn-icon">⚡</div>
         <div class="platform-btn-name">MatchTrader</div>
       </div>
-      <div class="platform-btn" onclick="selectPlatform('daxtrader')">
+      <div class="platform-btn" onclick="loadWebhookPlatform('daxtrader')">
         <div class="platform-btn-icon">💹</div>
         <div class="platform-btn-name">DAX Trader</div>
+      </div>
+      <div class="platform-btn" onclick="loadWebhookPlatform('takeprofit')">
+        <div class="platform-btn-icon">🎯</div>
+        <div class="platform-btn-name">TakeProfit.com</div>
       </div>
     </div>
   </div>
 
   <div id="platform-detail" style="display:none">
-    <button class="platform-back-sub" onclick="backToPlatformList()">‹ All Platforms</button>
+    <button class="platform-back-sub" onclick="showWebhookPlatformGrid()">&lsaquo; All Platforms</button>
     <div class="platform-detail-title" id="platform-detail-title"></div>
     <div class="platform-steps-list" id="platform-steps"></div>
   </div>

@@ -77,49 +77,64 @@ def create_bot() -> Bot:
     )
 
 
-async def on_startup(bot: Bot):
-    """Called when bot starts — set commands menu and Mini App button."""
+async def on_startup(bot: Bot, allow_network_failures: bool = False):
+    """Called when bot starts to register bot commands and Mini App metadata."""
     from aiogram.types import BotCommand, BotCommandScopeDefault, MenuButtonWebApp, WebAppInfo
 
     commands = [
-        BotCommand(command="start",              description="🏠 Main menu"),
-        BotCommand(command="generate",           description="🆓 English → Pine Script"),
-        BotCommand(command="generate_ea",        description="🆓 English → MQL5 EA"),
-        BotCommand(command="share_code",         description="📄 Share Pine Script source"),
-        BotCommand(command="my_usage",           description="📊 Free generation budget"),
-        BotCommand(command="check",              description="🔍 Validate a trade (paid)"),
-        BotCommand(command="outcome",            description="📝 Report trade result"),
-        BotCommand(command="add_rule",           description="📚 Add personal trading rule"),
-        BotCommand(command="my_rules",           description="📋 List your rules"),
-        BotCommand(command="history",            description="📜 Last 10 validations"),
-        BotCommand(command="insights",           description="⭐ Crowd stats (Pro)"),
-        BotCommand(command="connect_indicator",  description="🔌 TradingView webhook"),
-        BotCommand(command="connect_ea",         description="⚙️ EA monitor setup"),
-        BotCommand(command="subscribe",          description="💳 Upgrade plan (Whop)"),
-        BotCommand(command="status",             description="👤 My account"),
-        BotCommand(command="link",              description="🔗 Link browser extension"),
-        BotCommand(command="help",               description="❓ All commands"),
+        BotCommand(command="start", description="Main menu"),
+        BotCommand(command="generate", description="English to Pine Script"),
+        BotCommand(command="generate_ea", description="English to MQL5 EA"),
+        BotCommand(command="share_code", description="Share Pine Script source"),
+        BotCommand(command="my_usage", description="Free generation budget"),
+        BotCommand(command="check", description="Validate a trade"),
+        BotCommand(command="outcome", description="Report trade result"),
+        BotCommand(command="add_rule", description="Add personal trading rule"),
+        BotCommand(command="my_rules", description="List your rules"),
+        BotCommand(command="history", description="Last 10 validations"),
+        BotCommand(command="insights", description="Crowd stats"),
+        BotCommand(command="connect_indicator", description="TradingView webhook"),
+        BotCommand(command="connect_ea", description="EA monitor setup"),
+        BotCommand(command="subscribe", description="Upgrade plan"),
+        BotCommand(command="status", description="My account"),
+        BotCommand(command="link", description="Link browser extension"),
+        BotCommand(command="help", description="All commands"),
     ]
 
-    await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+    async def _network_step(label: str, coro):
+        try:
+            return await coro
+        except Exception as exc:
+            if allow_network_failures:
+                logger.warning(f"Telegram startup step skipped ({label}): {exc}")
+                return None
+            raise
 
-    # Register "Open App" Mini App button in chat (only if webhook URL is configured)
+    await _network_step(
+        "set_my_commands",
+        bot.set_my_commands(commands, scope=BotCommandScopeDefault()),
+    )
+
     from config.settings import settings
     if settings.TELEGRAM_WEBHOOK_URL:
         base = settings.TELEGRAM_WEBHOOK_URL.rsplit("/webhook", 1)[0]
-        try:
-            # Set globally (no chat_id) so it applies to ALL chats including new users
-            await bot.set_chat_menu_button(
+        result = await _network_step(
+            "set_chat_menu_button",
+            bot.set_chat_menu_button(
                 menu_button=MenuButtonWebApp(
                     text="Open App",
                     web_app=WebAppInfo(url=f"{base}/app?v=1778314063"),
                 )
-            )
-            logger.info(f"Mini App menu button registered → {base}/app")
-        except Exception as e:
-            logger.warning(f"Could not set Mini App menu button: {e}")
+            ),
+        )
+        if result is not None:
+            logger.info(f"Mini App menu button registered -> {base}/app")
 
-    logger.info(f"Bot @{(await bot.get_me()).username} started. {len(commands)} commands registered.")
+    me = await _network_step("get_me", bot.get_me())
+    if me is not None:
+        logger.info(f"Bot @{me.username} started. {len(commands)} commands registered.")
+    else:
+        logger.info("Bot startup completed without Telegram API confirmation.")
 
 
 async def on_shutdown(bot: Bot):

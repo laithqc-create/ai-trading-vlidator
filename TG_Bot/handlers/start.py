@@ -64,11 +64,12 @@ async def cmd_start(message: Message, state: FSMContext, user: User):
 
 @router.message(F.text == "📊 Indicator Validator")
 async def menu_indicator(message: Message, user: User):
-    from TG_Bot.keyboards.strategy_kb import platform_selector
+    from TG_Bot.handlers.validate import _indicator_options_text
+    from TG_Bot.keyboards.strategy_kb import strategy_selector
     await message.answer(
-        "*📊 Indicator Validator*\n\nSelect your trading platform:",
+        _indicator_options_text(),
         parse_mode="Markdown",
-        reply_markup=platform_selector(),
+        reply_markup=strategy_selector(),
     )
 
 
@@ -268,6 +269,22 @@ async def handle_webapp_data(message: Message, state: FSMContext, user: User):
             await handler(message, user)
         elif isinstance(handler, str):
             await message.answer(handler, parse_mode="Markdown")
+        return
+
+    if action == "flow":
+        flow = data.get("flow", "")
+        from TG_Bot.handlers.generate import (
+            send_bridge_indicator_info,
+            send_extension_info,
+            send_our_indicator_info,
+        )
+
+        if flow == "indicator_bridge":
+            await send_bridge_indicator_info(message)
+        elif flow == "indicator_our_indicator":
+            await send_our_indicator_info(message, user)
+        elif flow == "indicator_extension":
+            await send_extension_info(message)
         return
 
     if action == "generate":

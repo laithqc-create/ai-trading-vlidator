@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     # Webhook secrets
     INDICATOR_WEBHOOK_SECRET: str = "change-me-indicator"
     EA_WEBHOOK_SECRET: str = "change-me-ea"
+    MT4_DOWNLOAD_URL: str = ""
+    MT5_DOWNLOAD_URL: str = ""
 
     @property
     def is_production(self) -> bool:

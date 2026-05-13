@@ -1,8 +1,7 @@
 """
 TG_Bot/keyboards/strategy_kb.py
 
-Three-button strategy keyboard for Product 1 (Indicator Validator).
-Each button is a different entry method for different user types.
+Keyboard helpers for Product 1 (Indicator Validator) and related flows.
 """
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -22,12 +21,27 @@ def platform_selector() -> InlineKeyboardMarkup:
 
 
 def strategy_selector() -> InlineKeyboardMarkup:
-    """TradingView sub-menu — three entry methods."""
+    """Indicator Validator sub-menu — five entry methods."""
     buttons = [
-        [InlineKeyboardButton(text="🔌 Connect via Webhook",        callback_data="strategy_webhook")],
-        [InlineKeyboardButton(text="📄 Share Source Code",           callback_data="strategy_source")],
-        [InlineKeyboardButton(text="🤖 AI Generate Pine Script (Free)", callback_data="strategy_generate")],
+        [InlineKeyboardButton(text="1. Connect Indicator Webhook", callback_data="strategy_webhook")],
+        [InlineKeyboardButton(text="2. Share Source Code", callback_data="strategy_source")],
+        [InlineKeyboardButton(text="3. Get Bridge Indicator", callback_data="strategy_bridge")],
+        [InlineKeyboardButton(text="4. Get Our Indicator", callback_data="strategy_our_indicator")],
+        [InlineKeyboardButton(text="5. Get Browser Extension", callback_data="strategy_extension")],
         [InlineKeyboardButton(text="◀️ Back to Platforms",           callback_data="back_to_platforms")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def webhook_platform_selector() -> InlineKeyboardMarkup:
+    """Choose the platform for webhook connection setup."""
+    buttons = [
+        [InlineKeyboardButton(text="TradingView", callback_data="webhook_platform_tradingview")],
+        [InlineKeyboardButton(text="MetaTrader", callback_data="webhook_platform_metatrader")],
+        [InlineKeyboardButton(text="cTrader", callback_data="webhook_platform_ctrader")],
+        [InlineKeyboardButton(text="MatchTrader", callback_data="webhook_platform_matchtrader")],
+        [InlineKeyboardButton(text="DAX Trader", callback_data="webhook_platform_daxtrader")],
+        [InlineKeyboardButton(text="TakeProfit.com", callback_data="webhook_platform_takeprofit")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

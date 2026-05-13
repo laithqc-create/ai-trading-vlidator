@@ -94,16 +94,20 @@ async def start_manual_check(message: Message, user: User):
 
 
 async def send_webhook_setup(message: Message, user: User):
-    """Send TradingView webhook setup instructions."""
+    """Ask the user to choose a platform before showing webhook setup."""
+    from TG_Bot.keyboards.strategy_kb import webhook_platform_selector
+
+    await message.answer(
+        "*🔌 Connect Indicator Webhook*\n\n"
+        "Choose your preferred platform first:",
+        parse_mode="Markdown",
+        reply_markup=webhook_platform_selector(),
+    )
+
+
+async def _get_indicator_webhook_url(user: User) -> str | None:
     if user.plan not in (PlanTier.PRODUCT1, PlanTier.PRO):
-        await message.answer(
-            "🔒 *Webhook connection* requires *Product 1* ($19/mo) or *Pro* ($79/mo).\n\n"
-            "Use /subscribe to upgrade, or try the free options:\n"
-            "📄 Share Source Code or 🤖 AI Generate (no subscription needed).",
-            parse_mode="Markdown",
-            reply_markup=subscription_plans_keyboard(user.plan.value),
-        )
-        return
+        return None
 
     from services.user import UserService
     from db.database import AsyncSessionLocal
@@ -114,7 +118,119 @@ async def send_webhook_setup(message: Message, user: User):
         token = await user_svc.get_or_create_webhook_token(db_user, "indicator")
 
     base = settings.TELEGRAM_WEBHOOK_URL.rsplit("/webhook", 1)[0]
-    webhook_url = f"{base}/webhook/indicator/{token}"
+    return f"{base}/webhook/indicator/{token}"
+
+
+async def _send_webhook_locked_message(message: Message, user: User):
+    await message.answer(
+        "🔒 *Webhook connection* requires *Product 1* ($19/mo) or *Pro* ($79/mo).\n\n"
+        "Use /subscribe to upgrade, or try the free options:\n"
+        "📄 Share Source Code or 🤖 AI Generate (no subscription needed).",
+        parse_mode="Markdown",
+        reply_markup=subscription_plans_keyboard(user.plan.value),
+    )
+
+
+async def _send_platform_webhook_setup(message: Message, user: User, platform: str):
+    webhook_url = await _get_indicator_webhook_url(user)
+    if not webhook_url:
+        await _send_webhook_locked_message(message, user)
+        return
+    mt4_link = settings.MT4_DOWNLOAD_URL or "#"
+    mt5_link = settings.MT5_DOWNLOAD_URL or "#"
+
+    platform_text = {
+        "tradingview": (
+            "*📊 TradingView Webhook Setup*\n\n"
+            f"Your webhook URL:\n`{webhook_url}`\n\n"
+            "*Steps:*\n"
+            "1. Open your indicator and create an alert.\n"
+            "2. Enable *Webhook URL* and paste the link above.\n"
+            "3. Set the alert message to:\n\n"
+            "```json\n"
+            "{\n"
+            '  "ticker": "{{ticker}}",\n'
+            '  "signal": "BUY",\n'
+            '  "price": {{close}},\n'
+            '  "indicator": "MyIndicator"\n'
+            "}\n"
+            "```\n\n"
+            "_Replace `BUY` with your signal variable or alert output._"
+        ),
+        "metatrader": (
+            "*🤖 MetaTrader Webhook Setup*\n\n"
+            f"Your webhook URL:\n`{webhook_url}`\n\n"
+            "*Steps:*\n"
+            "1. Copy your special webhook URL.\n"
+            "2. Upload screenshots from your indicator.\n"
+            "3. Explain your indicator to the system.\n"
+            f"4. Download [MT4 (.ex4)]({mt4_link}) or [MT5 (.ex5)]({mt5_link}).\n"
+            "5. Attach the Expert Advisor to your chart.\n"
+            "6. Go to Tools -> Options -> Expert Advisors and enable Allow automated trading plus Allow WebRequest for listed URLs.\n"
+            f"7. Add this URL to the allowed list: `{webhook_url}`\n"
+            "8. Right-click chart -> Expert Advisors -> Properties -> Inputs and set WebhookURL plus SignalDescription.\n"
+            "9. Set SignalDescription to: Green arrow = BUY, Red arrow = SELL, Blue line = TP, Orange line = SL.\n"
+            "10. Choose the desired chart timeframe, then click OK.\n\n"
+            "_If the MT4/MT5 links are placeholders, set MT4_DOWNLOAD_URL and MT5_DOWNLOAD_URL in the app environment._"
+        ),
+        "ctrader": (
+            "*📈 cTrader Webhook Setup*\n\n"
+            f"Your webhook URL:\n`{webhook_url}`\n\n"
+            "*Steps:*\n"
+            "1. Open your cBot or indicator logic.\n"
+            "2. Add an HTTP POST call that sends alerts to the webhook URL above.\n"
+            "3. Include ticker, signal, price, and indicator fields in the JSON body.\n\n"
+            "_This works for cTrader setups that support outbound web requests._"
+        ),
+        "matchtrader": (
+            "*⚡ MatchTrader Webhook Setup*\n\n"
+            f"Your webhook URL:\n`{webhook_url}`\n\n"
+            "*Steps:*\n"
+            "1. Open your MatchTrader webhook or automation settings.\n"
+            "2. Paste the webhook URL above.\n"
+            "3. Map your alert fields to ticker, signal, price, and indicator name.\n\n"
+            "_Use your platform’s webhook feature to forward each alert to our system._"
+        ),
+        "daxtrader": (
+            "*💹 DAX Trader Webhook Setup*\n\n"
+            f"Your webhook URL:\n`{webhook_url}`\n\n"
+            "*Steps:*\n"
+            "1. Open DAX Trader alert settings.\n"
+            "2. Add the webhook URL above to your outgoing alert action.\n"
+            "3. Send your symbol, side, price, and indicator name in the payload.\n\n"
+            "_Once connected, our system responds to each alert automatically._"
+        ),
+        "takeprofit": (
+            "*🎯 TakeProfit.com Webhook Setup*\n\n"
+            f"Your webhook URL:\n`{webhook_url}`\n\n"
+            "*Steps:*\n"
+            "1. Copy your webhook URL.\n"
+            "2. Attach your indicator.\n"
+            "3. Click the bell icon.\n"
+            "4. Set the source to your indicator.\n"
+            "5. Click Expand.\n"
+            "6. Set frequency to Every Trigger.\n"
+            "7. Paste your webhook URL into the Webhook field.\n"
+            "8. In the Message field, explain your indicator logic using the JSON format shown below.\n\n"
+            "```json\n"
+            "{\n"
+            '  "ticker": "EURUSD",\n'
+            '  "signal": "BUY",\n'
+            '  "price": 1.0845,\n'
+            '  "indicator": "MyIndicator",\n'
+            '  "timeframe": "H1",\n'
+            '  "logic": "Green arrow = BUY, Red arrow = SELL, Blue line = TP, Orange line = SL"\n'
+            "}\n"
+            "```\n\n"
+            "_Every alert sent there will be analyzed by Indicator Validator._"
+        ),
+    }
+
+    await message.answer(
+        platform_text[platform],
+        parse_mode="Markdown",
+        reply_markup=_webhook_platform_back_keyboard(),
+    )
 
     await message.answer(
         f"*🔌 TradingView Webhook Setup*\n\n"
@@ -723,17 +839,31 @@ async def cb_back_to_platforms(callback: CallbackQuery, user: User):
     )
 
 
+@router.callback_query(F.data == "back_to_webhook_platforms")
+async def cb_back_to_webhook_platforms(callback: CallbackQuery, user: User):
+    from TG_Bot.keyboards.strategy_kb import webhook_platform_selector
+    await callback.answer()
+    await callback.message.edit_text(
+        "*🔌 Connect Indicator Webhook*\n\n"
+        "Choose your preferred platform first:",
+        parse_mode="Markdown",
+        reply_markup=webhook_platform_selector(),
+    )
+
+
+@router.callback_query(F.data.startswith("webhook_platform_"))
+async def cb_webhook_platform(callback: CallbackQuery, user: User):
+    platform = callback.data.replace("webhook_platform_", "")
+    await callback.answer()
+    await _send_platform_webhook_setup(callback.message, user, platform)
+
+
 @router.callback_query(F.data == "platform_tradingview")
 async def cb_platform_tradingview(callback: CallbackQuery, user: User):
     from TG_Bot.keyboards.strategy_kb import strategy_selector
     await callback.answer()
     await callback.message.edit_text(
-        "*📊 TradingView Indicator*\n\n"
-        "Choose how to connect your TradingView indicator:\n\n"
-        "🔌 *Webhook* — Requires paid TradingView ($15-30/mo)\n"
-        "📄 *Share Code* — Free! Paste your Pine Script source\n"
-        "🤖 *AI Generate* — Free! Describe in English\n\n"
-        "_All methods feed the same AI validation pipeline._",
+        _indicator_options_text(),
         parse_mode="Markdown",
         reply_markup=strategy_selector(),
     )
@@ -821,3 +951,27 @@ def _back_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="◀️ Back to Platforms", callback_data="back_to_platforms")
     ]])
+
+
+def _webhook_platform_back_keyboard():
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="◀️ Back to Platform Choice", callback_data="back_to_webhook_platforms")
+    ]])
+
+
+def _indicator_options_text() -> str:
+    return (
+        "*📊 Indicator Validator*\n\n"
+        "Choose how you want to use Indicator Validator:\n\n"
+        "*1. Connect Indicator Webhook*\n"
+        "_System responds based on your favorite indicator alerts._\n\n"
+        "*2. Share Source Code*\n"
+        "_You will get a JSON file that you paste to our bridge indicator so it can rebuild your indicator and connect without needing a paid TradingView plan._\n\n"
+        "*3. Get Bridge Indicator*\n"
+        "_Turn any strategy into an indicator or visualize your Pine Script after you get the JSON version of it._\n\n"
+        "*4. Get Our Indicator*\n"
+        "_Let our AI monitor and analyze chart patterns for you, including SMC and ICT patterns, market structure, time and session analysis, classical patterns, strategy models, and key levels according to your strategy._\n\n"
+        "*5. Get Browser Extension*\n"
+        "_Do exactly what our indicator does, but based on screenshots you provide instead of monitoring the market live._"
+    )

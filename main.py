@@ -66,21 +66,18 @@ async def lifespan(app: FastAPI):
     # Only set webhook in production — dev uses polling bot instead
     if settings.APP_ENV == "production" and settings.TELEGRAM_WEBHOOK_URL:
         bot = get_bot()
-        dp  = get_dispatcher()
-        await on_startup(bot)
+        dp = get_dispatcher()
+        await on_startup(bot, allow_network_failures=False)
         await bot.set_webhook(
             url=settings.TELEGRAM_WEBHOOK_URL,
             drop_pending_updates=True,
         )
         app.state.bot = bot
-        app.state.dp  = dp
+        app.state.dp = dp
         logger.info(f"Telegram webhook set: {settings.TELEGRAM_WEBHOOK_URL}")
     else:
-        # Dev mode — delete any stale webhook so polling bot can run cleanly
-        bot = get_bot()
-        await on_startup(bot)
-        await bot.delete_webhook(drop_pending_updates=True)
-        logger.info(f"Dev mode: webhook cleared, polling bot handles updates")
+        # Dev mode should keep the web app available even if Telegram is unreachable.
+        logger.info("Development mode: skipping Telegram startup handshake for FastAPI.")
 
     logger.info("AI Trade Validator ready.")
     yield
@@ -196,6 +193,221 @@ async def api_user_plan(request: Request):
         "plan":       plan_val,
         "plan_label": plan_label,
         "expires_at": expires,
+    }
+
+
+@app.get("/api/integrations/indicator-webhook")
+async def api_indicator_webhook_setup(request: Request, platform: str):
+    """
+    Return indicator webhook setup details for the Mini App.
+    Identifies user via X-Telegram-User-Id header.
+    """
+    telegram_id_str = request.headers.get("X-Telegram-User-Id", "")
+    if not telegram_id_str or not telegram_id_str.isdigit():
+        raise HTTPException(401, "Missing Telegram user context")
+
+    platform_key = platform.strip().lower()
+    platform_labels = {
+        "tradingview": "TradingView",
+        "metatrader": "MetaTrader",
+        "ctrader": "cTrader",
+        "matchtrader": "MatchTrader",
+        "daxtrader": "DAX Trader",
+        "takeprofit": "TakeProfit.com",
+    }
+    if platform_key not in platform_labels:
+        raise HTTPException(400, "Unsupported platform")
+
+    telegram_id = int(telegram_id_str)
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_user_by_telegram_id(telegram_id=telegram_id)
+        if user is None:
+            user = await user_svc.get_or_create_user(telegram_id=telegram_id)
+
+        has_access = user.plan in (PlanTier.PRODUCT1, PlanTier.PRO)
+        if not has_access and not settings.is_production:
+            has_access = True
+
+        if not has_access:
+            return {
+                "ok": False,
+                "requires_upgrade": True,
+                "platform": platform_labels[platform_key],
+                "message": "Webhook connection requires Indicator Validator or Pro.",
+            }
+
+        token = await user_svc.get_or_create_webhook_token(user, "indicator")
+        base = settings.TELEGRAM_WEBHOOK_URL.rsplit("/webhook", 1)[0]
+        webhook_url = f"{base}/webhook/indicator/{token}"
+
+    example_payloads = {
+        "tradingview": {
+            "ticker": "{{ticker}}",
+            "signal": "BUY",
+            "price": "{{close}}",
+            "indicator": "MyIndicator",
+        },
+        "metatrader": {
+            "ticker": "EURUSD",
+            "signal": "BUY",
+            "price": 1.0845,
+            "indicator": "MyIndicator",
+            "timeframe": "H1",
+            "logic": "Green arrow = BUY, Red arrow = SELL, Blue line = TP, Orange line = SL",
+        },
+        "ctrader": {
+            "ticker": "EURUSD",
+            "signal": "BUY",
+            "price": 1.0845,
+            "indicator": "MyIndicator",
+        },
+        "matchtrader": {
+            "ticker": "EURUSD",
+            "signal": "BUY",
+            "price": 1.0845,
+            "indicator": "MyIndicator",
+        },
+        "daxtrader": {
+            "ticker": "EURUSD",
+            "signal": "BUY",
+            "price": 1.0845,
+            "indicator": "MyIndicator",
+        },
+        "takeprofit": {
+            "ticker": "EURUSD",
+            "signal": "BUY",
+            "price": 1.0845,
+            "indicator": "MyIndicator",
+            "timeframe": "H1",
+            "logic": "Green arrow = BUY, Red arrow = SELL, Blue line = TP, Orange line = SL",
+        },
+    }
+
+    mt4_link = (
+        f'<a href="{settings.MT4_DOWNLOAD_URL}" target="_blank" rel="noopener noreferrer">MT4 (.ex4)</a>'
+        if settings.MT4_DOWNLOAD_URL else
+        "MT4 (.ex4)"
+    )
+    mt5_link = (
+        f'<a href="{settings.MT5_DOWNLOAD_URL}" target="_blank" rel="noopener noreferrer">MT5 (.ex5)</a>'
+        if settings.MT5_DOWNLOAD_URL else
+        "MT5 (.ex5)"
+    )
+
+    platform_details = {
+        "tradingview": {
+            "asks": [
+                "Generate webhook URL",
+                "Alert message format with copyable JSON template",
+            ],
+            "actions": [
+                "Copy your webhook URL.",
+                "Go to TradingView, create an alert, and scroll to Webhook URL.",
+                "Paste your webhook URL.",
+                "Format the alert message as JSON using the template below.",
+                "Save the alert.",
+            ],
+            "notes": [
+                "TradingView will send POST requests to your endpoint whenever the alert fires.",
+            ],
+        },
+        "metatrader": {
+            "asks": [
+                "Webhook URL",
+                "Indicator screenshots",
+                "Indicator logic description",
+            ],
+            "actions": [
+                "Copy your special webhook URL.",
+                "Upload screenshots from your indicator.",
+                "Explain your indicator to the system.",
+                f"Install the MetaTrader Expert Advisor: {mt4_link} or {mt5_link}.",
+                "Attach the Expert Advisor to your chart.",
+                "Go to Tools -> Options -> Expert Advisors, enable Allow automated trading, and enable Allow WebRequest for listed URLs.",
+                f"Add this URL to the allowed list: {webhook_url}",
+                "Right-click the chart -> Expert Advisors -> Properties -> Inputs, then set WebhookURL to your webhook URL and SignalDescription to: Green arrow = BUY, Red arrow = SELL, Blue line = TP, Orange line = SL.",
+                "Choose the desired chart timeframe.",
+                "Click OK.",
+            ],
+            "notes": [
+                "MetaTrader uses WebRequest, so the webhook domain must be whitelisted before the EA can send alerts.",
+                "If the MT4/MT5 labels are not clickable yet, add MT4_DOWNLOAD_URL and MT5_DOWNLOAD_URL to the environment.",
+            ],
+        },
+        "ctrader": {
+            "asks": [
+                "Webhook URL",
+                "cBot name to identify which bot is sending signals",
+            ],
+            "actions": [
+                "Download our custom cBot (.cs file).",
+                "Import it into cTrader.",
+                "Enter your webhook URL in the cBot parameters.",
+                "Attach the cBot to your chart.",
+            ],
+            "notes": [
+                "For this use case, the cBot should send data to your webhook.",
+                "The cBot still needs to be built and provided inside the product flow.",
+                "On our end, the endpoint receives POST requests from the cBot.",
+            ],
+        },
+        "matchtrader": {
+            "asks": [
+                "Webhook URL",
+            ],
+            "actions": [
+                "Log into the MatchTrader dashboard.",
+                "Go to Webhook settings.",
+                "Enter your URL.",
+                "Configure which events trigger the webhook.",
+            ],
+            "notes": [
+                "MatchTrader sends POST requests to your endpoint whenever the selected events occur.",
+            ],
+        },
+        "daxtrader": {
+            "asks": [
+                "Webhook URL",
+            ],
+            "actions": [
+                "Log into the DAX Trader web platform.",
+                "Go to Alert settings.",
+                "Paste your webhook URL.",
+            ],
+            "notes": [
+                "DAX Trader sends POST requests when alert conditions are met.",
+            ],
+        },
+        "takeprofit": {
+            "asks": [
+                "Webhook URL",
+                "Indicator logic description",
+            ],
+            "actions": [
+                "Copy your webhook URL.",
+                "Attach your indicator.",
+                "Click the bell icon.",
+                "Set the source to your indicator.",
+                "Click Expand.",
+                "Set frequency to Every Trigger.",
+                "Paste your webhook URL into the Webhook field.",
+                "Explain your indicator logic in the Message field using the recommended JSON format below.",
+            ],
+            "notes": [
+                "TakeProfit.com sends a POST request to your webhook each time the alert is triggered.",
+            ],
+        },
+    }
+
+    return {
+        "ok": True,
+        "platform": platform_labels[platform_key],
+        "webhook_url": webhook_url,
+        "asks": platform_details[platform_key]["asks"],
+        "actions": platform_details[platform_key]["actions"],
+        "notes": platform_details[platform_key]["notes"],
+        "example_payload": example_payloads[platform_key],
     }
 
 

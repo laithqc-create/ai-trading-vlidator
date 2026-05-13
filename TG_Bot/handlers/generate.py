@@ -484,6 +484,70 @@ async def cb_strategy_generate(callback: CallbackQuery, state: FSMContext, user:
     )
 
 
+@router.callback_query(F.data == "strategy_bridge")
+async def cb_strategy_bridge(callback: CallbackQuery):
+    await callback.answer()
+    await send_bridge_indicator_info(callback.message)
+
+
+async def send_bridge_indicator_info(message: Message):
+    await message.answer(
+        "*🧩 Bridge Indicator*\n\n"
+        "This flow is made for traders who want TradingView-style visualization without needing a paid TradingView alert plan.\n\n"
+        "*How it works:*\n"
+        "1. Share your source code first.\n"
+        "2. We convert your logic into a JSON representation.\n"
+        "3. You paste that JSON into our bridge indicator.\n"
+        "4. The bridge indicator rebuilds the logic and connects it to our system.\n\n"
+        "Start with /share_code to generate the JSON-ready version of your indicator.",
+        parse_mode="Markdown",
+        reply_markup=back_to_menu_keyboard(),
+    )
+
+
+@router.callback_query(F.data == "strategy_our_indicator")
+async def cb_strategy_our_indicator(callback: CallbackQuery, user: User):
+    await callback.answer()
+    await send_our_indicator_info(callback.message, user)
+
+
+async def send_our_indicator_info(message: Message, user: User):
+    await message.answer(
+        "*🧠 Our Indicator*\n\n"
+        "Let our AI monitor and analyze chart patterns for you based on your strategy.\n\n"
+        "*Coverage includes:*\n"
+        "• SMC and ICT patterns\n"
+        "• Market structure\n"
+        "• Time and session analysis\n"
+        "• Classical patterns\n"
+        "• Strategy models\n"
+        "• Key levels\n\n"
+        "Use /subscribe to unlock this guided indicator workflow and get setup help.",
+        parse_mode="Markdown",
+        reply_markup=subscription_plans_keyboard(user.plan.value),
+    )
+
+
+@router.callback_query(F.data == "strategy_extension")
+async def cb_strategy_extension(callback: CallbackQuery):
+    await callback.answer()
+    await send_extension_info(callback.message)
+
+
+async def send_extension_info(message: Message):
+    await message.answer(
+        "*🧩 Browser Extension*\n\n"
+        "The browser extension gives you the same style of AI analysis as our indicator, but from screenshots you provide instead of live market monitoring.\n\n"
+        "*Best for:*\n"
+        "• Visual chart review\n"
+        "• Manual setups\n"
+        "• Traders who want fast analysis without wiring alerts\n\n"
+        "Use `/link` to connect your extension to Telegram and keep your results tied to your account.",
+        parse_mode="Markdown",
+        reply_markup=back_to_menu_keyboard(),
+    )
+
+
 @router.callback_query(F.data == "ea_generate")
 async def cb_ea_generate(callback: CallbackQuery, state: FSMContext, user: User):
     await callback.answer()
