@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Pattern Rule Editor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #0d1117;
+    --bg2:     #161b22;
+    --bg3:     #1c2128;
+    --bg4:     #21262d;
+    --border:  #30363d;
+    --text:    #e6edf3;
+    --text2:   #8b949e;
+    --text3:   #6e7681;
+    --accent:  #58a6ff;
+    --accent2: #1f6feb;
+    --green:   #3fb950;
+    --red:     #f85149;
+    --yellow:  #d29922;
+    --purple:  #bc8cff;
+    --r:       8px;
+    --r-sm:    5px;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-title { font-size: 16px; font-weight: 600; }
+  .header-sub   { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .btn-reset {
+    font-size: 11px; padding: 5px 11px;
+    border: 1px solid var(--border); border-radius: var(--r-sm);
+    background: transparent; color: var(--text2); cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .btn-reset:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Disclaimer banner ── */
+  .disclaimer {
+    margin: 12px 16px 0;
+    padding: 10px 13px;
+    background: rgba(210,153,34,.08);
+    border: 1px solid rgba(210,153,34,.3);
+    border-radius: var(--r);
+    font-size: 12px;
+    color: var(--yellow);
+    line-height: 1.55;
+  }
+  .disclaimer a { color: var(--accent); text-decoration: none; }
+  .disclaimer a:hover { text-decoration: underline; }
+
+  /* ── Search + filter bar ── */
+  .filter-bar {
+    padding: 12px 16px 8px;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .search-wrap { position: relative; flex: 1; }
+  .search-wrap svg {
+    position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px; stroke: var(--text3); pointer-events: none;
+  }
+  .search-input {
+    width: 100%; padding: 7px 10px 7px 30px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--r-sm); color: var(--text); font-size: 13px; outline: none;
+    transition: border-color .15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .filter-chips { display: flex; gap: 6px; flex-shrink: 0; }
+  .chip {
+    padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+    border: 1px solid var(--border); background: var(--bg3);
+    color: var(--text2); cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .chip.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+  /* ── Patterns list ── */
+  .patterns-list { padding: 0 16px 80px; }
+
+  /* ── Pattern card ── */
+  .pattern-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--r); margin-bottom: 10px;
+    transition: border-color .15s;
+    overflow: hidden;
+  }
+  .pattern-card.disabled { opacity: .55; }
+  .pattern-card.has-override { border-color: rgba(88,166,255,.4); }
+
+  .card-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 13px; cursor: pointer;
+    user-select: none;
+  }
+  .card-header:hover { background: var(--bg3); }
+
+  /* Toggle switch */
+  .toggle {
+    position: relative; width: 36px; height: 20px; flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: var(--bg4); border: 1px solid var(--border);
+    border-radius: 20px; transition: background .2s, border-color .2s;
+    cursor: pointer;
+  }
+  .toggle input:checked + .toggle-track {
+    background: var(--green); border-color: var(--green);
+  }
+  .toggle-thumb {
+    position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    background: #fff; border-radius: 50%;
+    transition: transform .2s; pointer-events: none;
+  }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
+  .card-info { flex: 1; min-width: 0; }
+  .card-name {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .override-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+    display: none;
+  }
+  .has-override .override-dot { display: block; }
+
+  .card-desc { font-size: 11px; color: var(--text3); margin-top: 2px; line-height: 1.45; }
+  .signal-badge {
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; flex-shrink: 0;
+  }
+  .signal-badge.bull { background: rgba(63,185,80,.15); color: var(--green); }
+  .signal-badge.bear { background: rgba(248,81,73,.15); color: var(--red); }
+  .signal-badge.both { background: rgba(210,153,34,.15); color: var(--yellow); }
+
+  .chevron {
+    width: 16px; height: 16px; stroke: var(--text3); flex-shrink: 0;
+    transition: transform .2s;
+  }
+  .pattern-card.open .chevron { transform: rotate(180deg); }
+
+  /* ── Expanded body ── */
+  .card-body {
+    display: none; border-top: 1px solid var(--border);
+    padding: 13px;
+  }
+  .pattern-card.open .card-body { display: block; }
+
+  /* System rule explanation */
+  .system-rule-box {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 12px;
+  }
+  .system-rule-box-title {
+    font-size: 10px; font-weight: 600; color: var(--text3);
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .system-rule-box-title a {
+    font-size: 10px; color: var(--accent); text-decoration: none;
+    font-weight: 500; text-transform: none;
+  }
+  .system-rule-box-title a:hover { text-decoration: underline; }
+  .rule-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .rule-row:last-child { border-bottom: none; }
+  .rule-label { color: var(--text2); }
+  .rule-value { color: var(--text); font-weight: 500; }
+
+  /* Override controls */
+  .override-section { margin-top: 4px; }
+  .override-title {
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .override-badge {
+    font-size: 10px; padding: 1px 7px; border-radius: 20px;
+    background: rgba(88,166,255,.15); color: var(--accent);
+    font-weight: 500; text-transform: none;
+  }
+
+  .override-field { margin-bottom: 10px; }
+  .field-label {
+    font-size: 11px; color: var(--text2); margin-bottom: 5px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .field-label span { color: var(--text3); font-size: 10px; }
+
+  .slider-wrap { position: relative; }
+  .slider {
+    -webkit-appearance: none; width: 100%; height: 4px;
+    border-radius: 2px; background: var(--border); outline: none; cursor: pointer;
+  }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--accent); cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+  .slider-value {
+    position: absolute; right: 0; top: -20px;
+    font-size: 11px; color: var(--accent); font-weight: 600;
+  }
+
+  .field-null-note { font-size: 11px; color: var(--text3); margin-top: 4px; font-style: italic; }
+
+  /* Action buttons */
+  .card-actions {
+    display: flex; gap: 8px; margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .btn {
+    flex: 1; padding: 8px 12px; border-radius: var(--r-sm); font-size: 12px;
+    font-weight: 500; cursor: pointer; border: 1px solid var(--border);
+    background: var(--bg3); color: var(--text); transition: all .15s;
+  }
+  .btn:hover { background: var(--bg4); border-color: var(--text3); }
+  .btn-save { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  .btn-save:hover { background: var(--accent); border-color: var(--accent); }
+  .btn-reset-one { color: var(--red); border-color: transparent; background: transparent; flex: 0; }
+  .btn-reset-one:hover { border-color: var(--red); background: rgba(248,81,73,.08); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* Save feedback */
+  .save-feedback {
+    font-size: 11px; margin-top: 8px; text-align: center;
+    height: 16px; transition: opacity .3s;
+  }
+  .save-feedback.ok  { color: var(--green); }
+  .save-feedback.err { color: var(--red); }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center; padding: 48px 16px; color: var(--text3);
+  }
+
+  /* ── Bottom action bar ── */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--bg); border-top: 1px solid var(--border);
+    padding: 12px 16px; display: flex; gap: 10px; align-items: center;
+  }
+  .count-badge { font-size: 12px; color: var(--text2); flex: 1; }
+  .count-num { color: var(--text); font-weight: 600; }
+
+  /* ── Spinner ── */
+  .spinner {
+    display: inline-block; width: 13px; height: 13px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%);
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 8px 16px; font-size: 12px;
+    color: var(--text); opacity: 0; transition: opacity .25s; pointer-events: none;
+    white-space: nowrap; z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+  .toast.ok   { border-color: var(--green); color: var(--green); }
+  .toast.err  { border-color: var(--red);   color: var(--red);   }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">Pattern Rules</div>
+    <div class="header-sub">Customise how each pattern is detected</div>
+  </div>
+  <button class="btn-reset" id="btn-reset-all">Reset all</button>
+</div>
+
+<div class="disclaimer">
+  ⚠️ <strong>Analytical tool only.</strong>
+  These pattern rules are used for market analysis only and do not constitute financial advice.
+  You are solely responsible for any trading decisions.
+  <a href="#" id="link-system-rules">How system rules work →</a>
+</div>
+
+<div class="filter-bar">
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input class="search-input" id="search-input" placeholder="Search patterns…" type="text">
+  </div>
+  <div class="filter-chips">
+    <div class="chip active" data-filter="all">All</div>
+    <div class="chip" data-filter="bullish">Bull</div>
+    <div class="chip" data-filter="bearish">Bear</div>
+    <div class="chip" data-filter="override">Edited</div>
+  </div>
+</div>
+
+<div class="patterns-list" id="patterns-list">
+  <div class="empty-state"><span class="spinner"></span> Loading patterns…</div>
+</div>
+
+<div class="bottom-bar">
+  <div class="count-badge" id="bottom-count">—</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────
+const API_BASE = window.API_BASE || "";
+const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "";
+
+// ── State ──────────────────────────────────────────────────────────────────
+let allPatterns = [];
+let activeFilter = "all";
+let searchQuery  = "";
+let pendingChanges = {}; // { patternName: { enabled, sliders... } }
+
+// ── Fetch all patterns on load ─────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", async () => {
+  window.Telegram?.WebApp?.expand?.();
+  await loadPatterns();
+  initFilters();
+  initSearch();
+  initResetAll();
+  initSystemRulesLink();
+});
+
+async function loadPatterns() {
+  try {
+    const res = await apiFetch("/api/patterns");
+    allPatterns = res.patterns || [];
+    renderPatterns();
+  } catch (e) {
+    document.getElementById("patterns-list").innerHTML =
+      `<div class="empty-state" style="color:var(--red)">Failed to load patterns.<br>${e.message}</div>`;
+  }
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderPatterns() {
+  const list = document.getElementById("patterns-list");
+  const filtered = filterPatterns();
+
+  updateBottomCount(filtered.length, allPatterns.length);
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state">No patterns match your filter.</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => patternCardHTML(p)).join("");
+
+  // Wire up interactivity for each card
+  filtered.forEach(p => wireCard(p));
+}
+
+function filterPatterns() {
+  return allPatterns.filter(p => {
+    const q = searchQuery.toLowerCase();
+    if (q && !p.name.includes(q) && !p.display_name.toLowerCase().includes(q)) return false;
+    if (activeFilter === "bullish" && !BULLISH_PATTERNS.has(p.name)) return false;
+    if (activeFilter === "bearish" && !BEARISH_PATTERNS.has(p.name)) return false;
+    if (activeFilter === "override" && !p.has_user_override) return false;
+    return true;
+  });
+}
+
+// Classify patterns by direction
+const BULLISH_PATTERNS = new Set([
+  "hammer","inverted_hammer","bullish_engulfing","morning_star",
+  "three_white_soldiers","tweezer_bottom","piercing_line","doji","spinning_top"
+]);
+const BEARISH_PATTERNS = new Set([
+  "shooting_star","hanging_man","bearish_engulfing","evening_star",
+  "three_black_crows","tweezer_top","dark_cloud_cover","doji","spinning_top"
+]);
+
+function patternSignal(name) {
+  const bull = BULLISH_PATTERNS.has(name);
+  const bear = BEARISH_PATTERNS.has(name);
+  if (bull && bear) return "both";
+  if (bull) return "bull";
+  return "bear";
+}
+
+function patternCardHTML(p) {
+  const sig = patternSignal(p.name);
+  const sigLabel = { bull:"Bullish", bear:"Bearish", both:"Both" }[sig];
+  const disabledClass  = p.enabled ? "" : "disabled";
+  const overrideClass  = p.has_user_override ? "has-override" : "";
+
+  // System rule rows
+  const sysRule = p.system_rule || {};
+  const sysRows = Object.entries({
+    "Min body ratio":   sysRule.min_body_ratio,
+    "Max wick ratio":   sysRule.max_wick_ratio,
+    "Min engulf ratio": sysRule.min_engulf_ratio,
+  }).filter(([,v]) => v !== null && v !== undefined)
+    .map(([label, val]) =>
+      `<div class="rule-row">
+        <span class="rule-label">${label}</span>
+        <span class="rule-value">${(val * 100).toFixed(0)}%</span>
+      </div>`
+    ).join("") || `<div class="rule-label" style="font-size:12px;color:var(--text3)">Contextual / pattern-specific logic</div>`;
+
+  // User override sliders
+  const userRule = p.user_rule || {};
+  const sliders = buildSlidersHTML(p.name, sysRule, userRule, p.enabled);
+
+  return `
+<div class="pattern-card ${disabledClass} ${overrideClass}" id="card-${p.name}" data-name="${p.name}">
+  <div class="card-header">
+    <label class="toggle">
+      <input type="checkbox" class="toggle-input" data-pattern="${p.name}"
+             ${p.enabled ? "checked" : ""}>
+      <span class="toggle-track"></span>
+      <span class="toggle-thumb"></span>
+    </label>
+    <div class="card-info">
+      <div class="card-name">
+        ${p.display_name}
+        <span class="override-dot" title="You have a custom rule for this pattern"></span>
+      </div>
+      <div class="card-desc">${p.description}</div>
+    </div>
+    <span class="signal-badge ${sig}">${sigLabel}</span>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+  </div>
+
+  <div class="card-body">
+    <!-- System rule explanation -->
+    <div class="system-rule-box">
+      <div class="system-rule-box-title">
+        System detection logic
+        <a href="#" class="learn-link" data-pattern="${p.name}">Learn more</a>
+      </div>
+      ${sysRows}
+    </div>
+
+    <!-- User override sliders -->
+    <div class="override-section">
+      <div class="override-title">
+        Your overrides
+        ${p.has_user_override ? '<span class="override-badge">Active</span>' : ''}
+      </div>
+      ${sliders}
+    </div>
+
+    <!-- Action buttons -->
+    <div class="card-actions">
+      <button class="btn btn-reset-one" data-pattern="${p.name}">Reset</button>
+      <button class="btn btn-save" data-pattern="${p.name}">Save changes</button>
+    </div>
+    <div class="save-feedback" id="feedback-${p.name}"></div>
+  </div>
+</div>`;
+}
+
+function buildSlidersHTML(name, sysRule, userRule, enabled) {
+  const fields = [
+    { key: "min_body_ratio",   label: "Min body ratio",
+      hint: "Body size as % of total candle range",
+      sys: sysRule.min_body_ratio },
+    { key: "max_wick_ratio",   label: "Max wick ratio",
+      hint: "Max wick size as % of total candle range",
+      sys: sysRule.max_wick_ratio },
+    { key: "min_engulf_ratio", label: "Min engulf ratio",
+      hint: "How much the engulfing candle must exceed the prior body",
+      sys: sysRule.min_engulf_ratio },
+  ];
+
+  return fields.map(f => {
+    if (f.sys === null || f.sys === undefined) {
+      return `<div class="override-field">
+        <div class="field-label">${f.label}</div>
+        <div class="field-null-note">Not applicable to this pattern</div>
+      </div>`;
+    }
+
+    const current = userRule[f.key] !== null && userRule[f.key] !== undefined
+      ? userRule[f.key] : f.sys;
+    const pct = Math.round(current * 100);
+    const sysPct = Math.round(f.sys * 100);
+
+    return `<div class="override-field">
+      <div class="field-label">
+        ${f.label}
+        <span>System default: ${sysPct}%</span>
+      </div>
+      <div class="slider-wrap">
+        <span class="slider-value" id="sv-${name}-${f.key}">${pct}%</span>
+        <input type="range" class="slider" min="0" max="100" value="${pct}"
+               id="sl-${name}-${f.key}" data-pattern="${name}" data-field="${f.key}"
+               ${enabled ? "" : "disabled"}>
+      </div>
+      <div class="field-null-note">${f.hint}</div>
+    </div>`;
+  }).join("");
+}
+
+// ── Wire card interactivity ────────────────────────────────────────────────
+function wireCard(p) {
+  const card = document.getElementById(`card-${p.name}`);
+  if (!card) return;
+
+  // Expand/collapse on header click (not on toggle)
+  card.querySelector(".card-header").addEventListener("click", (e) => {
+    if (e.target.closest(".toggle")) return;
+    card.classList.toggle("open");
+  });
+
+  // Toggle enable/disable
+  const toggleInput = card.querySelector(".toggle-input");
+  toggleInput.addEventListener("change", () => {
+    const enabled = toggleInput.checked;
+    card.classList.toggle("disabled", !enabled);
+    // Disable sliders when pattern is off
+    card.querySelectorAll(".slider").forEach(s => s.disabled = !enabled);
+    queueChange(p.name, { enabled });
+  });
+
+  // Sliders
+  card.querySelectorAll(".slider").forEach(slider => {
+    const field = slider.dataset.field;
+    const valEl = document.getElementById(`sv-${p.name}-${field}`);
+    slider.addEventListener("input", () => {
+      const v = parseInt(slider.value);
+      if (valEl) valEl.textContent = `${v}%`;
+      queueChange(p.name, { [field]: v / 100 });
+    });
+  });
+
+  // Save button
+  card.querySelector(".btn-save").addEventListener("click", () => savePattern(p.name));
+
+  // Reset button
+  card.querySelector(".btn-reset-one").addEventListener("click", () => resetPattern(p.name));
+
+  // Learn more link
+  card.querySelector(".learn-link")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showSystemRuleDetail(p);
+  });
+}
+
+function queueChange(name, changes) {
+  pendingChanges[name] = { ...(pendingChanges[name] || {}), ...changes };
+}
+
+// ── Save / Reset ───────────────────────────────────────────────────────────
+async function savePattern(name) {
+  const changes = pendingChanges[name] || {};
+  if (!Object.keys(changes).length) {
+    showFeedback(name, "No changes to save.", false);
+    return;
+  }
+
+  const btn = document.querySelector(`.btn-save[data-pattern="${name}"]`);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    await apiFetch(`/api/patterns/${name}`, "PATCH", changes);
+    delete pendingChanges[name];
+
+    // Update local state
+    const p = allPatterns.find(x => x.name === name);
+    if (p) {
+      Object.assign(p.user_rule, changes);
+      p.has_user_override = true;
+      if ("enabled" in changes) p.enabled = changes.enabled;
+      updateCardOverrideBadge(name, true);
+    }
+
+    showFeedback(name, "✓ Saved", true);
+    showToast("Pattern saved", "ok");
+  } catch (e) {
+    showFeedback(name, `Error: ${e.message}`, false);
+    showToast("Save failed", "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save changes";
+  }
+}
+
+async function resetPattern(name) {
+  if (!confirm(`Reset "${name.replace(/_/g, " ")}" to system defaults?`)) return;
+
+  try {
+    await apiFetch(`/api/patterns/${name}`, "PATCH", { reset_to_system: true });
+    delete pendingChanges[name];
+
+    const p = allPatterns.find(x => x.name === name);
+    if (p) {
+      p.user_rule = {};
+      p.has_user_override = false;
+      p.enabled = true;
+    }
+
+    // Re-render just this card
+    const card = document.getElementById(`card-${name}`);
+    const wasOpen = card?.classList.contains("open");
+    if (p) {
+      card.outerHTML = patternCardHTML(p);
+      wireCard(p);
+      if (wasOpen) document.getElementById(`card-${name}`)?.classList.add("open");
+    }
+    updateCardOverrideBadge(name, false);
+    showToast("Reset to system defaults", "ok");
+  } catch (e) {
+    showToast(`Reset failed: ${e.message}`, "err");
+  }
+}
+
+async function resetAllPatterns() {
+  if (!confirm("Reset ALL pattern rules to system defaults? This cannot be undone.")) return;
+  try {
+    await apiFetch("/api/patterns/reset", "POST", {});
+    pendingChanges = {};
+    allPatterns.forEach(p => {
+      p.user_rule = {}; p.has_user_override = false; p.enabled = true;
+    });
+    renderPatterns();
+    showToast("All patterns reset", "ok");
+  } catch (e) {
+    showToast(`Reset failed: ${e.message}`, "err");
+  }
+}
+
+// ── Filters & search ───────────────────────────────────────────────────────
+function initFilters() {
+  document.querySelectorAll(".chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      activeFilter = chip.dataset.filter;
+      renderPatterns();
+    });
+  });
+}
+
+function initSearch() {
+  document.getElementById("search-input").addEventListener("input", e => {
+    searchQuery = e.target.value.trim().toLowerCase().replace(/ /g, "_");
+    renderPatterns();
+  });
+}
+
+function initResetAll() {
+  document.getElementById("btn-reset-all").addEventListener("click", resetAllPatterns);
+}
+
+function initSystemRulesLink() {
+  document.getElementById("link-system-rules").addEventListener("click", e => {
+    e.preventDefault();
+    showSystemRulesModal();
+  });
+}
+
+// ── System rules explainer modal ───────────────────────────────────────────
+function showSystemRulesModal() {
+  const content = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;
+                  width:100%;max-height:80vh;overflow-y:auto;padding:20px 16px;">
+        <div style="font-size:15px;font-weight:600;margin-bottom:4px">How system rules work</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6">
+          The pattern engine analyses real OHLC candle data using mathematical ratios.
+          Each pattern has default thresholds — you can override these with custom values.
+        </div>
+        <div style="font-size:12px;line-height:1.7;color:var(--text)">
+          <strong>Min body ratio</strong> — The candle body (|close − open|) must be at least
+          this fraction of the total range (high − low).<br><br>
+          <strong>Max wick ratio</strong> — The wick in the specified direction must not exceed
+          this fraction of the total range.<br><br>
+          <strong>Min engulf ratio</strong> — For engulfing patterns: the second candle's body
+          must be at least this multiple of the first candle's body.<br><br>
+          <strong>Confidence</strong> — Ranges 0–100%. Higher means the pattern criteria were
+          exceeded by a larger margin. Only used for ranking when multiple patterns fire.<br><br>
+          <em>Your overrides replace the system value for that specific threshold.
+          Leave a field at the system default if you don't want to change it.</em>
+        </div>
+        <button onclick="this.closest('div[style]').remove()"
+                style="margin-top:16px;width:100%;padding:10px;background:var(--accent2);
+                       border:none;border-radius:var(--r-sm);color:#fff;font-size:13px;
+                       font-weight:500;cursor:pointer">
+          Close
+        </button>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML("beforeend", content);
+}
+
+function showSystemRuleDetail(p) {
+  const sigLabel = patternSignal(p.name);
+  const content = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end">
+      <div style="background:var(--bg2);border:1px solid var(--border);
+                  border-radius:var(--r) var(--r) 0 0;width:100%;padding:20px 16px;">
+        <div style="font-size:15px;font-weight:600;margin-bottom:4px">${p.display_name}</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6">${p.description}</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.7">
+          <strong>Signal direction:</strong> ${sigLabel === "both" ? "Bullish & Bearish (context-dependent)" : sigLabel === "bull" ? "Bullish" : "Bearish"}<br><br>
+          <strong>Required candles:</strong> ${getCandleCount(p.name)} candle(s)<br><br>
+          <strong>What the system checks:</strong><br>
+          ${getDetailedLogic(p.name)}
+        </div>
+        <button onclick="this.closest('div[style]').remove()"
+                style="margin-top:16px;width:100%;padding:10px;background:var(--bg3);
+                       border:1px solid var(--border);border-radius:var(--r-sm);
+                       color:var(--text);font-size:13px;cursor:pointer">
+          Close
+        </button>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML("beforeend", content);
+}
+
+function getCandleCount(name) {
+  const three = ["morning_star","evening_star","three_white_soldiers","three_black_crows"];
+  const two   = ["bullish_engulfing","bearish_engulfing","tweezer_top","tweezer_bottom",
+                 "piercing_line","dark_cloud_cover"];
+  if (three.includes(name)) return 3;
+  if (two.includes(name))   return 2;
+  return 1;
+}
+
+function getDetailedLogic(name) {
+  const details = {
+    doji:                "Body / range < 5%. Upper wick ≈ lower wick. Signals indecision.",
+    hammer:              "Long lower wick ≥ 2× body. Upper wick < body size. Appears after downtrend.",
+    inverted_hammer:     "Long upper wick ≥ 2× body. Lower wick < body size. Potential reversal.",
+    shooting_star:       "Bearish candle. Upper wick ≥ 2× body. Lower wick < 50% of body.",
+    hanging_man:         "Same shape as hammer but appears after 3+ rising candles (uptrend).",
+    bullish_engulfing:   "Prior candle is bearish. Current candle is bullish. Current body > prior body.",
+    bearish_engulfing:   "Prior candle is bullish. Current candle is bearish. Current body > prior body.",
+    morning_star:        "Candle 1: bearish. Candle 2: small body (star). Candle 3: bullish, closes above midpoint of candle 1.",
+    evening_star:        "Candle 1: bullish. Candle 2: small body (star). Candle 3: bearish, closes below midpoint of candle 1.",
+    three_white_soldiers:"3 consecutive bullish candles, each closing higher. Upper wicks < 30% of body.",
+    three_black_crows:   "3 consecutive bearish candles, each closing lower. Lower wicks < 30% of body.",
+    tweezer_top:         "Two candles with matching highs (within 0.5% tolerance). First bullish, second bearish.",
+    tweezer_bottom:      "Two candles with matching lows (within 0.5% tolerance). First bearish, second bullish.",
+    piercing_line:       "Prior candle bearish. Current candle bullish, opens below prior close, closes above prior midpoint.",
+    dark_cloud_cover:    "Prior candle bullish. Current candle bearish, opens above prior close, closes below prior midpoint.",
+    spinning_top:        "Body is 5–35% of range. Both upper and lower wicks > 50% of body.",
+  };
+  return details[name] || "Pattern-specific contextual logic.";
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function updateCardOverrideBadge(name, hasOverride) {
+  const card = document.getElementById(`card-${name}`);
+  if (!card) return;
+  card.classList.toggle("has-override", hasOverride);
+  // Update override title badge
+  const overrideTitle = card.querySelector(".override-title");
+  if (overrideTitle) {
+    const existing = overrideTitle.querySelector(".override-badge");
+    if (hasOverride && !existing) {
+      overrideTitle.insertAdjacentHTML("beforeend", '<span class="override-badge">Active</span>');
+    } else if (!hasOverride && existing) {
+      existing.remove();
+    }
+  }
+}
+
+function showFeedback(name, msg, ok) {
+  const el = document.getElementById(`feedback-${name}`);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `save-feedback ${ok ? "ok" : "err"}`;
+  setTimeout(() => { el.textContent = ""; el.className = "save-feedback"; }, 3000);
+}
+
+function updateBottomCount(shown, total) {
+  const el = document.getElementById("bottom-count");
+  const overrides = allPatterns.filter(p => p.has_user_override).length;
+  el.innerHTML =
+    `Showing <span class="count-num">${shown}</span> of ${total} patterns` +
+    (overrides ? ` · <span class="count-num">${overrides}</span> customised` : "");
+}
+
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = "toast"; }, 2500);
+}
+
+// ── API ────────────────────────────────────────────────────────────────────
+async function apiFetch(path, method = "GET", body = null) {
+  const opts = {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(tgId ? { "X-Telegram-User-Id": String(tgId) } : {}),
+    },
+  };
+  if (body !== null) opts.body = JSON.stringify(body);
+  const res = await fetch(API_BASE + path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+</script>
+</body>
+</html>

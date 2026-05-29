@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "AI Trade Validator",
+  "version": "2.0.0",
+  "description": "Live chart monitoring, pattern analysis, news impact analysis \u2014 your AI trading co-pilot.",
+  "permissions": [
+    "sidePanel",
+    "activeTab",
+    "scripting",
+    "storage",
+    "alarms",
+    "tabs",
+    "tabCapture"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "https://api.aitradevalidator.com/*",
+    "http://localhost:8000/*",
+    "http://localhost/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "AI Trade Validator",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*/*",
+        "http://localhost/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sidepanel.html",
+        "icons/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
