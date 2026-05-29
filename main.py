@@ -79,23 +79,28 @@ async def lifespan(app: FastAPI):
     logger.info("Starting AI Trade Validator...")
     await init_db()
 
-    # Set Telegram webhook only in production (APP_ENV=production)
-    # In development, the polling bot handles updates instead
-    # Only set webhook in production — dev uses polling bot instead
-    if settings.APP_ENV == "production" and settings.TELEGRAM_WEBHOOK_URL:
-        bot = get_bot()
-        dp = get_dispatcher()
-        await on_startup(bot, allow_network_failures=False)
-        await bot.set_webhook(
-            url=settings.TELEGRAM_WEBHOOK_URL,
-            drop_pending_updates=True,
-        )
-        app.state.bot = bot
-        app.state.dp = dp
-        logger.info(f"Telegram webhook set: {settings.TELEGRAM_WEBHOOK_URL}")
+    # Register Telegram webhook whenever a webhook URL is configured.
+    # Works for both local (Cloudflare tunnel) and production.
+    if settings.TELEGRAM_WEBHOOK_URL and settings.TELEGRAM_BOT_TOKEN:
+        try:
+            import httpx
+            # Use raw httpx to avoid aiogram network issues in restricted regions
+            url = (
+                f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}"
+                f"/setWebhook?url={settings.TELEGRAM_WEBHOOK_URL}"
+                f"&drop_pending_updates=true"
+            )
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(url)
+                data = r.json()
+            if data.get("ok"):
+                logger.info(f"✓ Telegram webhook set: {settings.TELEGRAM_WEBHOOK_URL}")
+            else:
+                logger.warning(f"Webhook set failed: {data}")
+        except Exception as e:
+            logger.warning(f"Could not set Telegram webhook (continuing anyway): {e}")
     else:
-        # Dev mode should keep the web app available even if Telegram is unreachable.
-        logger.info("Development mode: skipping Telegram startup handshake for FastAPI.")
+        logger.info("No webhook URL configured — skipping Telegram webhook registration.")
 
     logger.info("AI Trade Validator ready.")
     yield
