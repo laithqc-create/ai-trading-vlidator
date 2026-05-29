@@ -31,7 +31,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import FastAPI, Request, HTTPException, Header, Depends, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from pydantic import BaseModel
@@ -98,7 +98,7 @@ async def lifespan(app: FastAPI):
             else:
                 logger.warning(f"Webhook set failed: {data}")
         except Exception as e:
-            logger.warning(f"Could not set Telegram webhook (continuing anyway): {e}")
+            logger.warning(f"Could not set Telegram webhook (continuing anyway): {type(e).__name__}: {e}")
     else:
         logger.info("No webhook URL configured — skipping Telegram webhook registration.")
 
@@ -164,6 +164,14 @@ async def download_bot_file(filename: str):
         raise HTTPException(404, "File not built yet")
     media = "application/zip" if filename.endswith(".zip") else "application/octet-stream"
     return FileResponse(path=str(path), filename=filename, media_type=media)
+
+# ─── Root redirect → Mini App ─────────────────────────────────────────────────
+
+@app.get("/")
+async def root_redirect():
+    """Redirect root to the Mini App — so any URL works whether /app is set or not."""
+    return RedirectResponse(url="/app", status_code=302)
+
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
 
