@@ -1,31 +1,31 @@
 # Local development — no Postgres, no Redis, no Celery needed
 # Run with: pip install -r requirements_local.txt
 
-fastapi==0.115.5
-uvicorn[standard]==0.32.1
-python-multipart==0.0.12
+fastapi>=0.115.5
+uvicorn[standard]>=0.32.1
+python-multipart>=0.0.12
 
 # SQLite async driver (built-in Python, zero install)
-sqlalchemy[asyncio]==2.0.36
-aiosqlite==0.20.0
-alembic==1.14.0
+sqlalchemy[asyncio]>=2.0.36
+aiosqlite>=0.20.0
+alembic>=1.14.0
 
-# Telegram bot
-aiogram==3.14.0
+# Telegram bot (3.15+ supports pydantic 2.10+)
+aiogram>=3.15.0
 
 # HTTP client (DeepSeek calls)
-httpx==0.28.0
+httpx>=0.27.0
 
 # Retry logic
-tenacity==9.0.0
+tenacity>=9.0.0
 
 # Config / env
-pydantic==2.10.3
-pydantic-settings==2.6.1
-python-dotenv==1.0.1
+pydantic>=2.10.0
+pydantic-settings>=2.6.1
+python-dotenv>=1.0.1
 
 # Logging
-loguru==0.7.3
+loguru>=0.7.3
 
 # Image processing (extension icons)
-Pillow==11.0.0
+Pillow>=10.0.0
