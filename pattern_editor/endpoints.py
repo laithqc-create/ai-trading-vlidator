@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from db.database import AsyncSessionLocal
 from services.user import UserService
-from services.pattern_engine import SYSTEM_RULES, PATTERN_DESCRIPTIONS
+from services.pattern_engine import SYSTEM_RULES, PATTERN_DESCRIPTIONS, PATTERN_CATEGORIES
 
 router = APIRouter(prefix="/api/patterns", tags=["patterns"])
 
@@ -51,6 +51,8 @@ async def get_patterns(request: Request):
         "ok": True,
         "disclaimer": "This system is an analytical tool only. Pattern detection does not constitute financial advice.",
         "patterns": patterns,
+        "categories": PATTERN_CATEGORIES,
+        "total": len(patterns),
     }
 
 class PatternUpdateRequest(BaseModel):
