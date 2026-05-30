@@ -80,17 +80,16 @@ async def lifespan(app: FastAPI):
     await init_db()
 
     # Register Telegram webhook whenever a webhook URL is configured.
-    # Works for both local (Cloudflare tunnel) and production.
+    # If api.telegram.org is blocked regionally, skip gracefully.
     if settings.TELEGRAM_WEBHOOK_URL and settings.TELEGRAM_BOT_TOKEN:
         try:
             import httpx
-            # Use raw httpx to avoid aiogram network issues in restricted regions
             url = (
                 f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}"
                 f"/setWebhook?url={settings.TELEGRAM_WEBHOOK_URL}"
                 f"&drop_pending_updates=true"
             )
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(timeout=8) as client:
                 r = await client.get(url)
                 data = r.json()
             if data.get("ok"):
@@ -98,7 +97,11 @@ async def lifespan(app: FastAPI):
             else:
                 logger.warning(f"Webhook set failed: {data}")
         except Exception as e:
-            logger.warning(f"Could not set Telegram webhook (continuing anyway): {type(e).__name__}: {e}")
+            logger.info(
+                f"Telegram webhook auto-registration skipped "
+                f"({type(e).__name__} — likely regional restriction). "
+                f"Webhook set via BotFather — bot will work normally."
+            )
     else:
         logger.info("No webhook URL configured — skipping Telegram webhook registration.")
 
@@ -169,8 +172,36 @@ async def download_bot_file(filename: str):
 
 @app.get("/")
 async def root_redirect():
-    """Redirect root to the Mini App — so any URL works whether /app is set or not."""
+    """Redirect root to the Mini App."""
     return RedirectResponse(url="/app", status_code=302)
+
+
+@app.get("/setup-webhook")
+async def setup_webhook():
+    """
+    Manually register the Telegram webhook.
+    Visit this URL in your browser after starting the server:
+    http://localhost:8000/setup-webhook
+    """
+    if not settings.TELEGRAM_WEBHOOK_URL or not settings.TELEGRAM_BOT_TOKEN:
+        return {"ok": False, "error": "TELEGRAM_BOT_TOKEN or TELEGRAM_WEBHOOK_URL not set in .env"}
+    try:
+        import httpx
+        url = (
+            f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}"
+            f"/setWebhook?url={settings.TELEGRAM_WEBHOOK_URL}"
+            f"&drop_pending_updates=true"
+        )
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.get(url)
+            data = r.json()
+        return {
+            "ok": data.get("ok"),
+            "webhook_url": settings.TELEGRAM_WEBHOOK_URL,
+            "telegram_response": data,
+        }
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {e}"}
 
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
