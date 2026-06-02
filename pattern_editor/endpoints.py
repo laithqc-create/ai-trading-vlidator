@@ -92,3 +92,75 @@ async def reset_all_patterns(request: Request):
         await user_svc.delete_all_pattern_rules(user.id)
         await db.commit()
     return {"ok": True, "message": "All pattern rules reset to system defaults."}
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# INDICATOR PREFERENCES
+# ════════════════════════════════════════════════════════════════════════════
+from services.indicator_engine import INDICATOR_DEFAULTS, INDICATOR_GROUPS, INDICATOR_DISPLAY
+from typing import Optional as Opt
+
+
+@router.get("/api/indicators")
+async def get_indicators(request: Request):
+    """
+    Return all 30+ indicators with defaults and user settings.
+    Called by Mini App indicator selector and extension settings tab.
+    """
+    telegram_id = _require_tg_id(request)
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(telegram_id=telegram_id)
+        enabled  = await user_svc.get_enabled_indicators(user.id)
+        settings = await user_svc.get_indicator_settings(user.id)
+
+    indicators = []
+    for name, defaults in INDICATOR_DEFAULTS.items():
+        group = next((g for g, names in INDICATOR_GROUPS.items() if name in names), "other")
+        indicators.append({
+            "name":     name,
+            "display":  INDICATOR_DISPLAY.get(name, name),
+            "group":    group,
+            "enabled":  (enabled is None) or (name in (enabled or [])),
+            "defaults": defaults,
+            "settings": settings.get(name, {}),
+        })
+
+    return {
+        "ok": True,
+        "indicators": indicators,
+        "groups": {g: {"label": g.replace("_", " ").title(),
+                       "names": names}
+                   for g, names in INDICATOR_GROUPS.items()},
+    }
+
+
+class IndicatorPrefRequest(BaseModel):
+    enabled: Opt[list] = None      # None = all; [] = none; ["rsi","macd"] = subset
+    settings: Opt[dict] = None     # {name: {period: 21}} etc.
+
+
+@router.post("/api/indicators/prefs")
+async def save_indicator_prefs(req: IndicatorPrefRequest, request: Request):
+    """Save user's indicator enabled list and custom settings."""
+    telegram_id = _require_tg_id(request)
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(telegram_id=telegram_id)
+        await user_svc.upsert_indicator_prefs(user.id,
+                                               enabled=req.enabled,
+                                               settings=req.settings)
+        await db.commit()
+    return {"ok": True, "message": "Indicator preferences saved."}
+
+
+@router.post("/api/indicators/reset")
+async def reset_indicator_prefs(request: Request):
+    """Reset all indicator preferences to system defaults."""
+    telegram_id = _require_tg_id(request)
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(telegram_id=telegram_id)
+        await user_svc.upsert_indicator_prefs(user.id, enabled=None, settings={})
+        await db.commit()
+    return {"ok": True, "message": "Indicator preferences reset to defaults."}

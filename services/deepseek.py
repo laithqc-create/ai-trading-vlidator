@@ -133,6 +133,52 @@ class DeepSeekService:
                 logger.error(f"DeepSeek chat error: {e}")
                 raise
 
+
+    async def chat_stream(self, messages: list, max_tokens: int = 2000):
+        """
+        Stream DeepSeek response token by token.
+        Yields str chunks as they arrive.
+        Used by App Builder so user sees PLAN→CODE building in real time.
+
+        Usage (FastAPI SSE endpoint):
+            async for chunk in ds.chat_stream(messages):
+                yield f"data: {chunk}\n\n"
+        """
+        import json
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+        }
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": 0.3,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+        async with httpx.AsyncClient(timeout=120) as client:
+            async with client.stream(
+                "POST",
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=payload,
+            ) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        obj = json.loads(data)
+                        delta = obj["choices"][0]["delta"].get("content", "")
+                        if delta:
+                            yield delta
+                    except Exception:
+                        continue
+
     async def analyze_ohlc(
         self,
         symbol: str,
@@ -141,6 +187,7 @@ class DeepSeekService:
         indicators: dict,
         detected_patterns: list,
         personal_rules: list,
+        trade_context: dict | None = None,
     ) -> dict:
         """
         Analyse OHLC candle data + detected patterns.

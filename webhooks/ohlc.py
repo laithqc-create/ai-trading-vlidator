@@ -1,126 +1,140 @@
 """
-webhooks/ohlc.py
-OHLC analysis endpoint — receives candle data from MT4/MT5/cTrader bots,
-runs DeepSeek pattern detection against user's rules, returns drawing instructions.
-
-Mount in main.py:
-  from webhooks.ohlc import router as ohlc_router
-  app.include_router(ohlc_router)
+webhooks/ohlc.py — Unified OHLC analysis endpoint.
+Handles data from ALL sources:
+  - MT4/MT5/cTrader EA   → candle-close data
+  - Browser extension    → screenshot + candle data
+  - Indicator webhook    → indicator fire data
+Runs: pattern detection + all indicators + AI verdict
+Returns: structured report for Mini App, Telegram, extension, and chart drawing
 """
-
 from __future__ import annotations
-import json
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from loguru import logger
-
 from db.database import AsyncSessionLocal
 from services.user import UserService
 from services.deepseek import DeepSeekService
 from services.pattern_engine import PatternEngine
+from services.indicator_engine import IndicatorEngine
 
 router = APIRouter(prefix="/api/ohlc", tags=["ohlc"])
 
 
 class Candle(BaseModel):
-    t: int          # unix timestamp
-    o: float        # open
-    h: float        # high
-    l: float        # low
-    c: float        # close
-    v: int = 0      # tick volume
+    t: int; o: float; h: float; l: float; c: float; v: int = 0
 
 
-class OHLCAnalysisRequest(BaseModel):
+class OHLCRequest(BaseModel):
     token: str
     symbol: str
     timeframe: str
     candles: List[Candle]
-    indicators: Optional[dict] = {}
-    platform: str = "mt5"   # mt4 | mt5 | ctrader
+    source: str = "ea"              # ea | extension | indicator
+    platform: str = "mt5"          # mt4 | mt5 | ctrader | extension
+    enabled_indicators: Optional[List[str]] = None
+    indicator_settings: Optional[dict] = None
+    # EA analyser trade context
+    trade_direction: Optional[str] = None   # buy | sell
+    trade_price: Optional[float] = None
+    trade_context: Optional[str] = None     # open | close | sl | tp
 
 
 @router.post("/analyze")
-async def analyze_ohlc(req: OHLCAnalysisRequest):
-    """
-    Receive OHLC candles from MT4/MT5/cTrader bots.
-    Run AI pattern detection + user rule check.
-    Return drawing instructions.
-    """
-    if len(req.candles) < 3:
-        raise HTTPException(400, "Need at least 3 candles")
+async def analyze_ohlc(req: OHLCRequest):
+    if len(req.candles) < 5:
+        raise HTTPException(400, "Need at least 5 candles")
 
     async with AsyncSessionLocal() as db:
         user_svc = UserService(db)
-        user = await user_svc.get_user_by_webhook_token(req.token, "ea")
-        if user is None:
-            user = await user_svc.get_user_by_webhook_token(req.token, "indicator")
+        user = await user_svc.get_user_by_webhook_token(req.token, "any")
         if user is None:
             raise HTTPException(401, "Invalid token")
+        if not (user.has_product_access(1) or user.has_product_access(2)):
+            raise HTTPException(403, "Requires Signal Validator, EA Analyser, Pro, or active trial")
 
-        if not user.has_product_access(2) and not user.has_product_access(1):
-            raise HTTPException(403, "OHLC analysis requires an active plan or trial")
+        personal_rules     = await user_svc.get_personal_rules(user.id)
+        enabled_indicators = await user_svc.get_enabled_indicators(user.id)
+        indicator_settings = await user_svc.get_indicator_settings(user.id)
 
-        # Load user's personal pattern rules from RAGFlow / DB
-        personal_rules = await user_svc.get_personal_rules(user.id)
-        ragflow_id = user.ragflow_dataset_id
+    # Request-level overrides
+    if req.enabled_indicators is not None:
+        enabled_indicators = req.enabled_indicators
+    if req.indicator_settings:
+        indicator_settings = {**(indicator_settings or {}), **req.indicator_settings}
 
-    # Run pattern detection
-    engine = PatternEngine()
-    pattern_results = engine.detect(req.candles, personal_rules)
+    candles_raw = [c.dict() for c in req.candles]
 
-    # Run AI analysis via DeepSeek
+    # 1 — Pattern detection
+    patterns = PatternEngine().detect(req.candles, personal_rules)
+
+    # 2 — Indicator calculation
+    ind_report = IndicatorEngine().calculate_for_report(
+        candles_raw,
+        enabled=enabled_indicators,
+        user_settings=indicator_settings,
+    )
+
+    # 3 — AI verdict
     ds = DeepSeekService()
-    ai_result = await ds.analyze_ohlc(
-        symbol=req.symbol,
-        timeframe=req.timeframe,
-        candles=[c.dict() for c in req.candles[-20:]],   # last 20 candles
-        indicators=req.indicators or {},
-        detected_patterns=pattern_results,
+    trade_ctx = {"direction": req.trade_direction, "price": req.trade_price,
+                 "event": req.trade_context} if req.trade_direction else None
+
+    ai = await ds.analyze_ohlc(
+        symbol=req.symbol, timeframe=req.timeframe,
+        candles=candles_raw[-20:],
+        indicators=_flatten(ind_report),
+        detected_patterns=patterns,
         personal_rules=personal_rules,
+        trade_context=trade_ctx,
     )
 
-    # Build drawing instructions for the bot
-    drawing = _build_drawing_instructions(
-        ai_result=ai_result,
-        candles=req.candles,
-        platform=req.platform,
-    )
-
-    logger.info(f"OHLC analysis: {req.symbol} {req.timeframe} → {ai_result.get('signal')} "
-                f"({ai_result.get('pattern')}) for user {user.telegram_id}")
-
-    return {
-        "ok": True,
-        "signal":   ai_result.get("signal", "NEUTRAL"),
-        "pattern":  ai_result.get("pattern", ""),
-        "reason":   ai_result.get("reason", ""),
-        "confidence": ai_result.get("confidence", 0),
-        "drawing":  drawing,
+    # 4 — Structured report
+    report = {
+        "symbol": req.symbol, "timeframe": req.timeframe, "source": req.source,
+        "signal": ai.get("signal", "NEUTRAL"),
+        "pattern": ai.get("pattern", ""),
+        "reason": ai.get("reason", ""),
+        "confidence": round(ai.get("confidence", 0) * 100),
+        "patterns": patterns,
+        "indicators": ind_report,
+        "levels": ai.get("levels", []),
     }
+    if req.trade_direction:
+        report["trade"] = {
+            "direction": req.trade_direction, "price": req.trade_price,
+            "event": req.trade_context,
+            "verdict":    ai.get("trade_verdict", ""),
+            "why_entry":  ai.get("why_entry", ""),
+            "why_result": ai.get("why_result", ""),
+        }
+
+    # 5 — Drawing instructions (MT bots only)
+    drawing = None
+    if req.source == "ea" and req.candles:
+        last = req.candles[-1]
+        sig = ai.get("signal", "NEUTRAL")
+        drawing = {
+            "arrow": {
+                "time": last.t,
+                "direction": "up" if sig == "BUY" else ("down" if sig == "SELL" else "none"),
+                "color": "lime" if sig == "BUY" else ("red" if sig == "SELL" else "yellow"),
+                "label": f"{sig} | {ai.get('pattern','')}",
+                "tooltip": ai.get("reason", ""),
+            },
+            "lines": ai.get("levels", []),
+        }
+
+    logger.info(f"OHLC [{req.source}] {req.symbol} {req.timeframe} → {ai.get('signal','?')} ({ai.get('pattern','?')})")
+    return {"ok": True, "signal": ai.get("signal","NEUTRAL"), "pattern": ai.get("pattern",""),
+            "reason": ai.get("reason",""), "confidence": ai.get("confidence",0),
+            "report": report, "drawing": drawing}
 
 
-def _build_drawing_instructions(ai_result: dict, candles: list, platform: str) -> dict:
-    """
-    Build platform-specific drawing instructions.
-    The bot uses these to draw arrows, lines, labels on the chart.
-    """
-    signal  = ai_result.get("signal", "NEUTRAL")
-    pattern = ai_result.get("pattern", "")
-    reason  = ai_result.get("reason", "")
-
-    last_candle = candles[-1] if candles else None
-    last_ts = last_candle.t if last_candle else 0
-
-    return {
-        "arrow": {
-            "time":      last_ts,
-            "direction": "up" if signal == "BUY" else ("down" if signal == "SELL" else "none"),
-            "color":     "lime" if signal == "BUY" else ("red" if signal == "SELL" else "yellow"),
-            "label":     f"{signal} | {pattern}",
-            "tooltip":   reason,
-        },
-        # Future: add horizontal lines for SR levels, Fibonacci, etc.
-        "lines": ai_result.get("levels", []),
-    }
+def _flatten(ind_report: dict) -> dict:
+    flat = {}
+    for group in ind_report.get("groups", {}).values():
+        for name, data in group.items():
+            if data.get("value") is not None:
+                flat[name] = data["value"]
+    return flat

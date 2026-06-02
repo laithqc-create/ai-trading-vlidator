@@ -933,7 +933,66 @@ async def ea_webhook(
 
     logger.info(f"EA webhook: {payload.ea_name} {action_upper} {ticker} → {result_upper}")
 
-    # Queue EA analysis
+    # If candles provided, run full OHLC analysis immediately
+    candles = payload.dict().get("candles") or []
+    if candles:
+        from services.indicator_engine import IndicatorEngine
+        from services.pattern_engine import PatternEngine
+        from services.report_formatter import format_ea_trade_report, format_telegram_report
+
+        async with AsyncSessionLocal() as db2:
+            user_svc2 = UserService(db2)
+            user2 = await user_svc2.get_user_by_webhook_token(token, "ea")
+            personal_rules = await user_svc2.get_personal_rules(user2.id)
+            enabled_inds   = await user_svc2.get_enabled_indicators(user2.id)
+            ind_settings   = await user_svc2.get_indicator_settings(user2.id)
+
+        patterns   = PatternEngine().detect(candles, personal_rules)
+        ind_report = IndicatorEngine().calculate_for_report(candles, enabled=enabled_inds, user_settings=ind_settings)
+
+        from services.deepseek import DeepSeekService
+        ds = DeepSeekService()
+        flat_ind = {n: d["value"] for g in ind_report.get("groups",{}).values() for n,d in g.items() if d.get("value")}
+        ai = await ds.analyze_ohlc(
+            symbol=ticker, timeframe=payload.dict().get("timeframe","1h"),
+            candles=candles[-20:], indicators=flat_ind,
+            detected_patterns=patterns, personal_rules=personal_rules,
+            trade_context={"direction": action_upper.lower(),
+                           "price": payload.pnl,
+                           "event": "sl" if result_upper=="LOSS" else "tp" if result_upper=="WIN" else "open"},
+        )
+        raw_report = {
+            "symbol": ticker, "timeframe": payload.dict().get("timeframe","1h"),
+            "source": "ea", "signal": ai.get("signal","NEUTRAL"),
+            "pattern": ai.get("pattern",""), "reason": ai.get("reason",""),
+            "confidence": round(ai.get("confidence",0)*100),
+            "patterns": patterns, "indicators": ind_report,
+            "levels": ai.get("levels",[]),
+            "trade": {
+                "direction": action_upper.lower(),
+                "price": payload.pnl, "event": result_upper.lower(),
+                "verdict": ai.get("trade_verdict",""),
+                "why_entry": ai.get("why_entry",""),
+                "why_result": ai.get("why_result",""),
+            }
+        }
+        ea_report   = format_ea_trade_report(raw_report)
+        tg_message  = format_telegram_report(raw_report, raw_report.get("trade"))
+
+        # Send Telegram message
+        try:
+            await bot.send_message(chat_id=telegram_id, text=tg_message, parse_mode="HTML")
+        except Exception as e:
+            logger.warning(f"EA Telegram send failed: {e}")
+
+        return {
+            "ok": True,
+            "message": "EA trade analysed.",
+            "validation_id": validation_id,
+            "report": ea_report,
+        }
+
+    # No candles — queue background analysis
     analyze_ea_task.delay(
         validation_id=validation_id,
         telegram_id=telegram_id,
@@ -1092,24 +1151,91 @@ async def _whop_handle_payment_failed(data: dict):
 async def _whop_handle_marketplace_activated(data: dict):
     """
     membership.went_valid — a user's marketplace purchase/rental became active.
-    Updates the corresponding MarketplacePurchase row to active=True.
+    Creates a MarketplacePurchase row if one doesn't exist yet, or sets active=True.
+    metadata must contain: listing_id, telegram_id, listing_type (sell|rent|free)
     """
     whop_membership_id = data.get("id", "")
+    metadata           = data.get("metadata", {})
+    listing_id         = metadata.get("listing_id", "")
+    telegram_id_str    = metadata.get("telegram_id", "0")
+    listing_type_str   = metadata.get("listing_type", "sell")
+    amount             = float(data.get("checkout_total_amount", 0) or 0) / 100  # cents → dollars
+
     if not whop_membership_id:
         return
 
-    from db.models_marketplace import MarketplacePurchase
-    from sqlalchemy import update as sa_update
+    from db.models_marketplace import MarketplacePurchase, ListingType, MarketplaceListing
+    from sqlalchemy import update as sa_update, select as sa_select
+    from datetime import datetime, timedelta
+    import uuid
 
     async with AsyncSessionLocal() as db:
-        await db.execute(
-            sa_update(MarketplacePurchase)
+        # Check if purchase row already exists
+        res = await db.execute(
+            sa_select(MarketplacePurchase)
             .where(MarketplacePurchase.whop_membership_id == whop_membership_id)
-            .values(active=True)
         )
-        await db.commit()
+        existing = res.scalar_one_or_none()
 
-    logger.info(f"Marketplace purchase activated: whop_membership_id={whop_membership_id}")
+        if existing:
+            existing.active = True
+            await db.commit()
+        elif listing_id and telegram_id_str.isdigit():
+            telegram_id = int(telegram_id_str)
+            # Resolve buyer user_id
+            user_svc = UserService(db)
+            buyer = await user_svc.get_or_create_user(telegram_id=telegram_id)
+
+            try:
+                listing_uuid = uuid.UUID(listing_id)
+            except ValueError:
+                logger.warning(f"Invalid listing_id in Whop metadata: {listing_id}")
+                return
+
+            try:
+                lt = ListingType(listing_type_str)
+            except ValueError:
+                lt = ListingType.SELL
+
+            # Set expiry for rentals (30 days default)
+            expires_at = datetime.utcnow() + timedelta(days=30) if lt == ListingType.RENT else None
+
+            purchase = MarketplacePurchase(
+                listing_id=listing_uuid,
+                buyer_user_id=buyer.id,
+                listing_type=lt,
+                amount_paid_usd=amount,
+                whop_membership_id=whop_membership_id,
+                active=True,
+                expires_at=expires_at,
+            )
+            db.add(purchase)
+
+            # Increment listing purchase count
+            listing_res = await db.execute(
+                sa_select(MarketplaceListing).where(MarketplaceListing.id == listing_uuid)
+            )
+            listing = listing_res.scalar_one_or_none()
+            if listing:
+                listing.purchases = (listing.purchases or 0) + 1
+
+            await db.commit()
+            logger.info(f"Marketplace purchase created: listing={listing_id} buyer={telegram_id}")
+
+            # Notify buyer via Telegram
+            try:
+                from workers.tasks import _send_telegram_message
+                await _send_telegram_message(
+                    telegram_id,
+                    f"🎉 *Purchase confirmed!*\n\n"
+                    f"You now have access to your purchased app.\n"
+                    f"Find it in the Marketplace → My Purchases tab.",
+                )
+            except Exception as e:
+                logger.warning(f"Purchase Telegram notify failed: {e}")
+            return
+
+    logger.info(f"Marketplace activated: whop_membership_id={whop_membership_id}")
 
 
 async def _whop_handle_marketplace_deactivated(data: dict):

@@ -11,6 +11,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from loguru import logger
 
@@ -231,3 +232,127 @@ async def download_code(project_id: UUID, request: Request):
         media_type="text/plain",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ── POST /api/appbuilder/projects/{project_id}/build/stream ──────────────────
+@router.post("/projects/{project_id}/build/stream")
+async def build_step_stream(project_id: UUID, req: BuildStepRequest, request: Request):
+    """
+    Streaming version of the build endpoint.
+    Returns Server-Sent Events so the Mini App and extension
+    show the PLAN → CODE → REVIEW building token by token in real time.
+
+    Client usage (JS):
+        const es = new EventSource("/api/appbuilder/projects/{id}/build/stream");
+        es.onmessage = (e) => appendToChat(e.data);
+        es.addEventListener("done", () => es.close());
+        es.addEventListener("error_event", (e) => showError(e.data));
+    """
+    telegram_id = _require_tg_id(request)
+
+    if not req.message.strip():
+        raise HTTPException(400, "Message cannot be empty")
+
+    async with AsyncSessionLocal() as db:
+        user = await _require_access(telegram_id, db)
+        svc  = AppBuilderService(db)
+
+        project = await svc.get_project(project_id, user.id)
+        if not project.disclaimer_agreed:
+            raise HTTPException(400, "Disclaimer not agreed")
+
+        from sqlalchemy import select as sa_select
+        from db.models_appbuilder import AppBuildStep
+        steps_r = await db.execute(
+            sa_select(AppBuildStep)
+            .where(AppBuildStep.project_id == project_id)
+            .order_by(AppBuildStep.step_number)
+        )
+        existing_steps = steps_r.scalars().all()
+        step_number = len(existing_steps) + 1
+
+        # Build message history
+        messages = svc._build_messages(project, existing_steps, req.message)
+
+        # Create step record (status=planning)
+        from db.models_appbuilder import BuildStatus
+        step = AppBuildStep(
+            project_id=project_id,
+            step_number=step_number,
+            user_message=req.message,
+            status=BuildStatus.PLANNING,
+        )
+        db.add(step)
+        await db.flush()
+        step_id = step.id
+        await db.commit()
+
+    from services.deepseek import DeepSeekService
+    ds = DeepSeekService()
+
+    async def event_generator():
+        full_text = ""
+        try:
+            async for chunk in ds.chat_stream(messages, max_tokens=2000):
+                full_text += chunk
+                # Escape newlines for SSE
+                safe = chunk.replace("\n", "\\n")
+                yield f"data: {safe}\n\n"
+
+            # Parse completed response and save step
+            import json, re
+            clean = re.sub(r"```json|```", "", full_text).strip()
+            try:
+                parsed = json.loads(clean)
+            except Exception:
+                parsed = {"plan": "", "code_diff": "", "full_code": full_text,
+                          "agent_notes": full_text, "warnings": []}
+
+            async with AsyncSessionLocal() as db2:
+                from sqlalchemy import select as sa_select2
+                res = await db2.execute(
+                    sa_select2(AppBuildStep).where(AppBuildStep.id == step_id)
+                )
+                step2 = res.scalar_one_or_none()
+                if step2:
+                    step2.agent_plan   = parsed.get("plan", "")
+                    step2.code_diff    = parsed.get("code_diff", "")
+                    step2.full_code    = parsed.get("full_code", "")
+                    step2.agent_notes  = parsed.get("agent_notes", "")
+                    step2.warnings     = parsed.get("warnings", [])
+                    step2.status       = BuildStatus.DONE
+
+                    # Update project current code
+                    from sqlalchemy import select as sa_select3
+                    from db.models_appbuilder import AppProject
+                    proj_res = await db2.execute(
+                        sa_select3(AppProject).where(AppProject.id == project_id)
+                    )
+                    proj2 = proj_res.scalar_one_or_none()
+                    if proj2 and parsed.get("full_code"):
+                        proj2.current_code    = parsed["full_code"]
+                        proj2.current_version = step_number
+                        proj2.status          = BuildStatus.DONE
+                    await db2.commit()
+
+            # Send final metadata event
+            import json as json2
+            meta = json2.dumps({
+                "step_number": step_number,
+                "warnings":    parsed.get("warnings", []),
+                "has_code":    bool(parsed.get("full_code")),
+            })
+            yield f"event: done\ndata: {meta}\n\n"
+
+        except Exception as e:
+            yield f"event: error_event\ndata: {str(e)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+    )
+

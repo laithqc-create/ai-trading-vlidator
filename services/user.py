@@ -281,3 +281,51 @@ class UserService:
 
     def is_over_generation_cap(self, user: User) -> bool:
         return (user.total_generation_cost or 0.0) >= settings.DEEPSEEK_FREE_CAP
+
+    # ── Indicator preferences ─────────────────────────────────────────────────
+
+    async def get_enabled_indicators(self, user_id: int) -> list | None:
+        """Returns list of enabled indicator names, or None (= all enabled)."""
+        from db.models_indicator_prefs import UserIndicatorPrefs
+        from sqlalchemy import select
+        result = await self.db.execute(
+            select(UserIndicatorPrefs).where(UserIndicatorPrefs.user_id == user_id)
+        )
+        prefs = result.scalar_one_or_none()
+        if prefs is None or prefs.enabled_indicators is None:
+            return None   # None = all enabled
+        return prefs.enabled_indicators
+
+    async def get_indicator_settings(self, user_id: int) -> dict:
+        """Returns {indicator_name: {param: value}} user overrides."""
+        from db.models_indicator_prefs import UserIndicatorPrefs
+        from sqlalchemy import select
+        result = await self.db.execute(
+            select(UserIndicatorPrefs).where(UserIndicatorPrefs.user_id == user_id)
+        )
+        prefs = result.scalar_one_or_none()
+        return prefs.custom_settings or {} if prefs else {}
+
+    async def upsert_indicator_prefs(
+        self, user_id: int,
+        enabled: list | None = None,
+        settings: dict | None = None,
+    ):
+        """Save user's indicator preferences."""
+        from db.models_indicator_prefs import UserIndicatorPrefs
+        from sqlalchemy import select
+        result = await self.db.execute(
+            select(UserIndicatorPrefs).where(UserIndicatorPrefs.user_id == user_id)
+        )
+        prefs = result.scalar_one_or_none()
+        if prefs is None:
+            prefs = UserIndicatorPrefs(user_id=user_id)
+            self.db.add(prefs)
+        if enabled is not None:
+            prefs.enabled_indicators = enabled
+        if settings is not None:
+            existing = prefs.custom_settings or {}
+            existing.update(settings)
+            prefs.custom_settings = existing
+        await self.db.flush()
+
