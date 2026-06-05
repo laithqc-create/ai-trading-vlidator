@@ -64,7 +64,7 @@ async def analyze_ohlc(req: OHLCRequest):
     if req.indicator_settings:
         indicator_settings = {**(indicator_settings or {}), **req.indicator_settings}
 
-    candles_raw = [c.dict() for c in req.candles]
+    candles_raw = [c.model_dump() for c in req.candles]
 
     # 1 — Pattern detection
     patterns = PatternEngine().detect(req.candles, personal_rules)

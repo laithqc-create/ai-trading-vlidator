@@ -59,11 +59,12 @@ def get_dispatcher() -> Dispatcher:
 
 
 def _register_handlers(dp: Dispatcher):
-    from TG_Bot.handlers import trial, appbuilder
+    from TG_Bot.handlers import trial, appbuilder, core
     from bot.handlers import router as tokens_router
-    dp.include_router(trial.router)
-    dp.include_router(appbuilder.router)
-    dp.include_router(tokens_router)
+    dp.include_router(core.router)       # /start /help /status /subscribe /history /connect_* /my_rules /add_rule
+    dp.include_router(trial.router)      # /trial + trial_start callback
+    dp.include_router(appbuilder.router) # /build FSM
+    dp.include_router(tokens_router)     # /tokens
 
 
 async def on_startup(bot: Bot):

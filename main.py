@@ -824,7 +824,7 @@ async def indicator_webhook(
             signal=SignalType(signal_upper),
             price=payload.price,
             status=ValidationStatus.PENDING,
-            source_payload=payload.dict(),
+            source_payload=payload.model_dump(),
         )
         db.add(validation)
         await db.flush()
@@ -905,7 +905,7 @@ async def ea_webhook(
             result=result_upper if result_upper in ("WIN", "LOSS") else "OPEN",
             pnl=payload.pnl,
             trade_time=datetime.fromisoformat(payload.trade_time) if payload.trade_time else datetime.utcnow(),
-            raw_payload=payload.dict(),
+            raw_payload=payload.model_dump(),
         )
         db.add(ea_log)
 
@@ -921,7 +921,7 @@ async def ea_webhook(
             ticker=ticker,
             signal=SignalType(action_upper),
             status=ValidationStatus.PENDING,
-            source_payload=payload.dict(),
+            source_payload=payload.model_dump(),
         )
         db.add(validation)
         await db.flush()
@@ -934,7 +934,7 @@ async def ea_webhook(
     logger.info(f"EA webhook: {payload.ea_name} {action_upper} {ticker} → {result_upper}")
 
     # If candles provided, run full OHLC analysis immediately
-    candles = payload.dict().get("candles") or []
+    candles = payload.model_dump().get("candles") or []
     if candles:
         from services.indicator_engine import IndicatorEngine
         from services.pattern_engine import PatternEngine
@@ -954,7 +954,7 @@ async def ea_webhook(
         ds = DeepSeekService()
         flat_ind = {n: d["value"] for g in ind_report.get("groups",{}).values() for n,d in g.items() if d.get("value")}
         ai = await ds.analyze_ohlc(
-            symbol=ticker, timeframe=payload.dict().get("timeframe","1h"),
+            symbol=ticker, timeframe=payload.model_dump().get("timeframe","1h"),
             candles=candles[-20:], indicators=flat_ind,
             detected_patterns=patterns, personal_rules=personal_rules,
             trade_context={"direction": action_upper.lower(),
@@ -962,7 +962,7 @@ async def ea_webhook(
                            "event": "sl" if result_upper=="LOSS" else "tp" if result_upper=="WIN" else "open"},
         )
         raw_report = {
-            "symbol": ticker, "timeframe": payload.dict().get("timeframe","1h"),
+            "symbol": ticker, "timeframe": payload.model_dump().get("timeframe","1h"),
             "source": "ea", "signal": ai.get("signal","NEUTRAL"),
             "pattern": ai.get("pattern",""), "reason": ai.get("reason",""),
             "confidence": round(ai.get("confidence",0)*100),
