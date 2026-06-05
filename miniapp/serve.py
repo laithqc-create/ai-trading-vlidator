@@ -76,6 +76,11 @@ async def serve_pattern_editor(request: Request):
     return _serve_html("pattern_editor.html", api_base=_get_api_base(request))
 
 
+@router.get("/app/indicators", response_class=HTMLResponse)
+async def serve_indicator_selector(request: Request):
+    return _serve_html("indicator_selector.html", api_base=_get_api_base(request))
+
+
 @router.get("/app/purchase.js")
 async def serve_purchase_js():
     f = MINIAPP_DIR / "purchase_patch.js"

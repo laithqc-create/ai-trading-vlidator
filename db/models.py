@@ -197,3 +197,18 @@ class EALog(Base):
 
     def __repr__(self):
         return f"<EALog {self.ea_name} {self.ticker} {self.result}>"
+
+
+class AnalysisReport(Base):
+    """Stores the last N analysis reports per user per source."""
+    __tablename__ = "analysis_reports"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    source = Column(String(20), nullable=False, index=True)   # indicator | ea | extension
+    symbol = Column(String(20), nullable=True)
+    timeframe = Column(String(10), nullable=True)
+    report = Column(JSON, nullable=True)                       # full structured report dict
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User", backref="analysis_reports")

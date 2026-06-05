@@ -257,21 +257,120 @@ function showAnalysisResult(result) {
   state.lastScreenshotId = result.id || result.screenshot_id || null;
 
   const card = document.getElementById("result-card");
-  const signal = document.getElementById("result-signal");
-  const reason = document.getElementById("result-reason");
-  const patterns = document.getElementById("result-patterns");
+  const report = result.report || result;
 
-  const sig = (result.signal || result.decision || "NEUTRAL").toUpperCase();
-  signal.textContent = sig;
-  signal.className = "result-signal " + (sig === "BUY" ? "buy" : sig === "SELL" ? "sell" : "neutral");
-  reason.textContent = result.reason || result.analysis || "No reason provided.";
-  patterns.innerHTML = (result.patterns || []).map((p) => `<span class="pattern-tag">${p}</span>`).join("");
-
+  card.innerHTML = renderFullReport(report);
   card.classList.add("show");
 
-  // Add system message to chat
-  addChatMessage("system", `📊 Analysis complete: ${sig} — ${result.patterns?.join(", ") || "patterns detected"}`);
+  const sig = (report.signal || result.signal || result.decision || "NEUTRAL").toUpperCase();
+  addChatMessage("system", `📊 Analysis complete: ${sig} — ${(report.patterns || []).map(p => p.name || p).join(", ") || "patterns detected"}`);
   document.getElementById("chat-empty").style.display = "none";
+}
+
+function renderFullReport(report) {
+  const sig = (report.signal || "NEUTRAL").toUpperCase();
+  const sigColor = sig === "BUY" ? "var(--green)" : sig === "SELL" ? "var(--red)" : "var(--yellow)";
+  const sigEmoji = sig === "BUY" ? "🟢" : sig === "SELL" ? "🔴" : "🟡";
+  const ind = report.indicators || {};
+  const groups = ind.groups || {};
+  const bias = ind.overall_bias || "neutral";
+  const confidence = report.confidence || 0;
+
+  let html = `
+    <div style="margin-bottom:10px">
+      <div style="font-size:16px;font-weight:700;color:${sigColor};margin-bottom:4px">${sigEmoji} ${sig}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+        ${report.symbol ? `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(88,166,255,.12);color:var(--accent)">📍 ${report.symbol}</span>` : ""}
+        ${report.timeframe ? `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(88,166,255,.12);color:var(--accent)">⏱ ${report.timeframe}</span>` : ""}
+        ${report.pattern ? `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(188,140,255,.12);color:var(--purple)">🕯 ${report.pattern}</span>` : ""}
+      </div>
+      ${report.reason ? `<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:8px">${report.reason}</div>` : ""}
+      <div style="margin-bottom:4px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px">
+          <span>Confidence</span><span>${confidence}%</span>
+        </div>
+        <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${confidence}%;background:${sigColor};border-radius:2px;transition:width .4s"></div>
+        </div>
+      </div>
+    </div>`;
+
+  // Bias summary
+  if (ind.overall_bias) {
+    const biasColor = bias === "bullish" ? "var(--green)" : bias === "bearish" ? "var(--red)" : "var(--yellow)";
+    html += `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:10px;color:var(--text2)">Overall bias</span>
+        <span style="font-size:11px;font-weight:600;color:${biasColor}">${bias.toUpperCase()}</span>
+      </div>
+      <div style="display:flex;gap:8px;font-size:11px">
+        <span style="color:var(--green)">↑${ind.bull_count||0}</span>
+        <span style="color:var(--red)">↓${ind.bear_count||0}</span>
+        <span style="color:var(--text3)">→${ind.neutral_count||0}</span>
+      </div>
+    </div>`;
+  }
+
+  // Indicator groups
+  if (Object.keys(groups).length) {
+    const groupEmoji = {momentum:"⚡",trend:"📈",volume:"📊",volatility:"🌊"};
+    const groupLabel = {momentum:"Momentum",trend:"Trend",volume:"Volume",volatility:"Volatility"};
+    Object.entries(groups).forEach(([grp, items]) => {
+      const bull = Object.values(items).filter(i => i.signal === "bullish").length;
+      const bear = Object.values(items).filter(i => i.signal === "bearish").length;
+      html += `
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+          <span style="font-size:11px;font-weight:600">${groupEmoji[grp]||"•"} ${groupLabel[grp]||grp}</span>
+          <span style="font-size:10px;color:var(--text2)"><span style="color:var(--green)">↑${bull}</span> <span style="color:var(--red)">↓${bear}</span></span>
+        </div>
+        <div style="display:none;padding:0 10px 8px">
+          ${Object.entries(items).map(([n, d]) => {
+            const dotColor = d.signal === "bullish" ? "var(--green)" : d.signal === "bearish" ? "var(--red)" : "var(--text3)";
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--border)">
+              <span style="font-size:10px;color:var(--text2)">${d.display||n}</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:10px;color:var(--text)">${d.value != null ? Number(d.value).toFixed(d.value > 100 ? 1 : 4) : "—"}</span>
+                <div style="width:6px;height:6px;border-radius:50%;background:${dotColor}"></div>
+              </div>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>`;
+    });
+  }
+
+  // Patterns detected
+  const patterns = report.patterns || [];
+  if (patterns.length) {
+    html += `<div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:8px 0 4px">Patterns detected</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;margin-bottom:8px">
+      ${patterns.map(p => {
+        const name = (p.name || p).toString().replace(/_/g, " ");
+        const bull = p.bullish !== undefined ? p.bullish : true;
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0">
+          <span style="font-size:11px">${name}</span>
+          <span style="font-size:10px;color:${bull ? "var(--green)" : "var(--red)"}">${bull ? "↑ Bull" : "↓ Bear"}${p.confidence ? " · " + p.confidence + "%" : ""}</span>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }
+
+  // Key levels
+  const levels = report.levels || [];
+  if (levels.length) {
+    html += `<div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:4px 0">Key levels</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px">
+      ${levels.map(lv => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0">
+          <span style="font-size:10px;color:var(--text2)">${lv.type}</span>
+          <span style="font-size:11px;font-family:monospace">${Number(lv.price).toFixed(5)}</span>
+        </div>`).join("")}
+    </div>`;
+  }
+
+  return html;
 }
 
 // ── Chat tab ──────────────────────────────────────────────────────────────────

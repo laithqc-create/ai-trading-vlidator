@@ -39,7 +39,7 @@ from pydantic import BaseModel
 from config.settings import settings
 from db.database import init_db, AsyncSessionLocal
 from db.models import (
-    User, Validation, EALog, ValidationStatus, SignalType, PlanTier
+    User, Validation, EALog, ValidationStatus, SignalType, PlanTier, AnalysisReport
 )
 from services.user import UserService
 from services.subscription import WhopService, PLAN_TIER_MAP
@@ -1357,6 +1357,87 @@ async def validation_history(request: Request, limit: int = 20):
         })
 
     return {"ok": True, "validations": rows, "total": len(rows)}
+
+
+# ─── Analysis report endpoints ───────────────────────────────────────────────
+
+@app.get("/api/user/last-report")
+async def last_report(request: Request, source: str = "indicator"):
+    """
+    Returns the most recent analysis report for the user by source.
+    source: indicator | ea | extension
+    Called by Mini App report tabs (loadSVReport, loadEAReport).
+    """
+    tid_str = request.headers.get("X-Telegram-User-Id", "")
+    if not tid_str:
+        raise HTTPException(401, "Missing X-Telegram-User-Id header")
+    tid = int(tid_str)
+
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(tid)
+
+        from sqlalchemy import desc
+        result = await db.execute(
+            select(AnalysisReport)
+            .where(AnalysisReport.user_id == user.id, AnalysisReport.source == source)
+            .order_by(desc(AnalysisReport.created_at))
+            .limit(1)
+        )
+        row = result.scalars().first()
+
+    if not row:
+        return {"ok": True, "report": None}
+
+    return {
+        "ok": True,
+        "report": row.report,
+        "symbol": row.symbol,
+        "timeframe": row.timeframe,
+        "created_at": row.created_at.isoformat(),
+    }
+
+
+@app.get("/api/user/reports")
+async def user_reports(request: Request, source: str = "ea", limit: int = 10):
+    """
+    Returns paginated analysis reports for the user by source.
+    Called by Mini App EA history tab (loadEAHistory).
+    """
+    tid_str = request.headers.get("X-Telegram-User-Id", "")
+    if not tid_str:
+        raise HTTPException(401, "Missing X-Telegram-User-Id header")
+    tid = int(tid_str)
+
+    async with AsyncSessionLocal() as db:
+        user_svc = UserService(db)
+        user = await user_svc.get_or_create_user(tid)
+
+        from sqlalchemy import desc
+        result = await db.execute(
+            select(AnalysisReport)
+            .where(AnalysisReport.user_id == user.id, AnalysisReport.source == source)
+            .order_by(desc(AnalysisReport.created_at))
+            .limit(min(limit, 50))
+        )
+        rows = result.scalars().all()
+
+    reports = [
+        {
+            "id": r.id,
+            "symbol": r.symbol,
+            "timeframe": r.timeframe,
+            "source": r.source,
+            "report": r.report,
+            "created_at": r.created_at.isoformat(),
+            # Convenience fields surfaced from the report dict
+            "signal": (r.report or {}).get("signal"),
+            "trade": (r.report or {}).get("trade"),
+        }
+        for r in rows
+    ]
+
+    return {"ok": True, "reports": reports, "total": len(reports)}
 
 
 # ─── Affiliate link ───────────────────────────────────────────────────────────

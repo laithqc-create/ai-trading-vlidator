@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from loguru import logger
 from db.database import AsyncSessionLocal
+from db.models import AnalysisReport
 from services.user import UserService
 from services.deepseek import DeepSeekService
 from services.pattern_engine import PatternEngine
@@ -126,6 +127,18 @@ async def analyze_ohlc(req: OHLCRequest):
         }
 
     logger.info(f"OHLC [{req.source}] {req.symbol} {req.timeframe} → {ai.get('signal','?')} ({ai.get('pattern','?')})")
+
+    # Persist report for /api/user/last-report
+    async with AsyncSessionLocal() as db:
+        db.add(AnalysisReport(
+            user_id=user.id,
+            source=req.source,
+            symbol=req.symbol,
+            timeframe=req.timeframe,
+            report=report,
+        ))
+        await db.commit()
+
     return {"ok": True, "signal": ai.get("signal","NEUTRAL"), "pattern": ai.get("pattern",""),
             "reason": ai.get("reason",""), "confidence": ai.get("confidence",0),
             "report": report, "drawing": drawing}
