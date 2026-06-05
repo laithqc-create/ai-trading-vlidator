@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Indicator Settings</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#09090f;--bg2:#0f1117;--bg3:#161b26;--bg4:#1c2333;--b:rgba(255,255,255,.07);--b2:rgba(255,255,255,.13);--t:#e8eaf2;--t2:#8892aa;--t3:#4a5470;--ac:#4f8eff;--ac2:#2563eb;--gr:#22c55e;--rd:#ef4444;--yw:#f59e0b;--pu:#a855f7;--cy:#06b6d4;--r:12px;--rs:7px}
+html,body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh}
+.header{position:sticky;top:0;z-index:50;background:rgba(9,9,15,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--b);padding:11px 16px;display:flex;align-items:center;justify-content:space-between}
+.header-title{font-size:15px;font-weight:700}.header-sub{font-size:11px;color:var(--t3);margin-top:1px}
+.reset-btn{font-size:11px;padding:5px 11px;border-radius:20px;background:transparent;border:1px solid var(--b);color:var(--t2);cursor:pointer}
+.reset-btn:hover{border-color:var(--rd);color:var(--rd)}
+.disclaimer{margin:12px 16px 0;padding:9px 12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:var(--r);font-size:11px;color:var(--t2);line-height:1.6}
+.disclaimer strong{color:var(--yw)}
+.filter-row{padding:10px 16px 6px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
+.chip{padding:5px 12px;border-radius:20px;background:var(--bg2);border:1px solid var(--b);font-size:11px;font-weight:500;color:var(--t3);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.chip.act{background:rgba(79,142,255,.1);border-color:var(--ac);color:var(--ac)}
+.content{padding:0 16px 80px}
+.group-section{margin-bottom:6px}
+.group-header{display:flex;align-items:center;justify-content:space-between;padding:10px 0 7px}
+.group-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:6px}
+.group-count{font-size:10px;color:var(--t3)}
+.ind-card{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rs);margin-bottom:7px;overflow:hidden;transition:border-color .15s}
+.ind-card.has-custom{border-color:rgba(79,142,255,.3)}
+.ind-row{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer}
+.ind-row:hover{background:rgba(255,255,255,.02)}
+.ind-name{flex:1}.ind-display{font-size:12px;font-weight:600;color:var(--t);margin-bottom:1px}
+.ind-default{font-size:10px;color:var(--t3)}
+.custom-dot{width:5px;height:5px;border-radius:50%;background:var(--ac);flex-shrink:0;display:none}
+.has-custom .custom-dot{display:block}
+.toggle{width:34px;height:19px;border-radius:10px;background:var(--bg4);border:1px solid var(--b2);position:relative;cursor:pointer;flex-shrink:0;transition:all .2s}
+.toggle.on{background:var(--gr);border-color:var(--gr)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle.on::after{transform:translateX(15px)}
+.chevron{width:14px;height:14px;stroke:var(--t3);flex-shrink:0;transition:transform .2s}
+.ind-body{display:none;border-top:1px solid var(--b);padding:11px 12px;background:var(--bg3)}
+.ind-body.open{display:block}
+.ind-card.open .chevron{transform:rotate(180deg)}
+.param-row{margin-bottom:10px}
+.param-label{font-size:11px;color:var(--t2);margin-bottom:4px;display:flex;justify-content:space-between}
+.param-label span{color:var(--t3);font-size:10px}
+.param-input{width:100%;background:var(--bg2);border:1px solid var(--b);border-radius:5px;padding:7px 9px;color:var(--t);font-size:12px;outline:none;font-family:inherit}
+.param-input:focus{border-color:var(--ac)}
+.slider{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--b2);outline:none;cursor:pointer}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ac);border:2px solid var(--bg);cursor:pointer}
+.slider-val{font-size:11px;color:var(--ac);font-weight:600;text-align:right;margin-top:3px}
+.type-pills{display:flex;gap:5px;margin-top:4px}
+.type-pill{padding:4px 10px;border-radius:20px;background:var(--bg2);border:1px solid var(--b);font-size:11px;color:var(--t2);cursor:pointer}
+.type-pill.sel{border-color:var(--ac);color:var(--ac);background:rgba(79,142,255,.08)}
+.action-row{display:flex;gap:7px;margin-top:12px;padding-top:10px;border-top:1px solid var(--b)}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:var(--rs);font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--b);background:var(--bg2);color:var(--t);flex:1;font-family:inherit;transition:all .15s}
+.btn.primary{background:var(--ac2);border-color:var(--ac2);color:#fff}
+.btn.ghost{color:var(--rd);border-color:transparent;background:transparent;flex:0}
+.btn.ghost:hover{border-color:var(--rd);background:rgba(239,68,68,.08)}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:rgba(9,9,15,.97);border-top:1px solid var(--b);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.bottom-info{font-size:12px;color:var(--t2)}.bottom-info strong{color:var(--t)}
+.save-btn{padding:9px 22px;background:var(--ac2);border:none;border-radius:var(--rs);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 16px;font-size:12px;color:var(--t);opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;z-index:200}
+.toast.show{opacity:1}.toast.ok{border-color:var(--gr);color:var(--gr)}.toast.err{border-color:var(--rd);color:var(--rd)}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--b2);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:40px 0;color:var(--t3);font-size:13px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div><div class="header-title">Indicator Settings</div><div class="header-sub">Choose which indicators to use in analysis</div></div>
+  <button class="reset-btn" id="btn-reset">Reset all</button>
+</div>
+<div class="disclaimer"><strong>⚠️ Analytical tool only.</strong> Indicators are used for market analysis only, not financial advice.</div>
+<div class="filter-row" id="filter-row">
+  <div class="chip act" data-group="all">All</div>
+  <div class="chip" data-group="momentum">⚡ Momentum</div>
+  <div class="chip" data-group="trend">📈 Trend</div>
+  <div class="chip" data-group="volume">📊 Volume</div>
+  <div class="chip" data-group="volatility">🌊 Volatility</div>
+</div>
+<div class="content" id="content">
+  <div class="empty"><span class="spinner"></span> Loading indicators…</div>
+</div>
+<div class="bottom-bar">
+  <div class="bottom-info">
+    <strong id="enabled-count">—</strong> enabled
+  </div>
+  <button class="save-btn" id="btn-save">Save preferences</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = window.API_BASE || "";
+const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "";
+const headers = {"Content-Type":"application/json", ...(tgId?{"X-Telegram-User-Id":String(tgId)}:{})};
+
+const GROUP_EMOJI = {momentum:"⚡",trend:"📈",volume:"📊",volatility:"🌊"};
+const GROUP_LABEL = {momentum:"Momentum & Oscillators",trend:"Trend & Moving Averages",volume:"Volume",volatility:"Volatility & Other"};
+
+let allIndicators = [];
+let enabled = {};
+let customSettings = {};
+let activeGroup = "all";
+let openCard = null;
+
+document.addEventListener("DOMContentLoaded", async () => {
+  window.Telegram?.WebApp?.expand?.();
+  await load();
+  initFilters();
+  document.getElementById("btn-save").onclick = save;
+  document.getElementById("btn-reset").onclick = resetAll;
+});
+
+async function load() {
+  try {
+    const res = await fetch(API + "/api/indicators", {headers});
+    const data = await res.json();
+    allIndicators = data.indicators || [];
+    allIndicators.forEach(ind => {
+      enabled[ind.name] = ind.enabled;
+      customSettings[ind.name] = {...ind.settings};
+    });
+    render();
+  } catch(e) {
+    document.getElementById("content").innerHTML = `<div class="empty" style="color:var(--rd)">Failed to load. Connect backend first.</div>`;
+  }
+}
+
+function render() {
+  const filtered = activeGroup === "all" ? allIndicators : allIndicators.filter(i => i.group === activeGroup);
+  const byGroup = {};
+  filtered.forEach(ind => {
+    if (!byGroup[ind.group]) byGroup[ind.group] = [];
+    byGroup[ind.group].push(ind);
+  });
+
+  const content = document.getElementById("content");
+  if (!filtered.length) { content.innerHTML = '<div class="empty">No indicators match.</div>'; return; }
+
+  content.innerHTML = Object.entries(byGroup).map(([grp, inds]) => `
+    <div class="group-section">
+      <div class="group-header">
+        <div class="group-title">${GROUP_EMOJI[grp]||"•"} ${GROUP_LABEL[grp]||grp}</div>
+        <div class="group-count">${inds.filter(i=>enabled[i.name]).length}/${inds.length} enabled</div>
+      </div>
+      ${inds.map(ind => indCard(ind)).join("")}
+    </div>
+  `).join("");
+
+  // Wire up each card
+  filtered.forEach(ind => wireCard(ind));
+  updateCount();
+}
+
+function indCard(ind) {
+  const hasCustom = Object.keys(customSettings[ind.name]||{}).length > 0;
+  const isOpen = openCard === ind.name;
+  const isEnabled = enabled[ind.name];
+  const defaults = ind.defaults || {};
+  const curr = customSettings[ind.name] || {};
+
+  const defaultStr = Object.entries(defaults)
+    .filter(([k]) => k !== "type" && k !== "periods")
+    .map(([k,v]) => `${k}=${v}`)
+    .join(", ") || "context-based";
+
+  return `
+<div class="ind-card ${hasCustom?"has-custom":""} ${isOpen?"open":""}" id="ic-${ind.name}">
+  <div class="ind-row" onclick="toggleCard('${ind.name}')">
+    <div class="ind-name">
+      <div class="ind-display">${ind.display}</div>
+      <div class="ind-default">${defaultStr}</div>
+    </div>
+    <div class="custom-dot" title="Custom settings active"></div>
+    <div class="toggle ${isEnabled?"on":""}" id="tog-${ind.name}" onclick="event.stopPropagation();togEnable('${ind.name}')"></div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="ind-body ${isOpen?"open":""}" id="ib-${ind.name}">
+    ${buildParams(ind)}
+    <div class="action-row">
+      <button class="btn ghost" onclick="resetOne('${ind.name}')">Reset</button>
+      <button class="btn primary" onclick="saveOne('${ind.name}')">Apply</button>
+    </div>
+  </div>
+</div>`;
+}
+
+function buildParams(ind) {
+  const d = ind.defaults || {};
+  const c = customSettings[ind.name] || {};
+  let html = "";
+
+  if ("period" in d) {
+    const v = c.period ?? d.period;
+    html += `<div class="param-row">
+      <div class="param-label">Period <span>Default: ${d.period}</span></div>
+      <input type="range" class="slider" min="2" max="200" value="${v}" id="p-period-${ind.name}" oninput="document.getElementById('sv-period-${ind.name}').textContent=this.value">
+      <div class="slider-val" id="sv-period-${ind.name}">${v}</div>
+    </div>`;
+  }
+  if ("fast" in d) {
+    const v = c.fast ?? d.fast;
+    html += `<div class="param-row"><div class="param-label">Fast period <span>Default: ${d.fast}</span></div>
+      <input type="range" class="slider" min="2" max="50" value="${v}" id="p-fast-${ind.name}" oninput="document.getElementById('sv-fast-${ind.name}').textContent=this.value">
+      <div class="slider-val" id="sv-fast-${ind.name}">${v}</div></div>`;
+  }
+  if ("slow" in d) {
+    const v = c.slow ?? d.slow;
+    html += `<div class="param-row"><div class="param-label">Slow period <span>Default: ${d.slow}</span></div>
+      <input type="range" class="slider" min="5" max="200" value="${v}" id="p-slow-${ind.name}" oninput="document.getElementById('sv-slow-${ind.name}').textContent=this.value">
+      <div class="slider-val" id="sv-slow-${ind.name}">${v}</div></div>`;
+  }
+  if ("signal" in d) {
+    const v = c.signal ?? d.signal;
+    html += `<div class="param-row"><div class="param-label">Signal period <span>Default: ${d.signal}</span></div>
+      <input type="range" class="slider" min="1" max="50" value="${v}" id="p-signal-${ind.name}" oninput="document.getElementById('sv-signal-${ind.name}').textContent=this.value">
+      <div class="slider-val" id="sv-signal-${ind.name}">${v}</div></div>`;
+  }
+  if ("std" in d) {
+    const v = c.std ?? d.std;
+    html += `<div class="param-row"><div class="param-label">Std deviation <span>Default: ${d.std}</span></div>
+      <input type="range" class="slider" min="1" max="4" step="0.5" value="${v}" id="p-std-${ind.name}" oninput="document.getElementById('sv-std-${ind.name}').textContent=this.value">
+      <div class="slider-val" id="sv-std-${ind.name}">${v}</div></div>`;
+  }
+  if ("multiplier" in d) {
+    const v = c.multiplier ?? d.multiplier;
+    html += `<div class="param-row"><div class="param-label">Multiplier <span>Default: ${d.multiplier}</span></div>
+      <input type="range" class="slider" min="0.5" max="10" step="0.5" value="${v}" id="p-multiplier-${ind.name}" oninput="document.getElementById('sv-multiplier-${ind.name}').textContent=this.value">
+      <div class="slider-val" id="sv-multiplier-${ind.name}">${v}</div></div>`;
+  }
+  if ("type" in d) {
+    const curr_type = c.type ?? d.type;
+    html += `<div class="param-row"><div class="param-label">MA type <span>Default: ${d.type}</span></div>
+      <div class="type-pills" id="tp-${ind.name}">
+        ${["sma","ema","wma","hma"].map(t=>`<div class="type-pill ${curr_type===t?"sel":""}" onclick="selType('${ind.name}','${t}',this)">${t.toUpperCase()}</div>`).join("")}
+      </div></div>`;
+  }
+  if (!html) html = `<div style="font-size:12px;color:var(--t3);padding:4px 0">This indicator uses contextual defaults. Toggle on/off only.</div>`;
+  return html;
+}
+
+function wireCard(ind) { /* interactions wired via onclick in HTML */ }
+
+function toggleCard(name) {
+  openCard = openCard === name ? null : name;
+  const card = document.getElementById(`ic-${name}`);
+  const body = document.getElementById(`ib-${name}`);
+  if (!card || !body) return;
+  const isOpen = openCard === name;
+  card.classList.toggle("open", isOpen);
+  body.classList.toggle("open", isOpen);
+  // Update chevron
+  const svg = card.querySelector(".chevron");
+  if (svg) svg.style.transform = isOpen ? "rotate(180deg)" : "";
+}
+
+function togEnable(name) {
+  enabled[name] = !enabled[name];
+  const tog = document.getElementById(`tog-${name}`);
+  if (tog) tog.classList.toggle("on", enabled[name]);
+  updateCount();
+}
+
+function selType(name, type, el) {
+  if (!customSettings[name]) customSettings[name] = {};
+  customSettings[name].type = type;
+  el.closest(".type-pills").querySelectorAll(".type-pill").forEach(p => p.classList.remove("sel"));
+  el.classList.add("sel");
+}
+
+function saveOne(name) {
+  const params = ["period","fast","slow","signal","std","multiplier","k","d"];
+  const settings = {};
+  params.forEach(p => {
+    const el = document.getElementById(`p-${p}-${name}`);
+    if (el) settings[p] = parseFloat(el.value);
+  });
+  if (customSettings[name]?.type) settings.type = customSettings[name].type;
+  customSettings[name] = settings;
+  // Update custom dot
+  const card = document.getElementById(`ic-${name}`);
+  if (card) card.classList.toggle("has-custom", Object.keys(settings).length > 0);
+  showToast("Settings applied ✓", "ok");
+}
+
+function resetOne(name) {
+  customSettings[name] = {};
+  const card = document.getElementById(`ic-${name}`);
+  if (card) card.classList.remove("has-custom");
+  // Re-render just this card's body
+  const ind = allIndicators.find(i => i.name === name);
+  if (ind) {
+    const body = document.getElementById(`ib-${name}`);
+    if (body) body.innerHTML = buildParams(ind) + `<div class="action-row"><button class="btn ghost" onclick="resetOne('${name}')">Reset</button><button class="btn primary" onclick="saveOne('${name}')">Apply</button></div>`;
+  }
+  showToast("Reset to defaults", "ok");
+}
+
+async function resetAll() {
+  if (!confirm("Reset all indicator settings to defaults?")) return;
+  try {
+    await fetch(API + "/api/indicators/reset", {method:"POST", headers});
+    allIndicators.forEach(i => { enabled[i.name] = true; customSettings[i.name] = {}; });
+    openCard = null;
+    render();
+    showToast("All reset ✓", "ok");
+  } catch { showToast("Reset failed", "err"); }
+}
+
+async function save() {
+  const btn = document.getElementById("btn-save");
+  btn.textContent = "Saving…"; btn.disabled = true;
+  try {
+    const enabledList = allIndicators.filter(i => enabled[i.name]).map(i => i.name);
+    await fetch(API + "/api/indicators/prefs", {
+      method: "POST", headers,
+      body: JSON.stringify({enabled: enabledList, settings: customSettings})
+    });
+    showToast("Preferences saved ✓", "ok");
+  } catch { showToast("Save failed", "err"); }
+  finally { btn.textContent = "Save preferences"; btn.disabled = false; }
+}
+
+function initFilters() {
+  document.querySelectorAll(".chip").forEach(chip => {
+    chip.onclick = () => {
+      document.querySelectorAll(".chip").forEach(c => c.classList.remove("act"));
+      chip.classList.add("act");
+      activeGroup = chip.dataset.group;
+      openCard = null;
+      render();
+    };
+  });
+}
+
+function updateCount() {
+  const count = Object.values(enabled).filter(Boolean).length;
+  document.getElementById("enabled-count").textContent = count;
+}
+
+let toastT;
+function showToast(msg, type="") {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = `toast show ${type}`;
+  clearTimeout(toastT); toastT = setTimeout(() => t.className = "toast", 2500);
+}
+</script>
+</body>
+</html>

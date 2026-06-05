@@ -59,6 +59,7 @@ class ValidationService:
 
         matches = self.engine.detect(candles, personal_rules or [])
 
+        directional_check = [m for m in matches if m['name'] not in {'killzone','london_killzone','ny_killzone','asian_killzone','amd','judas_swing','silver_bullet_window'}]
         if not matches:
             return {
                 "verdict": "NEUTRAL",
@@ -68,15 +69,22 @@ class ValidationService:
             }
 
         # Determine if patterns agree with the signal
-        bullish_patterns = [m for m in matches if m["bullish"]]
-        bearish_patterns = [m for m in matches if not m["bullish"]]
+        # Exclude session/time patterns (killzone, AMD etc.) — these are
+        # informational, not directional signals
+        SESSION_PATTERNS = {
+            "killzone", "london_killzone", "ny_killzone", "asian_killzone",
+            "amd", "judas_swing", "silver_bullet_window",
+        }
+        directional = [m for m in matches if m["name"] not in SESSION_PATTERNS]
+        bullish_patterns = [m for m in directional if m["bullish"]]
+        bearish_patterns = [m for m in directional if not m["bullish"]]
 
         if signal == "BUY":
             agreeing = bullish_patterns
         elif signal == "SELL":
             agreeing = bearish_patterns
         else:
-            agreeing = matches
+            agreeing = directional
 
         if agreeing:
             top = agreeing[0]

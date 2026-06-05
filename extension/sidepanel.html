@@ -184,6 +184,24 @@
   .plan-name { font-weight: 600; color: var(--accent); }
   .plan-sub { color: var(--text3); font-size: 11px; margin-top: 2px; }
 
+
+  /* ── Extended report card ── */
+  .ind-grp-card{background:var(--bg3);border:1px solid var(--border);border-radius:5px;margin-bottom:5px;overflow:hidden}
+  .ind-grp-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 9px;cursor:pointer;font-size:11px}
+  .ind-grp-hdr:hover{background:rgba(255,255,255,.03)}
+  .ind-grp-title{font-weight:600;color:var(--text);display:flex;align-items:center;gap:5px}
+  .ind-grp-pills{display:flex;gap:4px;font-size:10px}
+  .ind-grp-body{display:none;border-top:1px solid var(--border);padding:6px 9px}
+  .ind-grp-card.open .ind-grp-body{display:block}
+  .ind-grp-card.open .ig-chev{transform:rotate(180deg)}
+  .ig-chev{width:11px;height:11px;stroke:var(--text3);transition:transform .2s}
+  .ind-item{display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:10px}
+  .ind-item:last-child{border-bottom:none}
+  .ind-item-lbl{color:var(--text2);flex:1}
+  .ind-item-val{font-family:monospace;font-size:9px;color:var(--text);margin-right:6px}
+  .ind-sig{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .ind-sig.bullish{background:var(--green)}.ind-sig.bearish{background:var(--red)}.ind-sig.neutral{background:var(--text3)}
+
   /* ── Spinner ── */
   .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }

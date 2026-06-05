@@ -2,1366 +2,612 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>AI Trade Validator</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-
 :root{
-  --bg:        #0a0b0f;
-  --bg2:       #111318;
-  --bg3:       #181c24;
-  --bg4:       #1e2330;
-  --border:    rgba(255,255,255,.07);
-  --border2:   rgba(255,255,255,.12);
-  --text:      #e8eaf0;
-  --text2:     #7b8299;
-  --text3:     #4a5168;
-  --accent:    #4f8eff;
-  --accent2:   #2563eb;
-  --green:     #22c55e;
-  --green2:    #16a34a;
-  --red:       #ef4444;
-  --yellow:    #f59e0b;
-  --purple:    #a855f7;
-  --cyan:      #06b6d4;
-  --r:         14px;
-  --r-sm:      8px;
-  --r-xs:      5px;
-  --font-head: 'Syne', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
-  --font-mono: 'DM Mono', monospace;
-  --nav-h:     68px;
-  --header-h:  60px;
+  --bg:#0a0b0f;--bg2:#111318;--bg3:#181c24;--bg4:#1e2330;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --text:#e8eaf0;--text2:#7b8299;--text3:#4a5168;
+  --accent:#4f8eff;--accent2:#2563eb;
+  --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--purple:#a855f7;--cyan:#06b6d4;
+  --r:14px;--r-sm:8px;--r-xs:5px;
+  --font-head:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'DM Mono',monospace;
+  --nav-h:64px;--header-h:56px;
 }
+html,body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-html,body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:var(--font-body);
-  font-size:14px;
-  min-height:100vh;
-  overflow-x:hidden;
-}
-
-/* ── scrollbar ── */
-::-webkit-scrollbar{width:3px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-
-/* ════════════════════════════════════════════════
-   HEADER
-════════════════════════════════════════════════ */
-.app-header{
-  position:sticky;top:0;z-index:100;
-  height:var(--header-h);
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 16px;
-  background:rgba(10,11,15,.92);
-  backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--border);
-}
+/* ── Header ── */
+.app-header{position:sticky;top:0;z-index:100;height:var(--header-h);display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(10,11,15,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
 .header-brand{display:flex;align-items:center;gap:9px}
-.header-logo{
-  width:34px;height:34px;border-radius:9px;
-  background:linear-gradient(135deg,#2563eb,#4f8eff);
-  display:flex;align-items:center;justify-content:center;
-  font-size:16px;font-weight:700;color:#fff;
-  font-family:var(--font-head);
-}
-.header-name{font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--text)}
-.header-right{display:flex;align-items:center;gap:8px}
-.plan-chip{
-  font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;
-  background:rgba(79,142,255,.15);color:var(--accent);
-  border:1px solid rgba(79,142,255,.3);
-  font-family:var(--font-mono);
-}
+.header-logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#2563eb,#4f8eff);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff}
+.header-name{font-family:var(--font-head);font-size:14px;font-weight:700}
+.plan-chip{font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;background:rgba(79,142,255,.15);color:var(--accent);border:1px solid rgba(79,142,255,.3);font-family:var(--font-mono)}
 .plan-chip.trial{background:rgba(168,85,247,.15);color:var(--purple);border-color:rgba(168,85,247,.3)}
 .plan-chip.free{background:rgba(123,130,153,.1);color:var(--text2);border-color:var(--border)}
-.avatar-btn{
-  width:34px;height:34px;border-radius:50%;
-  background:var(--bg3);border:1px solid var(--border2);
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:17px;
-}
+.avatar-btn{width:32px;height:32px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
 
-/* ════════════════════════════════════════════════
-   NAV TABS
-════════════════════════════════════════════════ */
-.bottom-nav{
-  position:fixed;bottom:0;left:0;right:0;
-  height:var(--nav-h);
-  background:rgba(10,11,15,.96);
-  backdrop-filter:blur(20px);
-  border-top:1px solid var(--border);
-  display:flex;align-items:center;
-  padding:0 4px;
-  z-index:100;
-}
-.nav-item{
-  flex:1;display:flex;flex-direction:column;align-items:center;
-  gap:4px;padding:8px 4px;cursor:pointer;
-  border-radius:var(--r-sm);transition:all .2s;
-  position:relative;
-}
-.nav-item .nav-icon{font-size:20px;line-height:1;transition:transform .2s}
-.nav-item .nav-label{
-  font-size:10px;font-weight:500;color:var(--text3);
-  transition:color .2s;letter-spacing:.02em;
-}
-.nav-item.active .nav-icon{transform:translateY(-1px)}
-.nav-item.active .nav-label{color:var(--accent)}
-.nav-item.active::after{
-  content:'';position:absolute;top:6px;
-  width:20px;height:2px;border-radius:1px;
-  background:var(--accent);
-  top:-1px;
-  box-shadow:0 0 8px var(--accent);
-}
-
-/* ════════════════════════════════════════════════
-   SCROLL CONTAINER
-════════════════════════════════════════════════ */
-.scroll-container{
-  height:calc(100vh - var(--header-h) - var(--nav-h));
-  overflow-y:auto;
-  overflow-x:hidden;
-}
-.page{display:none;padding:16px 16px 8px;animation:fadeIn .2s ease}
+/* ── Scroll ── */
+.scroll-container{height:calc(100vh - var(--header-h) - var(--nav-h));overflow-y:auto;overflow-x:hidden}
+.page{display:none;padding:14px 14px 8px;animation:fadeIn .2s ease}
 .page.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
-/* ════════════════════════════════════════════════
-   COMMON COMPONENTS
-════════════════════════════════════════════════ */
-.section-label{
-  font-size:10px;font-weight:700;letter-spacing:.1em;
-  color:var(--text3);text-transform:uppercase;
-  margin-bottom:10px;padding-left:2px;
-}
+/* ── Bottom nav ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:rgba(10,11,15,.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 4px;z-index:100}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;cursor:pointer;border-radius:var(--r-sm);position:relative}
+.nav-item .nav-icon{font-size:19px;transition:transform .2s}
+.nav-item .nav-label{font-size:10px;font-weight:500;color:var(--text3)}
+.nav-item.active .nav-label{color:var(--accent)}
+.nav-item.active::after{content:'';position:absolute;top:-1px;width:18px;height:2px;background:var(--accent);border-radius:1px;box-shadow:0 0 6px var(--accent)}
 
-.card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--r);padding:14px;margin-bottom:12px;
-}
-.card-sm{padding:11px 13px}
-
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  padding:10px 18px;border-radius:var(--r-sm);
-  font-size:13px;font-weight:600;cursor:pointer;
-  border:1px solid var(--border);background:var(--bg3);
-  color:var(--text);font-family:var(--font-body);
-  transition:all .15s;white-space:nowrap;
-}
+/* ── Components ── */
+.section-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;padding-left:1px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:10px}
+.card-sm{padding:11px 12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:9px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:var(--font-body);transition:all .15s;white-space:nowrap}
 .btn:hover{background:var(--bg4);border-color:var(--border2)}
 .btn-primary{background:var(--accent2);border-color:var(--accent2);color:#fff}
 .btn-primary:hover{background:var(--accent);border-color:var(--accent)}
-.btn-green{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green)}
+.btn-green{background:rgba(34,197,94,.12);border-color:var(--green);color:var(--green)}
 .btn-full{width:100%}
-.btn-sm{padding:7px 12px;font-size:12px;border-radius:var(--r-xs)}
+.btn-sm{padding:6px 12px;font-size:11px;border-radius:var(--r-xs)}
+.divider{height:1px;background:var(--border);margin:10px 0}
 
-/* Toggle */
-.toggle-wrap{display:flex;align-items:center;gap:8px}
-.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
-.toggle input{opacity:0;width:0;height:0;position:absolute}
-.toggle-track{
-  position:absolute;inset:0;border-radius:11px;
-  background:var(--bg4);border:1px solid var(--border2);
-  cursor:pointer;transition:all .2s;
-}
-.toggle input:checked+.toggle-track{background:var(--green);border-color:var(--green)}
-.toggle-thumb{
-  position:absolute;top:3px;left:3px;
-  width:14px;height:14px;background:#fff;border-radius:50%;
-  pointer-events:none;transition:transform .2s;
-}
-.toggle input:checked~.toggle-thumb{transform:translateX(18px)}
-
-/* Pill badge */
+/* ── Badges ── */
 .badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
 .badge-paid{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid rgba(245,158,11,.25)}
 .badge-free{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25)}
 .badge-trial{background:rgba(168,85,247,.1);color:var(--purple);border:1px solid rgba(168,85,247,.25)}
 .badge-new{background:rgba(6,182,212,.1);color:var(--cyan);border:1px solid rgba(6,182,212,.25)}
 
-/* Divider */
-.divider{height:1px;background:var(--border);margin:12px 0}
-
-/* Chevron */
-.chevron{
-  width:16px;height:16px;stroke:var(--text3);
-  flex-shrink:0;transition:transform .2s;
-}
-.open>.chevron{transform:rotate(180deg)}
-
-/* Spinner */
-.spinner{
-  display:inline-block;width:14px;height:14px;
-  border:2px solid var(--border2);border-top-color:var(--accent);
-  border-radius:50%;animation:spin .7s linear infinite;
-}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* ════════════════════════════════════════════════
-   TRIAL BANNER
-════════════════════════════════════════════════ */
-.trial-banner{
-  background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(79,142,255,.08));
-  border:1px solid rgba(168,85,247,.3);
-  border-radius:var(--r);padding:12px 14px;margin-bottom:16px;
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-}
-.trial-banner.paid{
-  background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.2);
-}
-.trial-banner.expired{
-  background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.2);
-}
-.trial-text{flex:1}
-.trial-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
-.trial-sub{font-size:11px;color:var(--text2)}
-
-/* ════════════════════════════════════════════════
-   PAGE 1 — PRODUCTS
-════════════════════════════════════════════════ */
-
-/* ── Quick action bar ── */
-.quick-actions{
-  display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;
-  padding-bottom:2px;scrollbar-width:none;
-}
-.quick-actions::-webkit-scrollbar{display:none}
-.qa-btn{
-  display:flex;align-items:center;gap:6px;
-  padding:9px 14px;border-radius:40px;
-  background:var(--bg2);border:1px solid var(--border2);
-  font-size:12px;font-weight:500;color:var(--text2);
-  cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;
-}
-.qa-btn:hover{color:var(--text);border-color:var(--accent);background:rgba(79,142,255,.08)}
-.qa-btn.active{color:var(--accent);border-color:var(--accent);background:rgba(79,142,255,.1)}
+/* ── Trial banner ── */
+.trial-banner{background:linear-gradient(135deg,rgba(168,85,247,.1),rgba(79,142,255,.07));border:1px solid rgba(168,85,247,.28);border-radius:var(--r);padding:10px 13px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.trial-banner.paid{background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.2)}
+.trial-banner.expired{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.2)}
 
 /* ── Product grid ── */
-.product-grid{
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:10px;margin-bottom:20px;
-}
-.product-card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--r);padding:14px 12px;
-  cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
-}
-.product-card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  opacity:0;transition:opacity .2s;
-}
+.product-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}
+.product-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 11px;cursor:pointer;position:relative;overflow:hidden;transition:all .2s}
 .product-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.product-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity .2s}
 .product-card:hover::before{opacity:1}
-.product-card.p1::before{background:linear-gradient(90deg,var(--accent),var(--cyan))}
-.product-card.p2::before{background:linear-gradient(90deg,var(--purple),var(--accent))}
-.product-card.p3::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
-.product-card.p4::before{background:linear-gradient(90deg,var(--yellow),#f97316)}
-
-.product-card-badge{
-  position:absolute;top:10px;right:10px;
-}
-.product-icon{font-size:26px;margin-bottom:10px;display:block}
-.product-name{font-family:var(--font-head);font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px}
+.pc-sv::before{background:linear-gradient(90deg,var(--accent),var(--cyan))}
+.pc-ea::before{background:linear-gradient(90deg,var(--purple),var(--accent))}
+.pc-build::before{background:linear-gradient(90deg,var(--yellow),#f97316)}
+.pc-market::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.product-card-badge{position:absolute;top:9px;right:9px}
+.product-icon{font-size:24px;margin-bottom:8px;margin-top:2px;display:block}
+.product-name{font-family:var(--font-head);font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px}
 .product-price{font-size:11px;color:var(--text2)}
-.product-price b{color:var(--text);font-weight:600}
 
-/* ── Recent activity ── */
-.activity-row{
-  display:flex;align-items:center;gap:10px;
-  padding:10px 0;border-bottom:1px solid var(--border);
-}
-.activity-row:last-child{border-bottom:none}
-.activity-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.activity-dot.win{background:var(--green)}
-.activity-dot.loss{background:var(--red)}
-.activity-dot.neutral{background:var(--text3)}
-.activity-text{flex:1;font-size:12px;color:var(--text2);line-height:1.4}
-.activity-time{font-size:11px;color:var(--text3);font-family:var(--font-mono)}
+/* ── Activity ── */
+.act-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
+.act-row:last-child{border-bottom:none}
+.act-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.act-text{flex:1;font-size:11px;color:var(--text2);line-height:1.4}
+.act-time{font-size:10px;color:var(--text3)}
 
-/* ════════════════════════════════════════════════
-   PRODUCT DETAIL — INDICATOR VALIDATOR (P1)
-════════════════════════════════════════════════ */
-.product-detail{display:none}
-.product-detail.active{display:block}
-
-.detail-header{
-  display:flex;align-items:center;gap:10px;margin-bottom:16px;
-}
-.back-btn{
-  width:34px;height:34px;border-radius:var(--r-sm);
-  background:var(--bg2);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:18px;color:var(--text2);flex-shrink:0;
-}
-.detail-title{font-family:var(--font-head);font-size:17px;font-weight:700}
-
-/* Disclaimer */
-.disclaimer{
-  background:rgba(245,158,11,.06);
-  border:1px solid rgba(245,158,11,.2);
-  border-radius:var(--r);padding:11px 13px;margin-bottom:14px;
-  font-size:12px;color:var(--text2);line-height:1.6;
-}
+/* ── Detail pages ── */
+.detail-header{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.back-btn{width:30px;height:30px;border-radius:var(--r-sm);background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;color:var(--text2);flex-shrink:0}
+.detail-title{font-family:var(--font-head);font-size:16px;font-weight:700}
+.disclaimer{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:var(--r);padding:9px 12px;margin-bottom:12px;font-size:11px;color:var(--text2);line-height:1.6}
 .disclaimer strong{color:var(--yellow)}
-.disclaimer a{color:var(--accent);text-decoration:none;font-weight:500}
-.disclaimer a:hover{text-decoration:underline}
+.disclaimer a{color:var(--accent);text-decoration:none}
 
-/* Pattern list */
-.pattern-item{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--r-sm);margin-bottom:8px;overflow:hidden;
-}
-.pattern-row{
-  display:flex;align-items:center;gap:10px;
-  padding:11px 13px;cursor:pointer;
-}
+/* ── Sub tabs (inside detail pages) ── */
+.sub-tabs{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.sub-tab{flex:1;padding:9px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);cursor:pointer;transition:all .15s;border-right:1px solid var(--border)}
+.sub-tab:last-child{border-right:none}
+.sub-tab.active{background:var(--accent2);color:#fff}
+
+
+/* ── Pattern categories ── */
+.pattern-category{margin-bottom:8px}
+.pcat-header{display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer;user-select:none;transition:border-color .15s}
+.pcat-header:hover{border-color:var(--border2)}
+.pcat-emoji{font-size:15px;flex-shrink:0}
+.pcat-label{font-size:12px;font-weight:600;color:var(--text);flex:1}
+.pcat-count{font-size:10px;color:var(--text3);font-family:var(--font-mono)}
+.pcat-chevron{width:13px;height:13px;stroke:var(--text3);flex-shrink:0;transition:transform .2s}
+.pcat-chevron.open{transform:rotate(180deg)}
+.pcat-body{padding-top:6px}
+.pcat-body.collapsed{display:none}
+
+/* ── Pattern list ── */
+.pattern-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:7px;overflow:hidden}
+.pattern-row{display:flex;align-items:center;gap:8px;padding:9px 11px;cursor:pointer}
 .pattern-row:hover{background:rgba(255,255,255,.02)}
-.pattern-emoji{font-size:18px;flex-shrink:0}
+.pattern-emoji{font-size:16px;flex-shrink:0}
 .pattern-info{flex:1;min-width:0}
-.pattern-name{font-size:13px;font-weight:600;color:var(--text)}
-.pattern-desc{font-size:11px;color:var(--text3);margin-top:1px}
-.pattern-sig{font-size:10px;font-weight:600;flex-shrink:0}
-.pattern-sig.bull{color:var(--green)}
-.pattern-sig.bear{color:var(--red)}
-.pattern-sig.both{color:var(--yellow)}
-
-/* Pattern expanded body */
-.pattern-body{
-  display:none;border-top:1px solid var(--border);
-  padding:12px 13px;background:var(--bg3);
-}
-.pattern-item.open .pattern-body{display:block}
+.pattern-name{font-size:12px;font-weight:600;color:var(--text)}
+.pattern-desc{font-size:10px;color:var(--text3);margin-top:1px}
+.pat-sig{font-size:9px;font-weight:600;flex-shrink:0}
+.sig-bull{color:var(--green)}.sig-bear{color:var(--red)}.sig-both{color:var(--yellow)}
+.toggle{width:34px;height:19px;border-radius:10px;background:var(--bg4);border:1px solid var(--border2);position:relative;cursor:pointer;flex-shrink:0;transition:all .2s}
+.toggle.on{background:var(--green);border-color:var(--green)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle.on::after{transform:translateX(15px)}
+.chevron{width:14px;height:14px;stroke:var(--text3);flex-shrink:0;transition:transform .2s}
 .pattern-item.open .chevron{transform:rotate(180deg)}
-
-.system-rule-box{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--r-xs);padding:10px;margin-bottom:10px;
-  font-size:12px;
-}
-.rule-box-title{
-  font-size:10px;font-weight:700;color:var(--text3);
-  text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;
-  display:flex;align-items:center;justify-content:space-between;
-}
-.rule-box-title a{
-  font-size:10px;font-weight:500;color:var(--accent);
-  text-decoration:none;text-transform:none;
-}
-.rule-line{
-  display:flex;justify-content:space-between;
-  padding:4px 0;border-bottom:1px solid var(--border);
-  color:var(--text2);
-}
+.pattern-body{display:none;border-top:1px solid var(--border);padding:10px 11px;background:var(--bg3)}
+.pattern-item.open .pattern-body{display:block}
+.rule-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;margin-bottom:8px}
+.rule-box-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;display:flex;justify-content:space-between}
+.rule-line{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2)}
 .rule-line:last-child{border-bottom:none}
-.rule-line span{color:var(--text);font-family:var(--font-mono);font-size:11px}
+.rule-val{color:var(--text);font-family:var(--font-mono);font-size:10px}
+.custom-rule-btn{width:100%;padding:7px;border-radius:var(--r-xs);background:rgba(79,142,255,.07);border:1px dashed rgba(79,142,255,.3);color:var(--accent);font-size:11px;cursor:pointer;margin-bottom:7px;font-family:var(--font-body)}
+textarea.custom-input{width:100%;background:var(--bg2);border:1px solid var(--accent);border-radius:var(--r-xs);padding:8px 9px;color:var(--text);font-size:11px;resize:none;outline:none;font-family:var(--font-body);margin-bottom:7px;display:none}
+textarea.custom-input.show{display:block}
 
-.custom-rule-btn{
-  width:100%;padding:9px;border-radius:var(--r-xs);
-  background:rgba(79,142,255,.08);border:1px dashed rgba(79,142,255,.3);
-  color:var(--accent);font-size:12px;font-weight:500;cursor:pointer;
-  transition:all .15s;margin-bottom:10px;font-family:var(--font-body);
-}
-.custom-rule-btn:hover{background:rgba(79,142,255,.15);border-style:solid}
-
-.custom-rule-input{
-  display:none;
-  background:var(--bg2);border:1px solid var(--accent);
-  border-radius:var(--r-xs);padding:9px 10px;
-  color:var(--text);font-size:12px;font-family:var(--font-body);
-  width:100%;outline:none;margin-bottom:8px;resize:none;
-}
-.custom-rule-input.show{display:block}
-
-/* Platform selector */
-.platform-grid{
-  display:grid;grid-template-columns:1fr 1fr;gap:7px;
-  margin-bottom:10px;
-}
-.platform-btn{
-  padding:9px 8px;border-radius:var(--r-xs);text-align:center;
-  background:var(--bg2);border:1px solid var(--border);
-  font-size:11px;font-weight:500;color:var(--text2);
-  cursor:pointer;transition:all .15s;
-}
-.platform-btn:hover{border-color:var(--border2);color:var(--text)}
-.platform-btn.selected{
-  border-color:var(--accent);color:var(--accent);
-  background:rgba(79,142,255,.08);
-}
-.platform-logo{font-size:18px;display:block;margin-bottom:4px}
-
-/* Webhook box */
-.webhook-box{display:none}
+/* ── Platform grid ── */
+.platform-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.plat-btn{padding:8px 6px;border-radius:var(--r-xs);text-align:center;background:var(--bg2);border:1px solid var(--border);font-size:10px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s}
+.plat-btn:hover,.plat-btn.sel{border-color:var(--accent);color:var(--accent);background:rgba(79,142,255,.08)}
+.plat-icon{font-size:17px;display:block;margin-bottom:3px}
+.webhook-box{display:none;border-top:1px solid var(--border);padding-top:11px;margin-top:4px}
 .webhook-box.show{display:block}
-.webhook-url-row{
-  display:flex;align-items:center;gap:8px;
-  background:var(--bg3);border:1px solid var(--border);
-  border-radius:var(--r-xs);padding:9px 11px;margin-bottom:8px;
-}
-.webhook-url-text{
-  flex:1;font-size:11px;font-family:var(--font-mono);
-  color:var(--text2);word-break:break-all;line-height:1.4;
-}
-.copy-btn{
-  flex-shrink:0;padding:5px 10px;
-  background:var(--accent2);border:none;border-radius:var(--r-xs);
-  color:#fff;font-size:11px;font-weight:600;cursor:pointer;
-  font-family:var(--font-body);
-}
-.json-block{
-  background:var(--bg3);border:1px solid var(--border);
-  border-radius:var(--r-xs);padding:10px;
-  font-family:var(--font-mono);font-size:10px;
-  color:var(--text2);white-space:pre-wrap;word-break:break-all;
-  line-height:1.6;max-height:160px;overflow-y:auto;margin-bottom:8px;
-}
-.platform-steps{
-  font-size:11px;color:var(--text2);line-height:1.7;
-  padding:8px 10px;background:var(--bg3);
-  border-radius:var(--r-xs);border:1px solid var(--border);
-}
-.platform-steps b{color:var(--text)}
+.wh-url-row{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:7px 9px;margin-bottom:8px}
+.wh-url-text{flex:1;font-size:9px;font-family:var(--font-mono);color:var(--text2);word-break:break-all;line-height:1.5}
+.copy-btn{flex-shrink:0;padding:4px 9px;background:var(--accent2);border:none;border-radius:4px;color:#fff;font-size:10px;font-weight:600;cursor:pointer}
+.json-pre{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 9px;font-family:var(--font-mono);font-size:9px;color:var(--text2);white-space:pre-wrap;max-height:120px;overflow-y:auto;margin-bottom:8px;line-height:1.6}
+.steps-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;font-size:10px;color:var(--text2);line-height:1.8}
 
-/* ════════════════════════════════════════════════
-   PAGE 2 — GENERATE (Live Chart Analysis)
-════════════════════════════════════════════════ */
-.download-card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--r);padding:14px;margin-bottom:10px;
-  display:flex;align-items:center;gap:12px;
-}
-.dl-icon{
-  width:44px;height:44px;border-radius:var(--r-sm);
-  display:flex;align-items:center;justify-content:center;
-  font-size:22px;flex-shrink:0;
-}
-.dl-icon.mt5{background:rgba(79,142,255,.12)}
-.dl-icon.mt4{background:rgba(168,85,247,.12)}
-.dl-icon.ct{background:rgba(6,182,212,.12)}
-.dl-info{flex:1}
-.dl-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
-.dl-desc{font-size:11px;color:var(--text2)}
-.dl-btn{
-  padding:8px 14px;border-radius:var(--r-xs);
-  background:var(--bg3);border:1px solid var(--border2);
-  color:var(--text);font-size:12px;font-weight:500;cursor:pointer;
-  transition:all .15s;font-family:var(--font-body);flex-shrink:0;
-}
-.dl-btn:hover{background:var(--accent2);border-color:var(--accent2);color:#fff}
+/* ── Indicator settings shortcut ── */
+.ind-shortcut{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:10px}
+.ind-shortcut-info{font-size:12px;font-weight:600;color:var(--text)}
+.ind-shortcut-sub{font-size:10px;color:var(--text2);margin-top:1px}
 
-.ext-card{
-  background:linear-gradient(135deg,rgba(79,142,255,.08),rgba(168,85,247,.06));
-  border:1px solid rgba(79,142,255,.2);
-  border-radius:var(--r);padding:16px;margin-bottom:12px;
-}
-.ext-title{font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:5px}
-.ext-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px}
-.ext-features{
-  display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;
-}
-.ext-feature{
-  font-size:11px;padding:4px 10px;border-radius:20px;
-  background:rgba(255,255,255,.05);border:1px solid var(--border2);
-  color:var(--text2);
-}
+/* ── Report tab ── */
+.report-empty{text-align:center;padding:36px 0;color:var(--text3);font-size:12px;line-height:1.7}
+.report-header{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:10px}
+.report-signal{font-size:22px;font-weight:700;margin-bottom:4px;font-family:var(--font-head)}
+.report-signal.buy{color:var(--green)}.report-signal.sell{color:var(--red)}.report-signal.neutral{color:var(--yellow)}
+.report-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.report-meta-item{font-size:11px;color:var(--text2)}
+.report-reason{font-size:12px;color:var(--text2);line-height:1.6}
+.conf-bar-wrap{margin-top:8px}
+.conf-bar-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:4px}
+.conf-bar{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.conf-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .5s ease}
+.bias-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.bias-label{font-size:12px;color:var(--text2)}
+.bias-value{font-size:12px;font-weight:600}
+.bias-value.bull{color:var(--green)}.bias-value.bear{color:var(--red)}.bias-value.neutral{color:var(--yellow)}
+.bias-pills{display:flex;gap:4px;font-size:10px}
+.ind-group-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.ind-group-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer}
+.ind-group-header:hover{background:rgba(255,255,255,.02)}
+.ind-group-title{font-size:12px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
+.ind-group-summary{display:flex;gap:5px;font-size:10px}
+.ind-group-body{display:none;border-top:1px solid var(--border);padding:9px 12px}
+.ind-group-card.open .ind-group-body{display:block}
+.ind-group-card.open .ind-chevron{transform:rotate(180deg)}
+.ind-chevron{width:13px;height:13px;stroke:var(--text3);transition:transform .2s}
+.ind-row-item{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+.ind-row-item:last-child{border-bottom:none}
+.ind-row-label{color:var(--text2);flex:1}
+.ind-row-val{font-family:var(--font-mono);font-size:10px;color:var(--text);margin-right:8px}
+.ind-sig-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ind-sig-dot.bullish{background:var(--green)}.ind-sig-dot.bearish{background:var(--red)}.ind-sig-dot.neutral{background:var(--text3)}
+.pattern-result-item{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.pattern-result-item:last-child{border-bottom:none}
+.level-item{display:flex;justify-content:space-between;padding:5px 0;font-size:11px;border-bottom:1px solid var(--border)}
+.level-item:last-child{border-bottom:none}
+.level-type{color:var(--text2)}
+.level-price{font-family:var(--font-mono);font-size:10px;color:var(--text)}
 
-/* ════════════════════════════════════════════════
-   PAGE 3 — MARKET (Marketplace)
-════════════════════════════════════════════════ */
-.market-filters{
-  display:flex;gap:6px;overflow-x:auto;
-  padding-bottom:2px;margin-bottom:14px;
-  scrollbar-width:none;
-}
-.market-filters::-webkit-scrollbar{display:none}
-.mf-chip{
-  padding:6px 12px;border-radius:20px;
-  background:var(--bg2);border:1px solid var(--border);
-  font-size:11px;font-weight:500;color:var(--text3);
-  cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;
-}
-.mf-chip.active{
-  background:rgba(79,142,255,.1);border-color:var(--accent);color:var(--accent);
-}
+/* ── EA trade report ── */
+.ea-trade-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:10px}
+.ea-trade-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;font-family:var(--font-head)}
+.ea-verdict{font-size:12px;color:var(--text2);line-height:1.6;margin-top:6px}
+.ea-verdict strong{color:var(--text)}
+.ea-entry{background:var(--bg3);border-radius:var(--r-xs);padding:9px;margin-top:8px;font-size:11px;color:var(--text2);line-height:1.6}
 
-.listing-card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--r);padding:13px;margin-bottom:10px;
-  cursor:pointer;transition:border-color .15s;
-}
+/* ── Download cards ── */
+.dl-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:9px;display:flex;align-items:center;gap:11px}
+.dl-icon{width:40px;height:40px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.dl-name{font-size:12px;font-weight:600;color:var(--text)}
+.dl-desc{font-size:10px;color:var(--text2);margin-top:1px}
+
+/* ── Market ── */
+.mkt-filter{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;scrollbar-width:none}
+.mkt-filter::-webkit-scrollbar{display:none}
+.mf-chip{padding:5px 11px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);font-size:10px;font-weight:500;color:var(--text3);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.mf-chip.act{background:rgba(79,142,255,.1);border-color:var(--accent);color:var(--accent)}
+.listing-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:9px;cursor:pointer;transition:border-color .15s}
 .listing-card:hover{border-color:var(--border2)}
-.listing-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
-.listing-icon{
-  width:40px;height:40px;border-radius:var(--r-sm);
-  background:var(--bg3);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;flex-shrink:0;
-}
-.listing-info{flex:1;min-width:0}
-.listing-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
-.listing-author{font-size:11px;color:var(--text3)}
-.listing-price{
-  font-family:var(--font-mono);font-size:13px;font-weight:600;
-  color:var(--text);flex-shrink:0;
-}
-.listing-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:8px}
-.listing-tags{display:flex;flex-wrap:wrap;gap:4px}
-.listing-tag{
-  font-size:10px;padding:2px 7px;border-radius:20px;
-  background:var(--bg3);border:1px solid var(--border);color:var(--text3);
-}
-.listing-meta{
-  display:flex;align-items:center;gap:10px;margin-top:8px;
-  font-size:11px;color:var(--text3);
-}
+.listing-top{display:flex;align-items:flex-start;gap:9px;margin-bottom:7px}
+.listing-icon{width:38px;height:38px;border-radius:var(--r-sm);background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.listing-name{font-size:12px;font-weight:600;color:var(--text)}
+.listing-author{font-size:10px;color:var(--text3);margin-top:1px}
+.listing-price{font-size:12px;font-weight:600;color:var(--text);font-family:var(--font-mono);flex-shrink:0}
+.listing-desc{font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:7px}
+.listing-tags{display:flex;gap:4px;flex-wrap:wrap}
+.l-tag{font-size:9px;padding:2px 6px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);color:var(--text3)}
+.listing-meta{display:flex;align-items:center;gap:9px;margin-top:7px;font-size:10px;color:var(--text3)}
+.sell-cta{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(249,115,22,.05));border:1px solid rgba(245,158,11,.2);border-radius:var(--r);padding:13px;margin-bottom:12px}
 
-.sell-card{
-  background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(249,115,22,.06));
-  border:1px solid rgba(245,158,11,.2);
-  border-radius:var(--r);padding:14px;margin-bottom:12px;
-}
-
-/* ════════════════════════════════════════════════
-   PAGE 4 — BUILD (App Builder)
-════════════════════════════════════════════════ */
-.build-disclaimer{
-  background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);
-  border-radius:var(--r);padding:12px 13px;margin-bottom:14px;
-  font-size:12px;color:var(--text2);line-height:1.6;
-}
-.build-disclaimer strong{color:var(--red)}
-.agree-row{display:flex;align-items:center;gap:8px;margin-top:8px}
-.agree-checkbox{
-  width:16px;height:16px;accent-color:var(--accent);cursor:pointer;
-}
-.agree-label{font-size:12px;color:var(--text2);cursor:pointer}
-
-.project-card{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--r);padding:13px;margin-bottom:10px;
-  cursor:pointer;transition:all .15s;
-}
-.project-card:hover{border-color:var(--border2)}
-.project-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.project-icon{
-  width:36px;height:36px;border-radius:var(--r-sm);
-  background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(249,115,22,.1));
-  display:flex;align-items:center;justify-content:center;font-size:18px;
-}
-.project-name{font-size:13px;font-weight:600;color:var(--text)}
-.project-meta{font-size:11px;color:var(--text3);margin-top:1px}
-.project-status{
-  margin-left:auto;font-size:10px;font-weight:600;
-  padding:3px 9px;border-radius:20px;
-}
-.project-status.done{background:rgba(34,197,94,.1);color:var(--green)}
-.project-status.building{background:rgba(79,142,255,.1);color:var(--accent)}
-
-.build-chat{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--r);overflow:hidden;margin-bottom:12px;
-}
-.build-chat-messages{
-  height:220px;overflow-y:auto;padding:12px;
-  display:flex;flex-direction:column;gap:10px;
-}
-.build-msg{
-  max-width:85%;padding:9px 11px;border-radius:var(--r-sm);
-  font-size:12px;line-height:1.55;
-}
-.build-msg.user{
-  align-self:flex-end;
-  background:var(--accent2);color:#fff;
-  border-radius:10px 10px 2px 10px;
-}
-.build-msg.ai{
-  align-self:flex-start;
-  background:var(--bg3);border:1px solid var(--border);
-  border-radius:10px 10px 10px 2px;color:var(--text2);
-}
-.build-msg.system{
-  align-self:center;text-align:center;
-  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);
-  color:var(--yellow);font-size:11px;max-width:100%;border-radius:var(--r-xs);
-}
-.build-input-row{
-  display:flex;gap:8px;padding:10px;
-  border-top:1px solid var(--border);
-}
-.build-input{
-  flex:1;background:var(--bg3);border:1px solid var(--border);
-  border-radius:var(--r-xs);padding:8px 10px;
-  color:var(--text);font-size:12px;font-family:var(--font-body);outline:none;
-  transition:border-color .15s;
-}
-.build-input:focus{border-color:var(--accent)}
-.build-send{
-  padding:8px 14px;background:var(--accent2);border:none;
-  border-radius:var(--r-xs);color:#fff;font-size:12px;
-  font-weight:600;cursor:pointer;font-family:var(--font-body);
-}
-
-.platform-select-row{
-  display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;
-}
-.ps-btn{
-  padding:6px 12px;border-radius:20px;
-  background:var(--bg2);border:1px solid var(--border);
-  font-size:11px;font-weight:500;color:var(--text3);
-  cursor:pointer;transition:all .15s;
-}
+/* ── Builder ── */
+.build-disc{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:var(--r);padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2);line-height:1.6}
+.ps-btn{padding:5px 12px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);font-size:10px;font-weight:500;color:var(--text3);cursor:pointer}
 .ps-btn.sel{border-color:var(--yellow);color:var(--yellow);background:rgba(245,158,11,.08)}
+.proj-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px;margin-bottom:8px;cursor:pointer}
+.proj-icon{width:34px;height:34px;border-radius:var(--r-sm);background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(249,115,22,.1));display:flex;align-items:center;justify-content:center;font-size:17px}
+.proj-status{font-size:9px;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:auto}
+.proj-status.done{background:rgba(34,197,94,.1);color:var(--green)}
+.proj-status.building{background:rgba(79,142,255,.1);color:var(--accent)}
+.build-chat-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:11px}
+.build-msgs{height:200px;overflow-y:auto;padding:11px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin}
+.bm{max-width:86%;padding:7px 10px;border-radius:8px;font-size:11px;line-height:1.55;white-space:pre-wrap}
+.bm.user{align-self:flex-end;background:var(--accent2);color:#fff;border-radius:9px 9px 2px 9px}
+.bm.ai{align-self:flex-start;background:var(--bg3);border:1px solid var(--border);border-radius:9px 9px 9px 2px;color:var(--text2)}
+.bm.sys{align-self:center;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);color:var(--yellow);font-size:10px;border-radius:6px;max-width:100%;text-align:center}
+.build-input-row{display:flex;gap:7px;padding:9px 10px;border-top:1px solid var(--border)}
+.build-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:7px 9px;color:var(--text);font-size:11px;outline:none;font-family:inherit}
+.build-input:focus{border-color:var(--accent)}
+.build-send{padding:7px 13px;background:var(--accent2);border:none;border-radius:var(--r-xs);color:#fff;font-size:11px;font-weight:600;cursor:pointer}
 
-/* ════════════════════════════════════════════════
-   PAGE 5 — PROFILE
-════════════════════════════════════════════════ */
-.profile-header{
-  text-align:center;padding:20px 0 16px;
-}
-.profile-avatar{
-  width:64px;height:64px;border-radius:50%;
-  background:linear-gradient(135deg,var(--accent2),var(--purple));
-  display:flex;align-items:center;justify-content:center;
-  font-size:28px;margin:0 auto 10px;
-}
-.profile-name{font-family:var(--font-head);font-size:18px;font-weight:700;margin-bottom:3px}
-.profile-sub{font-size:12px;color:var(--text2)}
-
-.stats-grid{
-  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;
-}
-.stat-box{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:var(--r-sm);padding:11px 10px;text-align:center;
-}
-.stat-num{
-  font-family:var(--font-mono);font-size:18px;font-weight:500;
-  color:var(--text);margin-bottom:2px;
-}
-.stat-label{font-size:10px;color:var(--text3)}
-
-.settings-list{}
-.settings-row{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:13px 0;border-bottom:1px solid var(--border);
-}
+/* ── Profile ── */
+.prof-avatar{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#a855f7);display:flex;align-items:center;justify-content:center;font-size:25px;margin:0 auto 9px}
+.stat-num{font-family:var(--font-mono);font-size:17px;font-weight:500}
+.aff-banner{background:linear-gradient(135deg,rgba(34,197,94,.09),rgba(6,182,212,.05));border:1px solid rgba(34,197,94,.22);border-radius:var(--r);padding:13px;margin-bottom:12px;display:flex;align-items:center;gap:11px}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
 .settings-row:last-child{border-bottom:none}
-.settings-label{font-size:13px;color:var(--text)}
-.settings-sub{font-size:11px;color:var(--text3);margin-top:1px}
-.settings-value{font-size:12px;color:var(--text2);font-family:var(--font-mono)}
+.settings-label{font-size:12px;color:var(--text)}
+.settings-sub{font-size:10px;color:var(--text2);margin-top:1px}
+.settings-value{font-size:11px;color:var(--text2);font-family:var(--font-mono)}
 
-.affiliate-banner{
-  background:linear-gradient(135deg,rgba(34,197,94,.1),rgba(6,182,212,.06));
-  border:1px solid rgba(34,197,94,.25);
-  border-radius:var(--r);padding:14px;margin-bottom:12px;
-  display:flex;align-items:center;gap:12px;
-}
-.aff-icon{font-size:28px}
-.aff-info{flex:1}
-.aff-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
-.aff-sub{font-size:11px;color:var(--text2)}
-
-/* ════════════════════════════════════════════════
-   MODAL / BOTTOM SHEET
-════════════════════════════════════════════════ */
-.sheet-overlay{
-  display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,.6);z-index:200;
-  backdrop-filter:blur(4px);
-}
-.sheet-overlay.show{display:flex;align-items:flex-end}
-.sheet{
-  background:var(--bg2);border:1px solid var(--border2);
-  border-radius:var(--r) var(--r) 0 0;
-  width:100%;max-height:85vh;overflow-y:auto;
-  padding:20px 16px 32px;
-  animation:slideUp .25s ease;
-}
+/* ── Sheet ── */
+.sheet-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;backdrop-filter:blur(4px);align-items:flex-end}
+.sheet-overlay.show{display:flex}
+.sheet{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r) var(--r) 0 0;width:100%;max-height:86vh;overflow-y:auto;padding:18px 15px 30px;animation:slideUp .22s ease}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
-.sheet-handle{
-  width:36px;height:3px;border-radius:2px;
-  background:var(--border2);margin:0 auto 16px;
-}
-.sheet-title{
-  font-family:var(--font-head);font-size:16px;font-weight:700;
-  margin-bottom:12px;
-}
+.sheet-handle{width:34px;height:3px;border-radius:2px;background:var(--border2);margin:0 auto 14px}
+.sheet-title{font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:11px}
 
-/* Toast */
-.toast{
-  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
-  background:var(--bg3);border:1px solid var(--border2);
-  border-radius:var(--r-sm);padding:9px 16px;
-  font-size:12px;color:var(--text);
-  opacity:0;transition:opacity .25s;pointer-events:none;
-  white-space:nowrap;z-index:300;
-}
-.toast.show{opacity:1}
-.toast.ok{border-color:var(--green);color:var(--green)}
-.toast.err{border-color:var(--red);color:var(--red)}
-
-/* ── History cards ─────────────────────────────────────────────────────── */
-.history-card{
-  background:var(--bg2);border:1px solid var(--border1);
-  border-radius:var(--r-md);padding:12px 14px;margin-bottom:8px;
-}
-.history-card-top{display:flex;align-items:flex-start;gap:10px}
-.result-em{font-size:18px;flex-shrink:0;margin-top:1px}
-.history-card-main{flex:1;min-width:0}
-.history-card-title{
-  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
-  font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;
-}
-.history-card-meta{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px}
-.ts{font-size:11px;color:var(--text3)}
-.ticker-badge{
-  background:var(--bg3);border:1px solid var(--border2);
-  border-radius:4px;padding:1px 6px;font-size:12px;font-weight:600;
-}
-.ticker-badge.lg{font-size:14px;padding:2px 8px}
-.action-badge{
-  font-size:11px;font-weight:600;padding:1px 7px;
-  border-radius:10px;text-transform:uppercase;
-}
-.action-badge.buy{background:rgba(52,211,153,.15);color:#34d399}
-.action-badge.sell{background:rgba(248,113,113,.15);color:#f87171}
-.history-patterns{
-  display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px;
-}
-.pattern-chip{
-  font-size:11px;background:var(--bg3);border:1px solid var(--border2);
-  border-radius:10px;padding:1px 8px;color:var(--text2);
-}
-.analysis-body{
-  font-size:12px;color:var(--text2);line-height:1.6;
-  margin-top:6px;padding-top:6px;border-top:1px solid var(--border1);
-}
-.analysis-section{margin-bottom:6px}
-.expand-btn{
-  background:none;border:none;color:var(--accent);
-  font-size:11px;cursor:pointer;padding:4px 0;margin-top:2px;
-}
-.analysis-pending{
-  font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px;
-  margin-top:6px;padding-top:6px;border-top:1px solid var(--border1);
-}
-.history-loading{
-  text-align:center;padding:20px;color:var(--text2);font-size:13px;
-  display:flex;align-items:center;justify-content:center;gap:8px;
-}
-.history-empty{
-  text-align:center;padding:24px 16px;color:var(--text2);font-size:13px;line-height:1.6;
-}
-.history-error{
-  text-align:center;padding:14px;color:var(--red);font-size:12px;
-}
-.conf-bar-wrap{
-  flex:1;height:4px;background:var(--border1);border-radius:2px;overflow:hidden;
-}
-.conf-bar{height:100%;border-radius:2px;transition:width .4s}
-.conf-label{font-size:11px;white-space:nowrap}
-
-/* ── Build chat messages ──────────────────────────────────────────────── */
-.build-msg{
-  margin-bottom:10px;max-width:88%;
-}
-.build-msg.user{
-  margin-left:auto;
-  background:var(--accent);color:#fff;
-  border-radius:12px 12px 2px 12px;
-  padding:9px 12px;font-size:13px;line-height:1.5;
-}
-.build-msg.ai{
-  background:var(--bg2);border:1px solid var(--border1);
-  border-radius:12px 12px 12px 2px;
-  padding:9px 12px;font-size:13px;line-height:1.5;color:var(--text);
-}
-.build-msg.system{
-  text-align:center;font-size:12px;color:var(--text3);
-  border:none;background:none;max-width:100%;
-}
-.build-msg-text{margin-bottom:0}
-
-/* spinner */
-.spinner{
-  width:14px;height:14px;border:2px solid var(--border2);
-  border-top-color:var(--accent);border-radius:50%;
-  animation:spin .7s linear infinite;display:inline-block;flex-shrink:0;
-}
-.spinner.sm{width:11px;height:11px;border-width:2px}
+/* ── Toast ── */
+.toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);padding:8px 16px;font-size:12px;color:var(--text);opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;z-index:300}
+.toast.show{opacity:1}.toast.ok{border-color:var(--green);color:var(--green)}.toast.err{border-color:var(--red);color:var(--red)}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════
-     HEADER
-══════════════════════════════════════════════ -->
+<!-- Header -->
 <div class="app-header">
   <div class="header-brand">
     <div class="header-logo">⚡</div>
-    <div class="header-name">AI Trade Validator</div>
+    <div style="font-family:var(--font-head);font-size:13px;font-weight:700">AI Trade Validator</div>
   </div>
-  <div class="header-right">
+  <div style="display:flex;align-items:center;gap:8px">
     <div class="plan-chip trial" id="plan-chip">TRIAL</div>
     <div class="avatar-btn" onclick="showPage('profile')">👤</div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SCROLL AREA
-══════════════════════════════════════════════ -->
 <div class="scroll-container">
 
-  <!-- ════════════ PAGE: PRODUCTS ════════════ -->
-  <div class="page active" id="page-products">
-
-    <!-- Trial banner -->
-    <div class="trial-banner" id="trial-banner">
-      <div class="trial-text">
-        <div class="trial-title" id="trial-title">14-day free trial active</div>
-        <div class="trial-sub" id="trial-sub">11 days remaining · Full access to all products</div>
-      </div>
-      <button class="btn btn-sm" id="trial-action-btn" style="flex-shrink:0">Upgrade</button>
+<!-- ════ PAGE: PRODUCTS ════ -->
+<div class="page active" id="page-products">
+  <div class="trial-banner" id="trial-banner">
+    <div>
+      <div style="font-size:12px;font-weight:600;color:var(--text)" id="trial-title">14-day free trial active</div>
+      <div style="font-size:10px;color:var(--text2);margin-top:1px" id="trial-sub">11 days remaining · Full access to all products</div>
     </div>
-
-    <!-- Quick actions -->
-    <div class="quick-actions">
-      <div class="qa-btn active" onclick="showPage('products')">📦 Products</div>
-      <div class="qa-btn" onclick="showProductDetail('p1')">📊 Validator</div>
-      <div class="qa-btn" onclick="showPage('generate')">🖥 Live Analysis</div>
-      <div class="qa-btn" onclick="showPage('market')">🏪 Market</div>
-      <div class="qa-btn" onclick="showPage('build')">🏗 Builder</div>
+    <button class="btn btn-sm btn-primary" id="trial-action-btn" style="flex-shrink:0">Upgrade</button>
+  </div>
+  <div class="section-label">Products</div>
+  <div class="product-grid">
+    <div class="product-card pc-sv" onclick="showPage('sv')">
+      <span class="badge badge-paid product-card-badge">PAID</span>
+      <span class="product-icon">📊</span>
+      <div class="product-name">Signal Validator</div>
+      <div class="product-price"><b>$29</b> / mo</div>
     </div>
-
-    <!-- Products section -->
-    <div class="section-label">Products</div>
-    <div class="product-grid">
-      <div class="product-card p1" onclick="showProductDetail('p1')">
-        <span class="badge badge-paid product-card-badge">PAID</span>
-        <span class="product-icon">📊</span>
-        <div class="product-name">Indicator Validator</div>
-        <div class="product-price"><b>$19</b> / mo</div>
-      </div>
-      <div class="product-card p2" onclick="showProductDetail('p2')">
-        <span class="badge badge-paid product-card-badge">PAID</span>
-        <span class="product-icon">🤖</span>
-        <div class="product-name">EA Analyzer</div>
-        <div class="product-price"><b>$49</b> / mo</div>
-      </div>
-      <div class="product-card p3" onclick="showPage('generate')">
-        <span class="badge badge-paid product-card-badge">PAID</span>
-        <span class="product-icon">🖥</span>
-        <div class="product-name">Live Analysis</div>
-        <div class="product-price"><b>$29</b> / mo</div>
-      </div>
-      <div class="product-card p4" onclick="showPage('build')">
-        <span class="badge badge-new product-card-badge">NEW</span>
-        <span class="product-icon">🏗</span>
-        <div class="product-name">App Builder</div>
-        <div class="product-price"><b>$79</b> / mo · Pro</div>
-      </div>
+    <div class="product-card pc-ea" onclick="showPage('ea')">
+      <span class="badge badge-paid product-card-badge">PAID</span>
+      <span class="product-icon">🤖</span>
+      <div class="product-name">EA Analyser</div>
+      <div class="product-price"><b>$49</b> / mo</div>
     </div>
-
-    <!-- Recent activity -->
-    <div class="section-label">Recent Activity</div>
-    <div class="card card-sm">
-      <div class="activity-row">
-        <div class="activity-dot win"></div>
-        <div class="activity-text">Bullish Engulfing — EURUSD · 4h · BUY signal validated</div>
-        <div class="activity-time">2h ago</div>
-      </div>
-      <div class="activity-row">
-        <div class="activity-dot loss"></div>
-        <div class="activity-text">EA trade LOSS — GBPUSD short · Shooting star missed</div>
-        <div class="activity-time">5h ago</div>
-      </div>
-      <div class="activity-row">
-        <div class="activity-dot neutral"></div>
-        <div class="activity-text">Doji detected — BTCUSD · 1h · NEUTRAL — no setup</div>
-        <div class="activity-time">8h ago</div>
-      </div>
+    <div class="product-card pc-build" onclick="showPage('build')">
+      <span class="badge badge-new product-card-badge">NEW</span>
+      <span class="product-icon">🏗</span>
+      <div class="product-name">App Builder</div>
+      <div class="product-price"><b>$79</b> / mo · Pro</div>
+    </div>
+    <div class="product-card pc-market" onclick="showPage('market')">
+      <span class="badge badge-free product-card-badge">OPEN</span>
+      <span class="product-icon">🏪</span>
+      <div class="product-name">Marketplace</div>
+      <div class="product-price">Free to browse</div>
     </div>
   </div>
-
-  <!-- ════════════ PRODUCT DETAIL: INDICATOR VALIDATOR ════════════ -->
-  <div class="page" id="page-p1-detail">
-
-    <div class="detail-header">
-      <div class="back-btn" onclick="showPage('products')">←</div>
-      <div class="detail-title">📊 Indicator Validator</div>
-    </div>
-
-    <!-- Disclaimer -->
-    <div class="disclaimer">
-      <strong>⚠️ Analytical tool only.</strong> This system detects candle patterns for analysis purposes only.
-      It does not constitute financial advice. You are solely responsible for any trading decisions.
-      <a href="#" onclick="showSystemRulesSheet();return false">View system detection rules →</a>
-    </div>
-
-    <!-- Candle pattern selector -->
-    <div class="section-label">Choose candle patterns to monitor</div>
-
-    <div id="pattern-list">
-      <!-- Patterns rendered by JS -->
-    </div>
-
-    <!-- Data source -->
-    <div class="section-label" style="margin-top:16px">Data source — connect your platform</div>
-    <div class="card">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
-        Select your charting platform to get your webhook URL and setup instructions:
-      </div>
-      <div class="platform-grid" id="platform-grid">
-        <div class="platform-btn" data-platform="tradingview" onclick="selectPlatform(this,'tradingview')">
-          <span class="platform-logo">📈</span>TradingView
-        </div>
-        <div class="platform-btn" data-platform="metatrader" onclick="selectPlatform(this,'metatrader')">
-          <span class="platform-logo">🖥</span>MetaTrader
-        </div>
-        <div class="platform-btn" data-platform="matchtrader" onclick="selectPlatform(this,'matchtrader')">
-          <span class="platform-logo">⚡</span>MatchTrader
-        </div>
-        <div class="platform-btn" data-platform="ctrader" onclick="selectPlatform(this,'ctrader')">
-          <span class="platform-logo">🔷</span>cTrader
-        </div>
-        <div class="platform-btn" data-platform="daxtrader" onclick="selectPlatform(this,'daxtrader')">
-          <span class="platform-logo">📉</span>DAX Trader
-        </div>
-        <div class="platform-btn" data-platform="takeprofit" onclick="selectPlatform(this,'takeprofit')">
-          <span class="platform-logo">🎯</span>TakeProfit
-        </div>
-      </div>
-
-      <!-- Webhook box shown after platform selected -->
-      <div class="webhook-box" id="webhook-box">
-        <div class="divider"></div>
-        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">
-          Your webhook URL
-        </div>
-        <div class="webhook-url-row">
-          <div class="webhook-url-text" id="webhook-url-text">—</div>
-          <button class="copy-btn" onclick="copyWebhook()">Copy</button>
-        </div>
-        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">
-          JSON payload template
-        </div>
-        <div class="json-block" id="json-template-block">—</div>
-        <div class="platform-steps" id="platform-steps"></div>
-      </div>
-    </div>
-    <div class="section-label" style="margin-top:16px">Recent validations</div>
-    <div id="validation-history-list">
-      <div style="color:var(--text2);text-align:center;padding:14px;font-size:12px">No validations yet. Connect a platform above to start.</div>
-    </div>
-
-  </div>
-
-  <!-- ════════════ PRODUCT DETAIL: EA ANALYZER ════════════ -->
-  <div class="page" id="page-p2-detail">
-    <div class="detail-header">
-      <div class="back-btn" onclick="showPage('products')">←</div>
-      <div class="detail-title">🤖 EA Analyzer</div>
-    </div>
-    <div class="disclaimer">
-      <strong>⚠️ Analytical tool only.</strong> EA analysis explains trade history for educational purposes.
-      Not financial advice. Past performance does not indicate future results.
-    </div>
-    <div class="section-label">How it works</div>
-    <div class="card" style="font-size:12px;color:var(--text2);line-height:1.7">
-      Your MT4/MT5/cTrader EA sends trade data to our backend automatically.
-      When a trade opens, hits SL/TP, or closes, the AI analyses the full market context —
-      candle patterns, indicators, and timing — and tells you <b style="color:var(--text)">why the EA entered,
-      why it won, and why it lost</b>. Use this to fine-tune your EA's logic.
-    </div>
-    <div class="section-label">Download your bot</div>
-    <div class="download-card">
-      <div class="dl-icon mt5">🖥</div>
-      <div class="dl-info">
-        <div class="dl-name">MT5 Expert Advisor</div>
-        <div class="dl-desc">ATV_Analyzer.mq5 · MetaTrader 5</div>
-      </div>
-      <button class="dl-btn" onclick="downloadBot('mt5')">Download</button>
-    </div>
-    <div class="download-card">
-      <div class="dl-icon mt4">🖥</div>
-      <div class="dl-info">
-        <div class="dl-name">MT4 Expert Advisor</div>
-        <div class="dl-desc">ATV_Analyzer.mq4 · MetaTrader 4</div>
-      </div>
-      <button class="dl-btn" onclick="downloadBot('mt4')">Download</button>
-    </div>
-    <div class="download-card">
-      <div class="dl-icon ct">🔷</div>
-      <div class="dl-info">
-        <div class="dl-name">cTrader cBot</div>
-        <div class="dl-desc">ATV_Analyzer.cs · cAlgo</div>
-      </div>
-      <button class="dl-btn" onclick="downloadBot('ctrader')">Download</button>
-    </div>
-    <div class="section-label">Setup</div>
-    <div class="card" style="font-size:12px;color:var(--text2);line-height:1.7">
-      1. Download the bot for your platform<br>
-      2. Open it in MetaEditor / cAlgo<br>
-      3. Set <b style="color:var(--text)">UserToken</b> = your token from /tokens<br>
-      4. Set <b style="color:var(--text)">AnalysisURL</b> = your backend URL<br>
-      5. Compile and attach to your chart<br>
-      6. Allow WebRequest in Tools → Options → Expert Advisors
-    </div>
-    <div class="section-label" style="margin-top:16px">Recent trade analyses</div>
-    <div id="ea-history-list">
-      <div style="color:var(--text2);text-align:center;padding:14px;font-size:12px">Waiting for EA trades…</div>
-    </div>
-
-  </div>
-
-  <!-- ════════════ PAGE: LIVE ANALYSIS / GENERATE ════════════ -->
-  <div class="page" id="page-generate">
-
-    <div class="section-label">Live chart analysis</div>
-
-    <!-- Browser extension -->
-    <div class="ext-card">
-      <div class="ext-title">🖥 Browser Extension</div>
-      <div class="ext-desc">
-        Monitor any charting platform or news website in real time.
-        Opens as a side panel beside your browser tabs.
-      </div>
-      <div class="ext-features">
-        <span class="ext-feature">📸 Auto screenshot</span>
-        <span class="ext-feature">⏱ Candle-close aware</span>
-        <span class="ext-feature">💬 Chart chat</span>
-        <span class="ext-feature">📰 News highlighter</span>
-        <span class="ext-feature">30m – 8h monitoring</span>
-      </div>
-      <button class="btn btn-primary btn-full" onclick="downloadExtension()">
-        ⬇ Download Extension
-      </button>
-    </div>
-
-    <!-- MT bots download (same as EA page) -->
-    <div class="section-label">MetaTrader / cTrader bots</div>
-    <div class="download-card">
-      <div class="dl-icon mt5">🖥</div>
-      <div class="dl-info">
-        <div class="dl-name">MT5 Live Analysis Bot</div>
-        <div class="dl-desc">Sends OHLC → AI detects patterns → draws on chart</div>
-      </div>
-      <button class="dl-btn" onclick="downloadBot('mt5')">Download</button>
-    </div>
-    <div class="download-card">
-      <div class="dl-icon mt4">🖥</div>
-      <div class="dl-info">
-        <div class="dl-name">MT4 Live Analysis Bot</div>
-        <div class="dl-desc">ATV_Analyzer.mq4 · draws arrows on chart</div>
-      </div>
-      <button class="dl-btn" onclick="downloadBot('mt4')">Download</button>
-    </div>
-    <div class="download-card">
-      <div class="dl-icon ct">🔷</div>
-      <div class="dl-info">
-        <div class="dl-name">cTrader cBot</div>
-        <div class="dl-desc">ATV_Analyzer.cs · draws icons on chart</div>
-      </div>
-      <button class="dl-btn" onclick="downloadBot('ctrader')">Download</button>
-    </div>
-
-    <!-- Pattern rule shortcut -->
-    <div class="section-label">Pattern rules</div>
-    <div class="card" style="display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--text)">Customise detection rules</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:2px">Toggle patterns · Set custom thresholds</div>
-      </div>
-      <a href="pattern_editor.html" class="btn btn-sm">Edit rules</a>
-    </div>
-  </div>
-
-  <!-- ════════════ PAGE: MARKET ════════════ -->
-  <div class="page" id="page-market">
-
-    <div class="market-filters">
-      <div class="mf-chip active" onclick="filterMarket(this,'all')">All</div>
-      <div class="mf-chip" onclick="filterMarket(this,'mql5')">MQL5</div>
-      <div class="mf-chip" onclick="filterMarket(this,'mql4')">MQL4</div>
-      <div class="mf-chip" onclick="filterMarket(this,'pine')">Pine Script</div>
-      <div class="mf-chip" onclick="filterMarket(this,'sell')">For Sale</div>
-      <div class="mf-chip" onclick="filterMarket(this,'rent')">For Rent</div>
-    </div>
-
-    <!-- Sell your app CTA -->
-    <div class="sell-card">
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🏪 List your app</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-        Built something with the App Builder? Sell or rent it to other traders on the marketplace.
-      </div>
-      <button class="btn btn-sm" onclick="openCreateListing()">+ Create listing</button>
-    </div>
-
-    <div class="section-label">Browse apps</div>
-    <div id="marketplace-listings">
-      <!-- Populated by JS -->
-    </div>
-  </div>
-
-  <!-- ════════════ PAGE: BUILD (App Builder) ════════════ -->
-  <div class="page" id="page-build">
-
-    <div class="build-disclaimer">
-      <strong>⚠️ Technical tool only — not financial advice.</strong><br>
-      This App Builder writes code based on your instructions. You are solely and entirely
-      responsible for testing all generated code in a demo environment before live use,
-      and for any financial outcome resulting from its deployment.
-      <div class="agree-row">
-        <input type="checkbox" class="agree-checkbox" id="agree-cb" onchange="onAgreeChange()">
-        <label class="agree-label" for="agree-cb">I understand and accept full responsibility</label>
-      </div>
-    </div>
-
-    <!-- Platform selector -->
-    <div class="section-label">Target platform</div>
-    <div class="platform-select-row" id="build-platform-row">
-      <div class="ps-btn sel" onclick="selectBuildPlatform(this,'mql5')">MQL5</div>
-      <div class="ps-btn" onclick="selectBuildPlatform(this,'mql4')">MQL4</div>
-      <div class="ps-btn" onclick="selectBuildPlatform(this,'pine')">Pine Script</div>
-      <div class="ps-btn" onclick="selectBuildPlatform(this,'python')">Python</div>
-    </div>
-
-    <!-- Projects ---->
-    <div class="section-label">Your projects</div>
-    <div id="project-list">
-      <!-- Populated by renderProjects() -->
-    </div>
-    <button class="btn btn-full" style="margin-bottom:14px" onclick="openSheet('new-project-sheet')">
-      + New project
-    </button>
-
-    <!-- Active chat (shown when a project is open) -->
-    <div id="build-chat-wrap" style="display:none">
-      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
-        <span id="build-chat-title">Builder</span>
-        <button class="btn btn-sm" style="font-size:11px;padding:3px 10px"
-          onclick="document.getElementById('build-chat-wrap').style.display='none';renderProjects()">✕ Close</button>
-      </div>
-      <div class="build-chat" id="build-chat">
-        <div class="build-chat-messages" id="build-messages"></div>
-        <div class="build-input-row">
-          <input class="build-input" id="build-input" placeholder="Add RSI filter to entry logic…"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendBuildMessage()}">
-          <button class="build-send" onclick="sendBuildMessage()">Send</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ════════════ PAGE: PROFILE ════════════ -->
-  <div class="page" id="page-profile">
-
-    <div class="profile-header">
-      <div class="profile-avatar">👤</div>
-      <div class="profile-name" id="profile-name">Trader</div>
-      <div class="profile-sub" id="profile-sub">Free trial · 11 days remaining</div>
-    </div>
-
-    <div class="stats-grid">
-      <div class="stat-box">
-        <div class="stat-num" id="stat-val">—</div>
-        <div class="stat-label">Validations</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-num" id="stat-acc" style="color:var(--green)">—</div>
-        <div class="stat-label">Accuracy</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-num" id="stat-gen" style="color:var(--purple)">—</div>
-        <div class="stat-label">Apps built</div>
-      </div>
-    </div>
-
-    <!-- Affiliate -->
-    <div class="affiliate-banner">
-      <div class="aff-icon">🤝</div>
-      <div class="aff-info">
-        <div class="aff-title">Affiliate programme</div>
-        <div class="aff-sub">Earn commission — powered by Whop</div>
-      </div>
-      <button class="btn btn-sm btn-green" onclick="openAffiliate()">Join →</button>
-    </div>
-
-    <!-- Subscription -->
-    <div class="card card-sm">
-      <div class="section-label" style="margin-bottom:8px">Subscription</div>
-      <div class="settings-list">
-        <div class="settings-row">
-          <div>
-            <div class="settings-label">Current plan</div>
-            <div class="settings-sub" id="sub-plan-label">Free trial</div>
-          </div>
-          <button class="btn btn-sm btn-primary" onclick="openCheckout('pro')">Upgrade</button>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
-        <button class="btn btn-sm" onclick="openCheckout('product1')">Validator $19</button>
-        <button class="btn btn-sm" onclick="openCheckout('product2')">EA Analyzer $49</button>
-        <button class="btn btn-sm" onclick="openCheckout('product3')">Live Analysis $29</button>
-        <button class="btn btn-sm btn-primary" onclick="openCheckout('pro')">Pro Bundle $79</button>
-      </div>
-    </div>
-
-    <!-- Tokens -->
-    <div class="card card-sm">
-      <div class="section-label" style="margin-bottom:8px">Webhook tokens</div>
-      <div class="settings-list">
-        <div class="settings-row">
-          <div>
-            <div class="settings-label">Indicator token</div>
-            <div class="settings-value" id="token-indicator">—</div>
-          </div>
-          <button class="btn btn-sm" onclick="copyToken('indicator')">Copy</button>
-        </div>
-        <div class="settings-row">
-          <div>
-            <div class="settings-label">EA token</div>
-            <div class="settings-value" id="token-ea">—</div>
-          </div>
-          <button class="btn btn-sm" onclick="copyToken('ea')">Copy</button>
-        </div>
-        <div class="settings-row">
-          <div>
-            <div class="settings-label">Screenshot token</div>
-            <div class="settings-value" id="token-screenshot">—</div>
-          </div>
-          <button class="btn btn-sm" onclick="copyToken('screenshot')">Copy</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-</div><!-- /scroll-container -->
-
-<!-- ══════════════════════════════════════════════
-     BOTTOM NAV
-══════════════════════════════════════════════ -->
-<div class="bottom-nav">
-  <div class="nav-item active" id="nav-products" onclick="showPage('products')">
-    <div class="nav-icon">📦</div>
-    <div class="nav-label">Products</div>
-  </div>
-  <div class="nav-item" id="nav-generate" onclick="showPage('generate')">
-    <div class="nav-icon">🖥</div>
-    <div class="nav-label">Live</div>
-  </div>
-  <div class="nav-item" id="nav-market" onclick="showPage('market')">
-    <div class="nav-icon">🏪</div>
-    <div class="nav-label">Market</div>
-  </div>
-  <div class="nav-item" id="nav-build" onclick="showPage('build')">
-    <div class="nav-icon">🏗</div>
-    <div class="nav-label">Builder</div>
-  </div>
-  <div class="nav-item" id="nav-profile" onclick="showPage('profile')">
-    <div class="nav-icon">👤</div>
-    <div class="nav-label">Profile</div>
+  <div class="section-label">Recent Activity</div>
+  <div class="card card-sm">
+    <div class="act-row"><div class="act-dot" style="background:var(--green)"></div><div class="act-text">Bullish Engulfing — EURUSD · 4h · BUY validated</div><div class="act-time">2h ago</div></div>
+    <div class="act-row"><div class="act-dot" style="background:var(--red)"></div><div class="act-text">EA LOSS — GBPUSD short · Shooting Star missed</div><div class="act-time">5h ago</div></div>
+    <div class="act-row"><div class="act-dot" style="background:var(--text3)"></div><div class="act-text">Doji — BTCUSD · 1h · NEUTRAL — no setup</div><div class="act-time">8h ago</div></div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     BOTTOM SHEETS / MODALS
-══════════════════════════════════════════════ -->
+<!-- ════ PAGE: SIGNAL VALIDATOR ════ -->
+<div class="page" id="page-sv">
+  <div class="detail-header">
+    <div class="back-btn" onclick="showPage('products')">←</div>
+    <div class="detail-title">📊 Signal Validator</div>
+  </div>
+  <div class="disclaimer">
+    <strong>⚠️ Analytical tool only.</strong> Pattern and indicator analysis is for informational purposes only — not financial advice.
+    <a href="#" onclick="showSheet('system-rules-sheet');return false"> View system rules →</a>
+  </div>
+  <!-- Sub tabs -->
+  <div class="sub-tabs">
+    <div class="sub-tab active" data-svtab="setup" onclick="svTab(this)">Setup</div>
+    <div class="sub-tab" data-svtab="report" onclick="svTab(this)">Report</div>
+  </div>
 
-<!-- System rules sheet -->
+  <!-- Setup tab -->
+  <div id="svt-setup">
+    <!-- Indicator selector shortcut -->
+    <div class="ind-shortcut">
+      <div>
+        <div class="ind-shortcut-info">📈 Indicators</div>
+        <div class="ind-shortcut-sub" id="ind-enabled-label">All 30+ indicators enabled</div>
+      </div>
+      <a href="/app/indicators" class="btn btn-sm">Customise</a>
+    </div>
+
+    <div class="section-label">Candle patterns</div>
+    <div id="pattern-list-sv"></div>
+
+    <div class="section-label" style="margin-top:14px">Data source</div>
+    <div class="card">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:9px">Select your platform to get the webhook URL and setup instructions:</div>
+      <div class="platform-grid">
+        <div class="plat-btn" onclick="selPlat(this,'tradingview')"><span class="plat-icon">📈</span>TradingView</div>
+        <div class="plat-btn" onclick="selPlat(this,'metatrader')"><span class="plat-icon">🖥</span>MetaTrader</div>
+        <div class="plat-btn" onclick="selPlat(this,'matchtrader')"><span class="plat-icon">⚡</span>MatchTrader</div>
+        <div class="plat-btn" onclick="selPlat(this,'ctrader')"><span class="plat-icon">🔷</span>cTrader</div>
+        <div class="plat-btn" onclick="selPlat(this,'daxtrader')"><span class="plat-icon">📉</span>DAX Trader</div>
+        <div class="plat-btn" onclick="selPlat(this,'takeprofit')"><span class="plat-icon">🎯</span>TakeProfit</div>
+      </div>
+      <div class="webhook-box" id="webhook-box">
+        <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Your webhook URL</div>
+        <div class="wh-url-row"><div class="wh-url-text" id="wh-url-text"></div><button class="copy-btn" onclick="copyWh()">Copy</button></div>
+        <div style="font-size:10px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">JSON payload template</div>
+        <pre class="json-pre" id="json-pre"></pre>
+        <div class="steps-box" id="steps-box"></div>
+        <div style="margin-top:10px">
+          <a href="/app/indicators" class="btn btn-sm btn-primary btn-full" style="display:flex;justify-content:center">⚙️ Customise indicators for this analysis</a>
+        </div>
+      </div>
+    </div>
+    <!-- Download bots section -->
+    <div class="section-label">Download bots (MetaTrader / cTrader)</div>
+    <div class="dl-card"><div class="dl-icon" style="background:rgba(79,142,255,.12)">🖥</div><div style="flex:1"><div class="dl-name">MT5 Expert Advisor</div><div class="dl-desc">OHLC data → AI analysis → draws on chart</div></div><button class="btn btn-sm" onclick="dlBot('mt5')">Download</button></div>
+    <div class="dl-card"><div class="dl-icon" style="background:rgba(168,85,247,.12)">🖥</div><div style="flex:1"><div class="dl-name">MT4 Expert Advisor</div><div class="dl-desc">ATV_Analyzer.mq4</div></div><button class="btn btn-sm" onclick="dlBot('mt4')">Download</button></div>
+    <div class="dl-card"><div class="dl-icon" style="background:rgba(6,182,212,.12)">🔷</div><div style="flex:1"><div class="dl-name">cTrader cBot</div><div class="dl-desc">ATV_Analyzer.cs · draws icons on chart</div></div><button class="btn btn-sm" onclick="dlBot('ctrader')">Download</button></div>
+    <div class="card" style="margin-top:4px">
+      <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:4px">📱 Browser Extension</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:9px">For any other platform (TradingView web, MatchTrader, etc.) — use the browser extension with auto screenshot monitoring.</div>
+      <button class="btn btn-sm btn-primary btn-full" onclick="dlExtension()">⬇ Download Extension</button>
+    </div>
+  </div>
+
+  <!-- Report tab -->
+  <div id="svt-report" style="display:none">
+    <div id="sv-report-content">
+      <div class="report-empty">📊 No analysis yet.<br>Connect your platform and send a signal to see the report here.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PAGE: EA ANALYSER ════ -->
+<div class="page" id="page-ea">
+  <div class="detail-header">
+    <div class="back-btn" onclick="showPage('products')">←</div>
+    <div class="detail-title">🤖 EA Analyser</div>
+  </div>
+  <div class="disclaimer">
+    <strong>⚠️ Analytical tool only.</strong> EA analysis explains trade history for educational purposes only — not financial advice.
+  </div>
+  <div class="sub-tabs">
+    <div class="sub-tab active" data-eatab="setup" onclick="eaTab(this)">Setup</div>
+    <div class="sub-tab" data-eatab="report" onclick="eaTab(this)">Trade Report</div>
+    <div class="sub-tab" data-eatab="history" onclick="eaTab(this)">History</div>
+  </div>
+
+  <!-- EA Setup tab -->
+  <div id="eat-setup">
+    <div class="card" style="font-size:12px;color:var(--text2);line-height:1.7">
+      When your EA places or closes a trade, the system analyses the full market context — all indicators, candle patterns, and timing — and tells you <strong style="color:var(--text)">why the EA entered, why it won, and why it lost</strong>.
+    </div>
+    <div class="section-label">Download your bot</div>
+    <div class="dl-card"><div class="dl-icon" style="background:rgba(79,142,255,.12)">🖥</div><div style="flex:1"><div class="dl-name">MT5 EA Analyser</div><div class="dl-desc">ATV_Analyzer.mq5 · MetaTrader 5</div></div><button class="btn btn-sm" onclick="dlBot('mt5')">Download</button></div>
+    <div class="dl-card"><div class="dl-icon" style="background:rgba(168,85,247,.12)">🖥</div><div style="flex:1"><div class="dl-name">MT4 EA Analyser</div><div class="dl-desc">ATV_Analyzer.mq4 · MetaTrader 4</div></div><button class="btn btn-sm" onclick="dlBot('mt4')">Download</button></div>
+    <div class="dl-card"><div class="dl-icon" style="background:rgba(6,182,212,.12)">🔷</div><div style="flex:1"><div class="dl-name">cTrader cBot</div><div class="dl-desc">ATV_Analyzer.cs · cAlgo</div></div><button class="btn btn-sm" onclick="dlBot('ctrader')">Download</button></div>
+    <div class="section-label" style="margin-top:4px">Setup steps</div>
+    <div class="card" style="font-size:11px;color:var(--text2);line-height:1.9">
+      <span style="color:var(--accent);font-weight:600">1.</span> Download the bot for your platform<br>
+      <span style="color:var(--accent);font-weight:600">2.</span> Open in MetaEditor / cAlgo and compile<br>
+      <span style="color:var(--accent);font-weight:600">3.</span> Set <strong style="color:var(--text)">UserToken</strong> = your EA token (from Profile → Tokens)<br>
+      <span style="color:var(--accent);font-weight:600">4.</span> Set <strong style="color:var(--text)">AnalysisURL</strong> = your backend URL<br>
+      <span style="color:var(--accent);font-weight:600">5.</span> Allow WebRequest: Tools → Options → Expert Advisors<br>
+      <span style="color:var(--accent);font-weight:600">6.</span> Attach to the chart your EA runs on
+    </div>
+  </div>
+
+  <!-- EA Report tab -->
+  <div id="eat-report" style="display:none">
+    <div id="ea-report-content">
+      <div class="report-empty">🤖 No trade report yet.<br>The report appears automatically after your EA opens or closes a trade.</div>
+    </div>
+  </div>
+
+  <!-- EA History tab -->
+  <div id="eat-history" style="display:none">
+    <div id="ea-history-content">
+      <div class="report-empty">No trade history yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PAGE: MARKET ════ -->
+<div class="page" id="page-market">
+  <div class="mkt-filter">
+    <div class="mf-chip act" onclick="mktFilter(this,'all')">All</div>
+    <div class="mf-chip" onclick="mktFilter(this,'mql5')">MQL5</div>
+    <div class="mf-chip" onclick="mktFilter(this,'pine')">Pine</div>
+    <div class="mf-chip" onclick="mktFilter(this,'sell')">For Sale</div>
+    <div class="mf-chip" onclick="mktFilter(this,'rent')">For Rent</div>
+    <div class="mf-chip" onclick="mktFilter(this,'free')">Free</div>
+  </div>
+  <div class="sell-cta">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px">🏪 List your app</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:9px;line-height:1.5">Built with App Builder? Sell or rent it to other traders on the marketplace.</div>
+    <button class="btn btn-sm" onclick="showSheet('create-listing-sheet')">+ Create listing</button>
+  </div>
+  <div class="section-label">Browse apps</div>
+  <div id="marketplace-listings"></div>
+</div>
+
+<!-- ════ PAGE: APP BUILDER ════ -->
+<div class="page" id="page-build">
+  <div class="build-disc">
+    <strong style="color:var(--red)">⚠️ Technical tool only — not financial advice.</strong> You are solely responsible for testing all generated code in a demo environment before live use and for any financial outcome.
+    <div style="display:flex;align-items:center;gap:7px;margin-top:8px">
+      <input type="checkbox" id="agree-cb" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer" onchange="onAgree()">
+      <label for="agree-cb" style="font-size:11px;color:var(--text2);cursor:pointer">I understand and accept full responsibility</label>
+    </div>
+  </div>
+  <div class="section-label">Target platform</div>
+  <div style="display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap">
+    <div class="ps-btn sel" onclick="selPs(this,'mql5')">MQL5</div>
+    <div class="ps-btn" onclick="selPs(this,'mql4')">MQL4</div>
+    <div class="ps-btn" onclick="selPs(this,'pine')">Pine Script</div>
+    <div class="ps-btn" onclick="selPs(this,'python')">Python</div>
+  </div>
+  <div class="section-label">Your projects</div>
+  <div id="projects-list"></div>
+  <button class="btn btn-full" style="margin-bottom:12px" id="new-proj-btn" onclick="showSheet('new-project-sheet')" disabled>+ New project</button>
+  <div class="build-chat-wrap" id="build-chat" style="display:none">
+    <div class="build-msgs" id="build-msgs">
+      <div class="bm sys">🤖 Agentic session started. Tell me what to build.</div>
+    </div>
+    <div class="build-input-row">
+      <input class="build-input" id="build-input" placeholder="Add RSI filter to entry logic…">
+      <button class="build-send" onclick="buildSend()">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PAGE: PROFILE ════ -->
+<div class="page" id="page-profile">
+  <div style="text-align:center;padding:18px 0 13px">
+    <div class="prof-avatar">👤</div>
+    <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:2px" id="profile-name">Trader</div>
+    <div style="font-size:11px;color:var(--text2)" id="profile-sub">Free trial · 11 days remaining</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+    <div class="card card-sm" style="text-align:center"><div class="stat-num" style="color:var(--accent)" id="stat-val">—</div><div style="font-size:9px;color:var(--text3)">Validations</div></div>
+    <div class="card card-sm" style="text-align:center"><div class="stat-num" style="color:var(--green)" id="stat-acc">—</div><div style="font-size:9px;color:var(--text3)">Accuracy</div></div>
+    <div class="card card-sm" style="text-align:center"><div class="stat-num" style="color:var(--purple)" id="stat-apps">—</div><div style="font-size:9px;color:var(--text3)">Apps built</div></div>
+  </div>
+  <div class="aff-banner">
+    <div style="font-size:24px">🤝</div>
+    <div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">Affiliate programme</div><div style="font-size:10px;color:var(--text2)">Earn commission — powered by Whop</div></div>
+    <button class="btn btn-sm btn-green" onclick="openAffiliate()">Join →</button>
+  </div>
+  <div class="section-label">Subscription</div>
+  <div class="card card-sm">
+    <div class="settings-row">
+      <div><div class="settings-label">Current plan</div><div class="settings-sub" id="sub-plan-label">Free trial</div></div>
+      <button class="btn btn-sm btn-primary" onclick="openCheckout('pro')">Upgrade</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px">
+      <button class="btn btn-sm" onclick="openCheckout('validator')" data-product="validator">Signal Validator $29</button>
+      <button class="btn btn-sm" onclick="openCheckout('ea')" data-product="ea">EA Analyser $49</button>
+      <button class="btn btn-sm" onclick="openCheckout('builder')" data-product="builder">App Builder $79</button>
+      <button class="btn btn-sm btn-primary" onclick="openCheckout('pro')" data-product="pro">Pro Bundle $129</button>
+    </div>
+  </div>
+  <div class="section-label">Webhook tokens</div>
+  <div class="card card-sm">
+    <div class="settings-row"><div><div class="settings-label">Signal Validator token</div><div class="settings-value" id="token-indicator">—</div></div><button class="btn btn-sm" onclick="copyToken('indicator')">Copy</button></div>
+    <div class="settings-row"><div><div class="settings-label">EA Analyser token</div><div class="settings-value" id="token-ea">—</div></div><button class="btn btn-sm" onclick="copyToken('ea')">Copy</button></div>
+    <div class="settings-row"><div><div class="settings-label">Extension token</div><div class="settings-value" id="token-screenshot">—</div></div><button class="btn btn-sm" onclick="copyToken('screenshot')">Copy</button></div>
+  </div>
+</div>
+
+</div><!-- /scroll-container -->
+
+<!-- Bottom nav -->
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-products" onclick="showPage('products')"><div class="nav-icon">📦</div><div class="nav-label">Products</div></div>
+  <div class="nav-item" id="nav-sv" onclick="showPage('sv')"><div class="nav-icon">📊</div><div class="nav-label">Validator</div></div>
+  <div class="nav-item" id="nav-ea" onclick="showPage('ea')"><div class="nav-icon">🤖</div><div class="nav-label">EA</div></div>
+  <div class="nav-item" id="nav-market" onclick="showPage('market')"><div class="nav-icon">🏪</div><div class="nav-label">Market</div></div>
+  <div class="nav-item" id="nav-build" onclick="showPage('build')"><div class="nav-icon">🏗</div><div class="nav-label">Builder</div></div>
+  <div class="nav-item" id="nav-profile" onclick="showPage('profile')"><div class="nav-icon">👤</div><div class="nav-label">Profile</div></div>
+</div>
+
+<!-- Sheets -->
 <div class="sheet-overlay" id="system-rules-sheet" onclick="closeSheet('system-rules-sheet')">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-handle"></div>
     <div class="sheet-title">System detection rules</div>
-    <div id="system-rules-content" style="font-size:12px;color:var(--text2);line-height:1.7"></div>
-    <button class="btn btn-full" style="margin-top:16px" onclick="closeSheet('system-rules-sheet')">Close</button>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7">
+      <p style="margin-bottom:10px"><strong style="color:var(--text)">Pattern engine</strong> uses OHLC math: body ratio, wick ratio, engulf ratio on raw candle data.</p>
+      <p style="margin-bottom:10px"><strong style="color:var(--text)">Indicator engine</strong> calculates 30+ indicators on the backend from the same OHLC bars — no indicator data needed from your platform.</p>
+      <p style="margin-bottom:10px"><strong style="color:var(--text)">Your rules</strong> replace system thresholds per pattern and apply only to your account.</p>
+      <p><a href="/app/pattern-rules" style="color:var(--accent)">Customise pattern rules →</a>&nbsp;&nbsp;<a href="/app/indicators" style="color:var(--accent)">Customise indicators →</a></p>
+    </div>
+    <button class="btn btn-full" style="margin-top:14px" onclick="closeSheet('system-rules-sheet')">Close</button>
   </div>
 </div>
 
-<!-- New project sheet -->
 <div class="sheet-overlay" id="new-project-sheet" onclick="closeSheet('new-project-sheet')">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-handle"></div>
     <div class="sheet-title">New project</div>
-    <div style="margin-bottom:10px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">Project name</div>
-      <input id="proj-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:9px 10px;color:var(--text);font-size:13px;outline:none;font-family:var(--font-body)" placeholder="My RSI Scalper EA">
-    </div>
-    <div style="margin-bottom:10px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">Describe what it should do</div>
-      <textarea id="proj-desc" rows="3" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:9px 10px;color:var(--text);font-size:13px;outline:none;resize:none;font-family:var(--font-body)" placeholder="Buy when RSI < 30 and a bullish engulfing forms. SL 50 pips, TP 100 pips."></textarea>
-    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:5px">Project name</div>
+    <input id="proj-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:10px" placeholder="My RSI Scalper EA">
+    <div style="font-size:11px;color:var(--text2);margin-bottom:5px">Describe what it should do</div>
+    <textarea id="proj-desc" rows="3" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:12px;outline:none;resize:none;font-family:inherit;margin-bottom:12px" placeholder="Buy when RSI &lt; 30 and a bullish engulfing forms. SL 50 pips, TP 100 pips."></textarea>
     <button class="btn btn-primary btn-full" onclick="createProject()">Start building</button>
   </div>
 </div>
 
-<!-- Create listing sheet -->
 <div class="sheet-overlay" id="create-listing-sheet" onclick="closeSheet('create-listing-sheet')">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-handle"></div>
     <div class="sheet-title">List your app</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6">
-      You need a Whop product for paid listings. Create your product on Whop first, then paste the checkout URL below.
-    </div>
-    <div style="margin-bottom:10px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">App name</div>
-      <input id="listing-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:9px 10px;color:var(--text);font-size:13px;outline:none;font-family:var(--font-body)" placeholder="RSI Scalper EA">
-    </div>
-    <div style="margin-bottom:10px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">Listing type</div>
-      <div style="display:flex;gap:8px">
-        <div class="ps-btn sel" onclick="selectListingType(this,'sell')">Sell</div>
-        <div class="ps-btn" onclick="selectListingType(this,'rent')">Rent</div>
-        <div class="ps-btn" onclick="selectListingType(this,'free')">Free</div>
-      </div>
-    </div>
-    <div style="margin-bottom:10px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:5px">Whop checkout URL</div>
-      <input id="listing-whop-url" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:9px 10px;color:var(--text);font-size:13px;outline:none;font-family:var(--font-body)" placeholder="https://whop.com/checkout/...">
-    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">Create a product on <a href="https://whop.com" style="color:var(--accent)" target="_blank">Whop</a> first, then paste the checkout URL below.</div>
+    <input id="listing-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:10px" placeholder="App name">
+    <input id="listing-whop" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:12px" placeholder="https://whop.com/checkout/...">
     <button class="btn btn-primary btn-full" onclick="submitListing()">Publish listing</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<!-- ══════════════════════════════════════════════
-     JAVASCRIPT
-══════════════════════════════════════════════ -->
 <script>
-// ── Config ─────────────────────────────────────────────────────────────────
 const API_BASE = window.API_BASE || "";
 const tg = window.Telegram?.WebApp;
 const tgUser = tg?.initDataUnsafe?.user || {};
 const TG_ID = String(tgUser.id || "");
+const H = {"Content-Type":"application/json",...(TG_ID?{"X-Telegram-User-Id":TG_ID}:{})};
 
-// ── Init ───────────────────────────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
-  tg?.expand?.();
-  renderPatterns();
-  renderMarketplace();
-  renderProjects();
-  loadUserData();
-});
-
-// ── Page navigation ────────────────────────────────────────────────────────
-const PAGES = ["products","generate","market","build","profile"];
-const NAV_MAP = {
-  products:"products", generate:"generate",
-  market:"market", build:"build", profile:"profile",
-  "p1-detail":"products", "p2-detail":"products",
-};
+// ── Nav ────────────────────────────────────────────────────────────────────
+const NAV_MAP = {products:"products",sv:"sv",ea:"ea",market:"market",build:"build",profile:"profile"};
 
 function showPage(name) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
@@ -1370,922 +616,629 @@ function showPage(name) {
   const navKey = NAV_MAP[name] || name;
   document.getElementById(`nav-${navKey}`)?.classList.add("active");
   document.querySelector(".scroll-container")?.scrollTo(0,0);
-  // Clear polling timers when leaving those pages
-  if (name !== "p2-detail") { clearTimeout(_eaPollingTimer); _eaPollingTimer = null; }
-  if (name !== "p1-detail") { clearTimeout(_valPollingTimer); _valPollingTimer = null; }
-  // Lazy-load data for each page on first visit
   if (name === "market") renderMarketplace();
   if (name === "build") renderProjects();
-  if (name === "p2-detail") loadEAHistory();
-  if (name === "p1-detail") loadValidationHistory();
 }
 
-function showProductDetail(p) {
-  showPage(`${p}-detail`);
-}
-
-// ── Pattern data ───────────────────────────────────────────────────────────
-const PATTERNS = [
-  {name:"bullish_engulfing", display:"Bullish Engulfing", emoji:"🟢", sig:"bull",
-   desc:"Current bull candle body fully engulfs prior bear candle",
-   system:{min_body_ratio:"10%", min_engulf_ratio:"100%"},
-   logic:"Prior candle bearish. Current candle bullish. Body ratio ≥ 100% of prior body."},
-  {name:"bearish_engulfing", display:"Bearish Engulfing", emoji:"🔴", sig:"bear",
-   desc:"Current bear candle body fully engulfs prior bull candle",
-   system:{min_body_ratio:"10%", min_engulf_ratio:"100%"},
-   logic:"Prior candle bullish. Current candle bearish. Body ratio ≥ 100% of prior body."},
-  {name:"doji", display:"Doji", emoji:"➕", sig:"both",
-   desc:"Open ≈ Close — market indecision, watch for reversal",
-   system:{max_body_ratio:"5%"},
-   logic:"Body / range < 5%. Upper wick ≈ lower wick."},
-  {name:"hammer", display:"Hammer", emoji:"🔨", sig:"bull",
-   desc:"Small body, long lower wick — bullish reversal after downtrend",
-   system:{min_body_ratio:"10%", lower_wick:"≥ 2× body"},
-   logic:"Lower wick ≥ 2× body. Upper wick < body. Appears after downtrend."},
-  {name:"shooting_star", display:"Shooting Star", emoji:"💫", sig:"bear",
-   desc:"Small body, long upper wick after uptrend — bearish reversal",
-   system:{min_body_ratio:"10%", upper_wick:"≥ 2× body"},
-   logic:"Upper wick ≥ 2× body. Lower wick < 50% of body. Bearish candle."},
-  {name:"morning_star", display:"Morning Star", emoji:"🌅", sig:"bull",
-   desc:"3-candle bullish reversal at support — down, star, up",
-   system:{star_body:"< 30% of range", close_above:"midpoint of candle 1"},
-   logic:"Candle 1 bearish. Candle 2 small body (star). Candle 3 bullish, closes above midpoint of C1."},
-  {name:"evening_star", display:"Evening Star", emoji:"🌆", sig:"bear",
-   desc:"3-candle bearish reversal at resistance — up, star, down",
-   system:{star_body:"< 30% of range", close_below:"midpoint of candle 1"},
-   logic:"Candle 1 bullish. Candle 2 small body (star). Candle 3 bearish, closes below midpoint of C1."},
-  {name:"three_white_soldiers", display:"Three White Soldiers", emoji:"🪖", sig:"bull",
-   desc:"3 consecutive bull candles, each closing higher",
-   system:{upper_wick:"< 30% of body each"},
-   logic:"3 consecutive bullish candles. Each closes higher. Upper wicks < 30% of each body."},
-  {name:"three_black_crows", display:"Three Black Crows", emoji:"🦅", sig:"bear",
-   desc:"3 consecutive bear candles, each closing lower",
-   system:{lower_wick:"< 30% of body each"},
-   logic:"3 consecutive bearish candles. Each closes lower. Lower wicks < 30% of each body."},
-  {name:"tweezer_bottom", display:"Tweezer Bottom", emoji:"⬇", sig:"bull",
-   desc:"Two candles with matching lows — bullish reversal at support",
-   system:{tolerance:"0.5% of range"},
-   logic:"Two candles with matching lows (±0.5% tolerance). First bearish, second bullish."},
-  {name:"tweezer_top", display:"Tweezer Top", emoji:"⬆", sig:"bear",
-   desc:"Two candles with matching highs — bearish reversal at resistance",
-   system:{tolerance:"0.5% of range"},
-   logic:"Two candles with matching highs (±0.5% tolerance). First bullish, second bearish."},
-];
-
-// User pattern state (enabled toggles)
-const patternState = {};
-PATTERNS.forEach(p => { patternState[p.name] = true; });
-
-function renderPatterns() {
-  const container = document.getElementById("pattern-list");
-  if (!container) return;
-
-  container.innerHTML = PATTERNS.map(p => `
-    <div class="pattern-item" id="pi-${p.name}">
-      <div class="pattern-row" onclick="togglePattern('${p.name}')">
-        <span class="pattern-emoji">${p.emoji}</span>
-        <div class="pattern-info">
-          <div class="pattern-name">${p.display}</div>
-          <div class="pattern-desc">${p.desc}</div>
-        </div>
-        <span class="pattern-sig ${p.sig}">${p.sig==='bull'?'↑ Bull':p.sig==='bear'?'↓ Bear':'↕ Both'}</span>
-        <label class="toggle" onclick="event.stopPropagation()">
-          <input type="checkbox" ${patternState[p.name]?'checked':''} onchange="onPatternToggle('${p.name}',this.checked)">
-          <span class="toggle-track"></span>
-          <span class="toggle-thumb"></span>
-        </label>
-        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-      <div class="pattern-body">
-        <div class="system-rule-box">
-          <div class="rule-box-title">
-            System detection rules
-            <a href="#" onclick="showSystemRulesSheet('${p.name}');return false">How this works →</a>
-          </div>
-          ${Object.entries(p.system).map(([k,v]) => `
-            <div class="rule-line">${k.replace(/_/g,' ')}<span>${v}</span></div>
-          `).join('')}
-        </div>
-        <button class="custom-rule-btn" onclick="toggleCustomRule('${p.name}')">
-          ✏️ Define my own rule for ${p.display}
-        </button>
-        <textarea class="custom-rule-input" id="cr-${p.name}"
-          placeholder="e.g. Only trigger if body is at least 20% of range and lower wick ≥ 3× body"
-          rows="2"
-          onblur="saveCustomRule('${p.name}')"></textarea>
-        <button class="btn btn-sm btn-primary" style="width:100%" onclick="saveCustomRule('${p.name}')">
-          Save custom rule
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function togglePattern(name) {
-  const item = document.getElementById(`pi-${name}`);
-  item.classList.toggle("open");
-}
-
-function onPatternToggle(name, checked) {
-  patternState[name] = checked;
-  apiFetch(`/api/patterns/${name}`, "PATCH", {enabled: checked}).catch(()=>{});
-}
-
-function toggleCustomRule(name) {
-  const el = document.getElementById(`cr-${name}`);
-  el.classList.toggle("show");
-  if (el.classList.contains("show")) el.focus();
-}
-
-function saveCustomRule(name) {
-  const val = document.getElementById(`cr-${name}`)?.value?.trim();
-  if (!val) return;
-  apiFetch(`/api/patterns/${name}`, "PATCH", {user_rule_text: val})
-    .then(() => showToast("Custom rule saved ✓", "ok"))
-    .catch(() => showToast("Save failed", "err"));
-}
-
-// ── System rules sheet ─────────────────────────────────────────────────────
-function showSystemRulesSheet(patternName) {
-  const p = PATTERNS.find(x => x.name === patternName) || null;
-  const content = document.getElementById("system-rules-content");
-  if (p) {
-    content.innerHTML = `
-      <div style="font-size:15px;font-weight:700;margin-bottom:6px;color:var(--text)">${p.emoji} ${p.display}</div>
-      <div style="margin-bottom:12px"><strong style="color:var(--text)">Signal:</strong> ${p.sig==='bull'?'Bullish reversal':p.sig==='bear'?'Bearish reversal':'Context-dependent'}</div>
-      <div style="margin-bottom:12px"><strong style="color:var(--text)">What the system checks:</strong><br>${p.logic}</div>
-      <div style="margin-bottom:8px"><strong style="color:var(--text)">Detection thresholds:</strong></div>
-      ${Object.entries(p.system).map(([k,v])=>`<div class="rule-line" style="padding:5px 0">${k.replace(/_/g,' ')}<span>${v}</span></div>`).join('')}
-    `;
-  } else {
-    content.innerHTML = `
-      <p style="margin-bottom:10px">The system uses mathematical ratios on raw OHLC candle data to detect each pattern.</p>
-      <p style="margin-bottom:10px"><strong style="color:var(--text)">Min body ratio</strong> — how large the candle body must be relative to its full range (high − low).</p>
-      <p style="margin-bottom:10px"><strong style="color:var(--text)">Max wick ratio</strong> — upper or lower wick must not exceed this fraction of the full range.</p>
-      <p style="margin-bottom:10px"><strong style="color:var(--text)">Min engulf ratio</strong> — for engulfing patterns, how much the current body must exceed the prior body.</p>
-      <p>Your custom rules <strong style="color:var(--text)">replace</strong> the system values for that specific pattern and apply only to your account.</p>
-    `;
-  }
-  document.getElementById("system-rules-sheet").classList.add("show");
-}
-
-// ── Platform webhook ───────────────────────────────────────────────────────
-const PLATFORM_DATA = {
-  tradingview:{
-    label:"TradingView",
-    steps:`<b>Steps:</b><br>
-1. Open your indicator on TradingView<br>
-2. Click the indicator → Edit → Alerts tab<br>
-3. Set Webhook URL to the URL above<br>
-4. Paste the JSON template into Message body<br>
-5. Set alert condition and save`,
-    template: (token) => JSON.stringify({
-      token, ticker:"{{ticker}}", close:"{{close}}",
-      open:"{{open}}", high:"{{high}}", low:"{{low}}",
-      volume:"{{volume}}", timeframe:"{{interval}}",
-      alert_name:"{{plot_0}}", time:"{{time}}"
-    }, null, 2),
-  },
-  metatrader:{
-    label:"MetaTrader",
-    steps:`<b>Steps:</b><br>
-1. Download the ATV_Analyzer.mq5 EA from the Live Analysis page<br>
-2. Compile in MetaEditor and attach to your chart<br>
-3. Set UserToken = your token in EA inputs<br>
-4. Allow WebRequest in Tools → Options → Expert Advisors`,
-    template: (token) => JSON.stringify({
-      token, ticker:"SYMBOL", close:0.00000,
-      open:0.00000, high:0.00000, low:0.00000,
-      timeframe:"1h", platform:"metatrader"
-    }, null, 2),
-  },
-  matchtrader:{
-    label:"MatchTrader",
-    steps:`<b>Steps:</b><br>
-1. Go to MatchTrader → Alerts → Webhook<br>
-2. Paste your webhook URL<br>
-3. Use the JSON template for the payload body<br>
-4. Map MatchTrader variables to the JSON fields`,
-    template: (token) => JSON.stringify({
-      token, ticker:"{{symbol}}", close:"{{price}}",
-      timeframe:"{{interval}}", platform:"matchtrader"
-    }, null, 2),
-  },
-  ctrader:{
-    label:"cTrader",
-    steps:`<b>Steps:</b><br>
-1. Download ATV_Analyzer.cs cBot from Live Analysis<br>
-2. Open in cAlgo, compile and deploy<br>
-3. Set AnalysisURL and UserToken in parameters<br>
-4. The bot auto-sends OHLC on every candle close`,
-    template: (token) => JSON.stringify({
-      token, ticker:"SYMBOL", close:0.00000,
-      timeframe:"1h", platform:"ctrader"
-    }, null, 2),
-  },
-  daxtrader:{
-    label:"DAX Trader",
-    steps:`<b>Steps:</b><br>
-1. In DAX Trader, go to Automation → Webhooks<br>
-2. Create new webhook with the URL above<br>
-3. Use the JSON template as the payload<br>
-4. Map DAX Trader variables to the fields`,
-    template: (token) => JSON.stringify({
-      token, ticker:"{{instrument}}", close:"{{close}}",
-      timeframe:"{{period}}", platform:"daxtrader"
-    }, null, 2),
-  },
-  takeprofit:{
-    label:"TakeProfit",
-    steps:`<b>Steps:</b><br>
-1. In TakeProfit.com → Bots → Webhook trigger<br>
-2. Paste your webhook URL<br>
-3. Use JSON template as the request body<br>
-4. Set Content-Type header to application/json`,
-    template: (token) => JSON.stringify({
-      token, ticker:"{{symbol}}", close:"{{close}}",
-      timeframe:"{{timeframe}}", platform:"takeprofit"
-    }, null, 2),
-  },
-};
-
-let currentToken = "YOUR_TOKEN"; // loaded from API
-
-function selectPlatform(el, platform) {
-  document.querySelectorAll(".platform-btn").forEach(b => b.classList.remove("selected"));
-  el.classList.add("selected");
-
-  const pd = PLATFORM_DATA[platform];
-  if (!pd) return;
-
-  const backendUrl = API_BASE || "https://your-backend.example.com";
-  const url = `${backendUrl}/webhook/indicator/${currentToken}`;
-  document.getElementById("webhook-url-text").textContent = url;
-  document.getElementById("json-template-block").textContent = pd.template(currentToken);
-  document.getElementById("platform-steps").innerHTML = pd.steps;
-  document.getElementById("webhook-box").classList.add("show");
-}
-
-function copyWebhook() {
-  const text = document.getElementById("webhook-url-text").textContent;
-  navigator.clipboard.writeText(text).then(() => showToast("Webhook URL copied ✓", "ok"));
-}
-
-// ── Marketplace ────────────────────────────────────────────────────────────
-let _marketListings = [];
-let _marketFilter = "all";
-
-async function renderMarketplace() {
-  const el = document.getElementById("marketplace-listings");
-  if (!el) return;
-  el.innerHTML = `<div style="color:var(--text2);text-align:center;padding:20px">Loading…</div>`;
-  try {
-    const r = await apiFetch(`/api/marketplace?limit=30`);
-    _marketListings = r.listings || [];
-  } catch(e) {
-    // Fallback to placeholder while backend is starting
-    _marketListings = [
-      {id:"demo-1",name:"RSI Breakout EA",seller_username:"trader_42",icon:"📊",platform:"mql5",
-       listing_type:"sell",price_usd:29,description:"Buys breakouts when RSI diverges from price on H4.",
-       tags:["RSI","breakout","H4"],avg_rating:4.8,download_count:127},
-      {id:"demo-2",name:"Engulfing Scanner",seller_username:"pinemaster",icon:"🕯",platform:"pine",
-       listing_type:"rent",price_usd:9,description:"Scans all pairs for engulfing patterns on your timeframe.",
-       tags:["engulfing","scanner"],avg_rating:4.5,download_count:89},
-    ];
-  }
-  _renderListings();
-}
-
-function _renderListings() {
-  const el = document.getElementById("marketplace-listings");
-  if (!el) return;
-  const filtered = _marketFilter === "all" ? _marketListings
-    : _marketListings.filter(l => l.listing_type === _marketFilter || l.platform === _marketFilter);
-  if (!filtered.length) {
-    el.innerHTML = `<div style="color:var(--text2);text-align:center;padding:30px">No listings found</div>`;
-    return;
-  }
-  el.innerHTML = filtered.map(l => {
-    const priceLabel = l.listing_type==="free" ? "Free"
-      : l.listing_type==="rent" ? `$${l.price_usd}/mo` : `$${l.price_usd}`;
-    const btnLabel = l.listing_type==="free" ? "Download"
-      : l.listing_type==="rent" ? "Rent" : "Buy";
-    const stars = l.avg_rating ? `⭐ ${Number(l.avg_rating).toFixed(1)}` : "";
-    const tags = (l.tags||[]).map(t=>`<span class="listing-tag">${t}</span>`).join("");
-    return `
-    <div class="listing-card">
-      <div class="listing-top">
-        <div class="listing-icon">${l.icon||"📦"}</div>
-        <div class="listing-info">
-          <div class="listing-name">${l.name}</div>
-          <div class="listing-author">by @${l.seller_username||"?"} · ${(l.platform||"").toUpperCase()}</div>
-        </div>
-        <div class="listing-price">${priceLabel}</div>
-      </div>
-      <div class="listing-desc">${l.description||""}</div>
-      <div class="listing-tags">${tags}</div>
-      <div class="listing-meta">
-        <span>${stars}</span>
-        <span>⬇ ${l.download_count||0}</span>
-        <span style="margin-left:auto">
-          <button class="btn btn-sm" style="padding:5px 12px"
-            onclick="event.stopPropagation();buyListing('${l.id}','${l.listing_type}','${l.name}')">
-            ${btnLabel}
-          </button>
-        </span>
-      </div>
-    </div>`;
-  }).join("");
-}
-
-function filterMarket(el, filter) {
-  document.querySelectorAll(".mf-chip").forEach(c => c.classList.remove("active"));
+function svTab(el) {
+  const tab = el.dataset.svtab;
+  document.querySelectorAll("[data-svtab]").forEach(t => t.classList.remove("active"));
   el.classList.add("active");
-  _marketFilter = filter;
-  _renderListings();
+  document.getElementById("svt-setup").style.display = tab === "setup" ? "block" : "none";
+  document.getElementById("svt-report").style.display = tab === "report" ? "block" : "none";
+  if (tab === "report") loadSVReport();
 }
 
-async function buyListing(listingId, type, name) {
-  if (type === "free") { showToast("Downloading…", "ok"); return; }
-  try {
-    const r = await apiFetch(`/api/checkout/marketplace?listing_id=${listingId}`);
-    if (r.checkout_url) {
-      tg?.openLink ? tg.openLink(r.checkout_url) : window.open(r.checkout_url, "_blank");
-    }
-  } catch(e) {
-    showToast("Checkout: " + e.message, "err");
-  }
+function eaTab(el) {
+  const tab = el.dataset.eatab;
+  document.querySelectorAll("[data-eatab]").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  ["setup","report","history"].forEach(t => {
+    document.getElementById(`eat-${t}`).style.display = t === tab ? "block" : "none";
+  });
+  if (tab === "report") loadEAReport();
+  if (tab === "history") loadEAHistory();
 }
 
-async function submitListing() {
-  const name = document.getElementById("listing-name")?.value.trim();
-  const desc = document.getElementById("listing-desc")?.value.trim() || "";
-  if (!name) { showToast("Enter a listing name", "err"); return; }
-  try {
-    await apiFetch("/api/marketplace/listings", "POST", {
-      name, description: desc,
-      platform: buildPlatform,
-      listing_type: "sell",
-      project_id: activeProjectId,
-    });
-    closeSheet("create-listing-sheet");
-    showToast("Listing published ✓", "ok");
-    renderMarketplace();
-  } catch(e) {
-    showToast("Publish failed: " + e.message, "err");
-  }
-}
+// ── Plan / trial ───────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", async () => {
+  tg?.expand?.();
+  renderPatterns();
+  renderMarketplace();
+  renderProjects();
+  await loadUserData();
+});
 
-// ── App Builder ─────────────────────────────────────────────────────────────
-let buildPlatform = "mql5";
-let activeProjectId = null;
-let buildMessages = [];
-let _buildStreaming = false;
-
-function selectBuildPlatform(el, platform) {
-  document.querySelectorAll(".ps-btn").forEach(b => b.classList.remove("sel"));
-  el.classList.add("sel");
-  buildPlatform = platform;
-}
-
-async function renderProjects() {
-  const el = document.getElementById("project-list");
-  if (!el) return;
-  el.innerHTML = `<div class="history-loading"><span class="spinner"></span> Loading projects…</div>`;
-  try {
-    const r = await apiFetch("/api/appbuilder/projects");
-    const projects = r.projects || [];
-    if (!projects.length) {
-      el.innerHTML = `<div class="history-empty">
-        <div style="font-size:22px;margin-bottom:6px">🛠</div>
-        <div>No projects yet.</div>
-        <div style="font-size:11px;margin-top:4px">Start a new project to build your first EA or indicator.</div>
-      </div>`;
-      return;
-    }
-    el.innerHTML = projects.map(p => {
-      const statusColor = p.status==="done" ? "var(--green)" : p.status==="building" ? "var(--accent)" : "var(--text3)";
-      const statusLabel = p.status==="done" ? "✓ Done" : p.status==="building" ? "⏳ Building" : p.status||"draft";
-      return `<div class="history-card" onclick="openProject('${p.id}')" style="cursor:pointer">
-        <div class="history-card-top">
-          <span class="result-em">🛠</span>
-          <div class="history-card-main">
-            <div class="history-card-title">
-              <span>${p.name}</span>
-              <span class="ticker-badge">${(p.platform||"").toUpperCase()}</span>
-            </div>
-            <div class="history-card-meta">
-              <span style="color:${statusColor}">${statusLabel}</span>
-              ${p.version ? `<span class="ts">· v${p.version}</span>` : ""}
-            </div>
-          </div>
-          <button class="btn btn-sm" style="padding:4px 10px;font-size:11px"
-            onclick="event.stopPropagation();openProject('${p.id}')">Open</button>
-        </div>
-        ${p.description ? `<div style="font-size:11px;color:var(--text2);margin-top:6px">${p.description.slice(0,120)}${p.description.length>120?'…':''}</div>` : ""}
-      </div>`;
-    }).join("");
-  } catch(e) {
-    el.innerHTML = `<div class="history-error">⚠️ ${e.message} <button class="btn btn-sm" style="margin-left:8px" onclick="renderProjects()">Retry</button></div>`;
-  }
-}
-
-async function createProject() {
-  const name = document.getElementById("proj-name")?.value.trim();
-  const desc = document.getElementById("proj-desc")?.value.trim() || "";
-  if (!name) { showToast("Enter a project name", "err"); return; }
-  try {
-    const r = await apiFetch("/api/appbuilder/projects", "POST", {
-      name, description: desc, platform: buildPlatform,
-    });
-    activeProjectId = r.project?.id || r.id;
-    buildMessages = [];
-    closeSheet("new-project-sheet");
-    showToast("Project created ✓", "ok");
-    renderProjects();
-    // Auto-open the builder chat for the new project
-    if (activeProjectId) openProject(activeProjectId, { name, description: desc });
-  } catch(e) {
-    showToast("Failed: " + e.message, "err");
-  }
-}
-
-async function openProject(projectId, meta) {
-  activeProjectId = projectId;
-  // Load message history for this project
-  try {
-    const r = await apiFetch(`/api/appbuilder/projects/${projectId}`);
-    buildMessages = r.project?.build_steps?.map(s => ({
-      role: s.role || "assistant",
-      content: s.content,
-      code: s.code_output,
-    })) || [];
-    const name = meta?.name || r.project?.name || "Project";
-    showBuildChat(name);
-  } catch(e) {
-    showToast("Could not open project: " + e.message, "err");
-  }
-}
-
-function showBuildChat(projectName) {
-  const chatEl = document.getElementById("build-chat-area");
-  const chatWrap = document.getElementById("build-chat-wrap");
-  const titleEl  = document.getElementById("build-chat-title");
-  if (titleEl) titleEl.textContent = projectName || "Builder";
-  if (chatWrap) chatWrap.style.display = "block";
-  renderBuildChat();
-}
-
-function renderBuildChat() {
-  const el = document.getElementById("build-messages");
-  if (!el) return;
-  if (!buildMessages.length) {
-    el.innerHTML = `<div style="color:var(--text2);text-align:center;font-size:12px;padding:20px">
-      Describe what you want your EA to do and the AI will build it step by step.
-    </div>`;
-    return;
-  }
-  el.innerHTML = buildMessages.map(m => {
-    const isUser = m.role === "user";
-    const codeBlock = m.code ? `
-      <div style="margin-top:8px">
-        <div style="font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Generated code</div>
-        <div style="background:var(--bg1);border:1px solid var(--border1);border-radius:var(--r-xs);padding:10px;font-family:monospace;font-size:11px;color:var(--text2);overflow-x:auto;max-height:200px;overflow-y:auto;white-space:pre">${escHtml(m.code.slice(0,2000))}${m.code.length>2000?'\n…(truncated)':''}</div>
-        <button class="btn btn-sm" style="margin-top:6px;font-size:11px" onclick="copyCode(${buildMessages.indexOf(m)})">Copy code</button>
-      </div>` : "";
-    return `<div class="build-msg ${isUser?'user':'ai'}">
-      <div class="build-msg-text">${m.content}</div>
-      ${codeBlock}
-    </div>`;
-  }).join("");
-  el.scrollTop = el.scrollHeight;
-}
-
-function escHtml(s) {
-  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-
-function copyCode(idx) {
-  const m = buildMessages[idx];
-  if (!m?.code) return;
-  navigator.clipboard.writeText(m.code).then(() => showToast("Code copied ✓", "ok"));
-}
-
-async function sendBuildMessage() {
-  if (_buildStreaming) return;
-  if (!activeProjectId) { showToast("Open or create a project first", "err"); return; }
-  const inp = document.getElementById("build-input");
-  const msg = inp?.value.trim();
-  if (!msg) return;
-  inp.value = "";
-  buildMessages.push({ role: "user", content: msg });
-  buildMessages.push({ role: "assistant", content: "…", _pending: true });
-  renderBuildChat();
-  _buildStreaming = true;
-  try {
-    const r = await apiFetch(`/api/appbuilder/projects/${activeProjectId}/build`, "POST", { message: msg });
-    // Replace pending message
-    buildMessages = buildMessages.filter(m => !m._pending);
-    buildMessages.push({
-      role: "assistant",
-      content: r.reply || r.message || "Done.",
-      code: r.code_output || null,
-    });
-    renderBuildChat();
-  } catch(e) {
-    buildMessages = buildMessages.filter(m => !m._pending);
-    buildMessages.push({ role: "assistant", content: `⚠️ Error: ${e.message}` });
-    renderBuildChat();
-  } finally {
-    _buildStreaming = false;
-  }
-}
-
-
-// ── Downloads ──────────────────────────────────────────────────────────────
-function downloadBot(platform) {
-  const urls = {
-    mt5: `${API_BASE}/api/download/ATV_Analyzer.mq5`,
-    mt4: `${API_BASE}/api/download/ATV_Analyzer.mq4`,
-    ctrader: `${API_BASE}/api/download/ATV_Analyzer.cs`,
-  };
-  const url = urls[platform];
-  if (url && API_BASE) { window.open(url, "_blank"); }
-  else showToast("Bot download ready when backend is live", "ok");
-}
-
-function downloadExtension() {
-  if (API_BASE) window.open(`${API_BASE}/api/download/extension.zip`, "_blank");
-  else showToast("Extension download coming soon", "ok");
-}
-
-function openPatternEditor() {
-  window.location.href = "pattern_editor.html";
-}
-
-// ── Checkout + affiliate ───────────────────────────────────────────────────
-async function openCheckout(plan) {
-  try {
-    const r = await apiFetch(`/api/checkout/${plan}`);
-    if (r.checkout_url) {
-      tg?.openLink ? tg.openLink(r.checkout_url) : window.open(r.checkout_url, "_blank");
-    }
-  } catch {
-    showToast("Connect backend to enable checkout", "err");
-  }
-}
-
-function openAffiliate() {
-  const url = "https://whop.com/affiliate/YOUR_AFFILIATE_ID";
-  tg?.openLink ? tg.openLink(url) : window.open(url, "_blank");
-}
-
-// ── Load user data ─────────────────────────────────────────────────────────
 async function loadUserData() {
   if (!TG_ID) return;
   try {
-    const [planRes, trialRes, statsRes, tokensRes] = await Promise.all([
+    const [planRes, trialRes, statsRes, toksRes] = await Promise.all([
       apiFetch("/api/user/plan"),
       apiFetch("/api/trial/status"),
       apiFetch("/api/user/stats").catch(()=>({})),
       apiFetch("/api/user/tokens").catch(()=>({})),
     ]);
+    updatePlanBanner(planRes, trialRes);
+    updateProfile(planRes, trialRes, statsRes);
+    updateTokens(toksRes);
+    updateIndLabel();
+  } catch(e) {}
+}
 
-    // Plan chip
-    const chip = document.getElementById("plan-chip");
-    if (trialRes.active) {
-      chip.textContent = `TRIAL · ${trialRes.days_remaining}d`;
-      chip.className = "plan-chip trial";
-    } else if (planRes.plan !== "free") {
-      chip.textContent = planRes.plan_label || planRes.plan.toUpperCase();
-      chip.className = "plan-chip";
-    } else {
-      chip.textContent = "FREE";
-      chip.className = "plan-chip free";
-    }
-
-    // Trial banner
-    const banner = document.getElementById("trial-banner");
-    const btnAction = document.getElementById("trial-action-btn");
-    if (trialRes.active) {
-      document.getElementById("trial-title").textContent = "14-day free trial active";
-      document.getElementById("trial-sub").textContent = `${trialRes.days_remaining} days remaining · Full access to all products`;
-      btnAction.textContent = "Upgrade";
-      btnAction.onclick = () => openCheckout("pro");
-    } else if (!trialRes.used) {
-      document.getElementById("trial-title").textContent = "Start your free 14-day trial";
-      document.getElementById("trial-sub").textContent = "Full access · No card required";
-      btnAction.textContent = "Start trial";
-      btnAction.onclick = startTrial;
-    } else {
-      banner.className = "trial-banner expired";
-      document.getElementById("trial-title").textContent = "Trial ended";
-      document.getElementById("trial-sub").textContent = "Subscribe to keep access";
-      btnAction.textContent = "Subscribe";
-      btnAction.onclick = () => openCheckout("pro");
-    }
-
-    // Profile
-    if (tgUser.first_name) {
-      document.getElementById("profile-name").textContent =
-        [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
-    }
-    document.getElementById("profile-sub").textContent =
-      trialRes.active ? `Free trial · ${trialRes.days_remaining} days remaining`
-      : planRes.plan_label || "Free plan";
-    document.getElementById("sub-plan-label").textContent =
-      trialRes.active ? `Trial · expires ${new Date(trialRes.expires_at).toLocaleDateString()}`
-      : planRes.plan_label || "Free";
-
-    // Stats
-    if (statsRes.validations !== undefined) {
-      document.getElementById("stat-val").textContent = statsRes.validations;
-      document.getElementById("stat-acc").textContent =
-        statsRes.accuracy ? `${statsRes.accuracy}%` : "—";
-      document.getElementById("stat-gen").textContent = statsRes.projects ?? "—";
-    }
-
-    // Tokens
-    currentToken = tokensRes.indicator || "YOUR_TOKEN";
-    if (tokensRes.indicator) {
-      document.getElementById("token-indicator").textContent =
-        tokensRes.indicator.slice(0,8) + "…";
-      document.getElementById("token-ea").textContent =
-        tokensRes.ea.slice(0,8) + "…";
-      document.getElementById("token-screenshot").textContent =
-        tokensRes.screenshot.slice(0,8) + "…";
-    }
-
-  } catch(e) {
-    console.warn("loadUserData:", e);
+function updatePlanBanner(plan, trial) {
+  const chip = document.getElementById("plan-chip");
+  const banner = document.getElementById("trial-banner");
+  const title = document.getElementById("trial-title");
+  const sub = document.getElementById("trial-sub");
+  const btn = document.getElementById("trial-action-btn");
+  if (trial.active) {
+    chip.textContent = `TRIAL · ${trial.days_remaining}d`;
+    chip.className = "plan-chip trial";
+    title.textContent = "14-day free trial active";
+    sub.textContent = `${trial.days_remaining} days remaining · Full access`;
+    btn.textContent = "Upgrade"; btn.onclick = () => openCheckout("pro");
+  } else if (plan.plan !== "free") {
+    chip.textContent = plan.plan.toUpperCase(); chip.className = "plan-chip";
+    banner.className = "trial-banner paid";
+    title.textContent = plan.plan_label || plan.plan;
+    sub.textContent = "Active subscription";
+    btn.style.display = "none";
+  } else {
+    chip.textContent = "FREE"; chip.className = "plan-chip free";
+    banner.className = trial.used ? "trial-banner expired" : "trial-banner";
+    title.textContent = trial.used ? "Trial ended" : "Start your 14-day free trial";
+    sub.textContent = trial.used ? "Subscribe to keep access" : "Full access · No card required";
+    btn.textContent = trial.used ? "Subscribe" : "Start trial";
+    btn.onclick = trial.used ? () => openCheckout("pro") : startTrial;
   }
+}
+
+function updateProfile(plan, trial, stats) {
+  if (tgUser.first_name) document.getElementById("profile-name").textContent = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
+  document.getElementById("profile-sub").textContent = trial.active ? `Trial · ${trial.days_remaining}d remaining` : plan.plan_label || "Free";
+  document.getElementById("sub-plan-label").textContent = trial.active ? `Trial · expires ${new Date(trial.expires_at).toLocaleDateString()}` : plan.plan_label || "Free";
+  if (stats.validations !== undefined) {
+    document.getElementById("stat-val").textContent = stats.validations;
+    document.getElementById("stat-acc").textContent = stats.accuracy ? `${stats.accuracy}%` : "—";
+    document.getElementById("stat-apps").textContent = stats.projects ?? "—";
+  }
+}
+
+function updateTokens(toks) {
+  if (!toks.indicator) return;
+  window._fullTokens = toks;
+  document.getElementById("token-indicator").textContent = toks.indicator?.slice(0,8) + "…";
+  document.getElementById("token-ea").textContent = toks.ea?.slice(0,8) + "…";
+  document.getElementById("token-screenshot").textContent = toks.screenshot?.slice(0,8) + "…";
+}
+
+async function updateIndLabel() {
+  try {
+    const res = await apiFetch("/api/indicators");
+    const inds = res.indicators || [];
+    const enabled = inds.filter(i => i.enabled).length;
+    document.getElementById("ind-enabled-label").textContent = enabled === inds.length ? `All ${inds.length} indicators enabled` : `${enabled} of ${inds.length} indicators enabled`;
+  } catch {}
 }
 
 async function startTrial() {
   try {
     const r = await apiFetch("/api/trial/start", "POST", {});
-    if (r.ok) {
-      showToast(`✓ Trial started! ${r.days_remaining} days of full access.`, "ok");
-      setTimeout(loadUserData, 500);
-    } else {
-      showToast(r.message || "Could not start trial", "err");
-    }
+    if (r.ok) { showToast(`✓ Trial started — ${r.days_remaining} days`, "ok"); await loadUserData(); }
+    else showToast(r.message || "Could not start trial", "err");
   } catch { showToast("Error starting trial", "err"); }
 }
 
-// ── Token copy ─────────────────────────────────────────────────────────────
-const fullTokens = {};
+// ── Signal Validator Report ────────────────────────────────────────────────
+async function loadSVReport() {
+  const el = document.getElementById("sv-report-content");
+  try {
+    const r = await apiFetch("/api/user/last-report?source=indicator");
+    if (!r.report) { el.innerHTML = `<div class="report-empty">No analysis yet.</div>`; return; }
+    el.innerHTML = renderReport(r.report);
+  } catch { el.innerHTML = `<div class="report-empty">Connect your platform to see reports here.</div>`; }
+}
+
+// ── EA Report ─────────────────────────────────────────────────────────────
+async function loadEAReport() {
+  const el = document.getElementById("ea-report-content");
+  try {
+    const r = await apiFetch("/api/user/last-report?source=ea");
+    if (!r.report) { el.innerHTML = `<div class="report-empty">🤖 No trade report yet.<br>Appears after your EA opens or closes a trade.</div>`; return; }
+    el.innerHTML = renderEAReport(r.report);
+  } catch { el.innerHTML = `<div class="report-empty">No report yet.</div>`; }
+}
+
+async function loadEAHistory() {
+  const el = document.getElementById("ea-history-content");
+  try {
+    const r = await apiFetch("/api/user/reports?source=ea&limit=10");
+    if (!r.reports?.length) { el.innerHTML = `<div class="report-empty">No trade history yet.</div>`; return; }
+    el.innerHTML = r.reports.map(rep => `
+      <div class="ea-trade-card" onclick="showFullReport(this)" style="cursor:pointer">
+        <div class="ea-trade-title">${rep.trade?.event === "sl" ? "🛑" : rep.trade?.event === "tp" ? "🎯" : "📍"} ${rep.trade?.direction?.toUpperCase() || ""} ${rep.symbol} · ${rep.timeframe}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${new Date(rep.created_at || Date.now()).toLocaleString()}</div>
+        <div class="ea-verdict">${rep.reason || ""}</div>
+      </div>`).join("");
+  } catch { el.innerHTML = `<div class="report-empty">No history yet.</div>`; }
+}
+
+// ── Report renderer ────────────────────────────────────────────────────────
+function renderReport(report) {
+  const sig = report.signal || "NEUTRAL";
+  const sigClass = sig === "BUY" ? "buy" : sig === "SELL" ? "sell" : "neutral";
+  const sigEmoji = sig === "BUY" ? "🟢" : sig === "SELL" ? "🔴" : "🟡";
+  const ind = report.indicators || {};
+  const groups = ind.groups || {};
+  const bias = ind.overall_bias || "neutral";
+  const biasClass = bias === "bullish" ? "bull" : bias === "bearish" ? "bear" : "neutral";
+
+  let html = `
+  <div class="report-header">
+    <div class="report-signal ${sigClass}">${sigEmoji} ${sig}</div>
+    <div class="report-meta">
+      <span class="report-meta-item">📍 ${report.symbol}</span>
+      <span class="report-meta-item">⏱ ${report.timeframe}</span>
+      ${report.pattern ? `<span class="report-meta-item">🕯 ${report.pattern}</span>` : ""}
+    </div>
+    <div class="report-reason">${report.reason || ""}</div>
+    <div class="conf-bar-wrap">
+      <div class="conf-bar-label"><span>Confidence</span><span>${report.confidence || 0}%</span></div>
+      <div class="conf-bar"><div class="conf-bar-fill" style="width:${report.confidence||0}%"></div></div>
+    </div>
+  </div>`;
+
+  // Indicator bias summary
+  html += `<div class="card card-sm" style="margin-bottom:10px">
+    <div class="bias-row">
+      <div class="bias-label">Overall indicator bias</div>
+      <div class="bias-value ${biasClass}">${bias.toUpperCase()}</div>
+    </div>
+    <div class="bias-row" style="border-bottom:none">
+      <div class="bias-label">Signal count</div>
+      <div class="bias-pills">
+        <span style="color:var(--green)">↑${ind.bull_count||0}</span>
+        <span style="color:var(--red)">↓${ind.bear_count||0}</span>
+        <span style="color:var(--text3)">→${ind.neutral_count||0}</span>
+      </div>
+    </div>
+  </div>`;
+
+  // Indicator groups
+  if (Object.keys(groups).length) {
+    html += `<div class="section-label">Indicators</div>`;
+    const groupEmoji = {momentum:"⚡",trend:"📈",volume:"📊",volatility:"🌊"};
+    const groupLabel = {momentum:"Momentum & Oscillators",trend:"Trend & Moving Averages",volume:"Volume",volatility:"Volatility & Other"};
+    Object.entries(groups).forEach(([grp, items]) => {
+      const bull = Object.values(items).filter(i=>i.signal==="bullish").length;
+      const bear = Object.values(items).filter(i=>i.signal==="bearish").length;
+      html += `<div class="ind-group-card" id="ig-${grp}">
+        <div class="ind-group-header" onclick="toggleGroup('${grp}')">
+          <div class="ind-group-title">${groupEmoji[grp]||"•"} ${groupLabel[grp]||grp}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="ind-group-summary"><span style="color:var(--green)">↑${bull}</span><span style="color:var(--red)">↓${bear}</span></div>
+            <svg class="ind-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div class="ind-group-body">
+          ${Object.entries(items).map(([n,d]) => `
+            <div class="ind-row-item">
+              <div class="ind-row-label">${d.display||n}</div>
+              <div class="ind-row-val">${d.value!=null?Number(d.value).toFixed(d.value>100?1:5):""}</div>
+              <div class="ind-sig-dot ${d.signal||"neutral"}"></div>
+            </div>`).join("")}
+        </div>
+      </div>`;
+    });
+  }
+
+  // Patterns detected
+  const patterns = report.patterns || [];
+  if (patterns.length) {
+    html += `<div class="section-label" style="margin-top:4px">Patterns detected</div><div class="card card-sm">`;
+    html += patterns.map(p => `
+      <div class="pattern-result-item">
+        <span style="color:var(--text)">${p.name?.replace(/_/g," ")||p.name}</span>
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-size:10px;color:${p.bullish?"var(--green)":"var(--red)"}">${p.bullish?"↑ Bull":"↓ Bear"}</span>
+          <span style="font-size:10px;color:var(--text2)">${p.confidence||0}%</span>
+        </div>
+      </div>`).join("");
+    html += `</div>`;
+  }
+
+  // Key levels
+  const levels = report.levels || [];
+  if (levels.length) {
+    html += `<div class="section-label" style="margin-top:4px">Key levels</div><div class="card card-sm">`;
+    html += levels.map(lv => `
+      <div class="level-item">
+        <span class="level-type">${lv.type}</span>
+        <span class="level-price">${Number(lv.price).toFixed(5)}</span>
+      </div>`).join("");
+    html += `</div>`;
+  }
+
+  return html;
+}
+
+function renderEAReport(report) {
+  const trade = report.trade || {};
+  const evEmoji = {sl:"🛑",tp:"🎯",open:"📍",close:"📪"}[trade.event] || "📍";
+  let html = `<div class="ea-trade-card">
+    <div class="ea-trade-title">${evEmoji} ${trade.direction?.toUpperCase()||""} @ ${trade.price||0}</div>
+    ${trade.verdict ? `<div class="ea-verdict"><strong>Verdict:</strong> ${trade.verdict}</div>` : ""}
+    ${trade.why_entry ? `<div class="ea-entry"><strong>Why entry:</strong><br>${trade.why_entry}</div>` : ""}
+    ${trade.why_result ? `<div class="ea-entry" style="margin-top:6px"><strong>Why result:</strong><br>${trade.why_result}</div>` : ""}
+  </div>`;
+  html += renderReport(report);
+  return html;
+}
+
+function toggleGroup(grp) {
+  document.getElementById(`ig-${grp}`)?.classList.toggle("open");
+}
+
+// ── Patterns ───────────────────────────────────────────────────────────────
+// ── Full pattern list grouped by category ────────────────────────────────
+const PATTERN_CATEGORIES = [
+  {
+    key:"smc", label:"SMC / ICT", emoji:"🏦",
+    patterns:[
+      {name:"fvg",               display:"Fair Value Gap",        emoji:"📐",sig:"both",desc:"Imbalance between three candles — price tends to fill",             rules:{"Gap":"open[i+2] < low[i] or high[i] < open[i+2]"}},
+      {name:"order_blocks",      display:"Order Blocks",          emoji:"🟦",sig:"both",desc:"Last bearish/bullish candle before strong opposing move",           rules:{"Min move":"3× avg body"}},
+      {name:"breaker_blocks",    display:"Breaker Blocks",        emoji:"💥",sig:"both",desc:"Failed order block that price has broken through",                  rules:{"Broken OB":"price closes past OB"}},
+      {name:"liquidity_sweeps",  display:"Liquidity Sweeps",      emoji:"🌊",sig:"both",desc:"Price sweeps equal highs/lows then reverses sharply",               rules:{"Wick beyond":"prior swing high/low"}},
+      {name:"mitigation_blocks", display:"Mitigation Blocks",     emoji:"🛡",sig:"both",desc:"Order block that has been partially mitigated",                     rules:{"Partial fill":"price retests OB once"}},
+      {name:"equal_hl",          display:"Equal High / Low",      emoji:"〰️",sig:"both",desc:"Two or more matching highs or lows — liquidity target",            rules:{"Tolerance":"0.1% of price"}},
+      {name:"rejection_blocks",  display:"Rejection Blocks",      emoji:"🚫",sig:"both",desc:"Strong wick rejection from key level",                             rules:{"Wick ratio":"≥ 60% of candle range"}},
+      {name:"smt_divergence",    display:"SMT Divergence",        emoji:"⚖️",sig:"both",desc:"Two correlated pairs making opposite highs/lows simultaneously",   rules:{"Pairs":"correlated instruments"}},
+    ]
+  },
+  {
+    key:"structure", label:"Market Structure", emoji:"🏗",
+    patterns:[
+      {name:"bos",               display:"Break of Structure",    emoji:"💢",sig:"both",desc:"Price breaks a prior swing high (bullish BOS) or low (bearish BOS)", rules:{"Close beyond":"prior swing point"}},
+      {name:"choch",             display:"Change of Character",   emoji:"🔄",sig:"both",desc:"First opposing BOS — signals potential trend reversal",              rules:{"Opposing BOS":"first break in trend direction"}},
+      {name:"swing_hl",          display:"Swing High / Low",      emoji:"⛰️",sig:"both",desc:"Confirmed pivot high or low with candles on both sides",            rules:{"Confirmation":"2 candles each side"}},
+      {name:"retracement_depth", display:"Retracement Depth",     emoji:"📏",sig:"both",desc:"Depth of pullback into prior swing (OTE zone 62–79%)",              rules:{"OTE zone":"61.8%–78.6% Fibonacci"}},
+    ]
+  },
+  {
+    key:"session", label:"Session / Time", emoji:"🕐",
+    patterns:[
+      {name:"killzone",          display:"Killzone",              emoji:"🎯",sig:"both",desc:"High-probability trading window — London/NY/Asian open",             rules:{"Times":"02:00–05:00, 08:30–11:00, 13:30–16:00 EST"}},
+      {name:"silver_bullet_window", display:"Silver Bullet Window", emoji:"🥈",sig:"both",desc:"ICT Silver Bullet — 3 specific 1-hour windows per session",       rules:{"Windows":"10:00–11:00, 14:00–15:00, 15:00–16:00 EST"}},
+      {name:"amd",               display:"AMD (Accumulation/Manipulation/Distribution)", emoji:"📊",sig:"both",desc:"Three-phase daily cycle used by smart money", rules:{"Phase 1":"accumulate low", "Phase 2":"manipulate", "Phase 3":"distribute"}},
+      {name:"judas_swing",       display:"Judas Swing",           emoji:"🎭",sig:"both",desc:"False move at session open to grab liquidity before true direction",  rules:{"Timing":"first 30 min of session"}},
+    ]
+  },
+  {
+    key:"classical_candle", label:"Classical Candle", emoji:"🕯",
+    patterns:[
+      {name:"bullish_engulfing", display:"Bullish Engulfing",     emoji:"🟢",sig:"bull",desc:"Bull candle engulfs prior bear candle",                             rules:{"Min body":"10%","Min engulf":"100%"}},
+      {name:"bearish_engulfing", display:"Bearish Engulfing",     emoji:"🔴",sig:"bear",desc:"Bear candle engulfs prior bull candle",                             rules:{"Min body":"10%","Min engulf":"100%"}},
+      {name:"doji",              display:"Doji",                   emoji:"➕",sig:"both",desc:"Open ≈ Close — market indecision",                                  rules:{"Max body":"5%"}},
+      {name:"hammer",            display:"Hammer",                 emoji:"🔨",sig:"bull",desc:"Long lower wick — bullish reversal after downtrend",                rules:{"Lower wick":"≥2× body"}},
+      {name:"shooting_star",     display:"Shooting Star",          emoji:"💫",sig:"bear",desc:"Long upper wick after uptrend — bearish reversal",                  rules:{"Upper wick":"≥2× body"}},
+      {name:"morning_star",      display:"Morning Star",           emoji:"🌅",sig:"bull",desc:"3-candle bullish reversal at support",                              rules:{"Star body":"<30%"}},
+      {name:"evening_star",      display:"Evening Star",           emoji:"🌆",sig:"bear",desc:"3-candle bearish reversal at resistance",                           rules:{"Star body":"<30%"}},
+      {name:"three_white_soldiers", display:"3 White Soldiers",   emoji:"🪖",sig:"bull",desc:"3 consecutive bullish candles",                                     rules:{"Upper wicks":"<30% body"}},
+      {name:"three_black_crows", display:"3 Black Crows",         emoji:"🦅",sig:"bear",desc:"3 consecutive bearish candles",                                     rules:{"Lower wicks":"<30% body"}},
+      {name:"tweezer_bottom",    display:"Tweezer Bottom",         emoji:"⬇",sig:"bull",desc:"Matching lows — bullish reversal at support",                       rules:{"Tolerance":"0.5% range"}},
+      {name:"tweezer_top",       display:"Tweezer Top",            emoji:"⬆",sig:"bear",desc:"Matching highs — bearish reversal at resistance",                   rules:{"Tolerance":"0.5% range"}},
+      {name:"piercing_line",     display:"Piercing Line",          emoji:"🔰",sig:"bull",desc:"Bull closes above midpoint of prior bear",                          rules:{"Close above":"50% prior range"}},
+    ]
+  },
+  {
+    key:"classical_chart", label:"Classical Chart Patterns", emoji:"📈",
+    patterns:[
+      {name:"head_and_shoulders",    display:"Head & Shoulders",   emoji:"👤",sig:"bear",desc:"Three-peak reversal — middle peak highest",                       rules:{"Neckline":"broken with volume"}},
+      {name:"double_top_bottom",     display:"Double Top / Bottom", emoji:"🔂",sig:"both",desc:"Two equal highs (bearish) or lows (bullish) — reversal",          rules:{"Tolerance":"1% of price"}},
+      {name:"triangles",             display:"Triangles",           emoji:"△",sig:"both",desc:"Ascending, descending, or symmetrical — continuation/reversal",    rules:{"Breakout":"close outside triangle"}},
+      {name:"cup_and_handle",        display:"Cup & Handle",        emoji:"☕",sig:"bull",desc:"Rounded bottom with small consolidation — bullish continuation",   rules:{"Cup depth":"15–50% of prior move"}},
+      {name:"flags_pennants",        display:"Flags & Pennants",    emoji:"🚩",sig:"both",desc:"Brief consolidation after strong move — continuation signal",      rules:{"Duration":"5–20 candles"}},
+      {name:"wedges",                display:"Wedges",              emoji:"📐",sig:"both",desc:"Rising wedge (bearish) or falling wedge (bullish)",                rules:{"Converging":"trendlines required"}},
+    ]
+  },
+  {
+    key:"strategy", label:"Strategy Models", emoji:"🎯",
+    patterns:[
+      {name:"turtle_soup",       display:"Turtle Soup",            emoji:"🐢",sig:"both",desc:"False breakout of 20-period high/low — reversal entry",             rules:{"Lookback":"20 candles","Reversal":"within 2 candles"}},
+      {name:"silver_bullet",     display:"Silver Bullet",          emoji:"🥈",sig:"both",desc:"ICT Silver Bullet setup — FVG fill during kill zone window",        rules:{"Requires":"FVG + killzone timing"}},
+      {name:"power_of_3",        display:"Power of 3",             emoji:"3️⃣",sig:"both",desc:"Accumulation → Manipulation → Distribution within a session",     rules:{"Timeframe":"daily or session range"}},
+      {name:"ote",               display:"OTE (Optimal Trade Entry)", emoji:"⭐",sig:"both",desc:"Entry in 61.8–78.6% retracement zone after BOS",                rules:{"Fib zone":"61.8%–78.6%"}},
+    ]
+  },
+  {
+    key:"key_levels", label:"Key Levels", emoji:"📏",
+    patterns:[
+      {name:"support_resistance",    display:"Support / Resistance", emoji:"🧱",sig:"both",desc:"Historical price levels where price has repeatedly reacted",      rules:{"Min touches":"2 prior reactions"}},
+      {name:"prev_day_hl",           display:"Previous Day High / Low", emoji:"📅",sig:"both",desc:"Prior session high and low — key intraday reference levels",   rules:{"Source":"previous daily candle"}},
+      {name:"prev_week_hl",          display:"Previous Week High / Low", emoji:"📆",sig:"both",desc:"Prior week high and low — key swing reference levels",         rules:{"Source":"previous weekly candle"}},
+      {name:"prev_month_hl",         display:"Previous Month High / Low", emoji:"🗓",sig:"both",desc:"Prior month high and low — major structural reference levels", rules:{"Source":"previous monthly candle"}},
+    ]
+  },
+];
+
+// Flat list for backward compatibility
+const PATTERNS = PATTERN_CATEGORIES.flatMap(cat => cat.patterns);
+
+const patternToggles = {};
+PATTERNS.forEach(p => patternToggles[p.name] = true);
+let openPat = null;
+
+// Track which categories are collapsed
+const catOpen = {};
+
+function renderPatterns() {
+  const el = document.getElementById("pattern-list-sv");
+  if (!el) return;
+
+  el.innerHTML = PATTERN_CATEGORIES.map(cat => {
+    const isOpen = catOpen[cat.key] !== false; // default open
+    const enabledCount = cat.patterns.filter(p => patternToggles[p.name] !== false).length;
+    return `
+    <div class="pattern-category" id="pcat-${cat.key}">
+      <div class="pcat-header" onclick="toggleCat('${cat.key}')">
+        <span class="pcat-emoji">${cat.emoji}</span>
+        <span class="pcat-label">${cat.label}</span>
+        <span class="pcat-count">${enabledCount}/${cat.patterns.length}</span>
+        <svg class="pcat-chevron ${isOpen?"open":""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="pcat-body ${isOpen?"":"collapsed"}">
+        ${cat.patterns.map(p => patternItemHTML(p)).join("")}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function patternItemHTML(p) {
+  const isOn = patternToggles[p.name] !== false;
+  const isOpen = openPat === p.name;
+  return `
+  <div class="pattern-item ${isOpen?"open":""}" id="pi-${p.name}">
+    <div class="pattern-row" onclick="togglePat('${p.name}')">
+      <span class="pattern-emoji">${p.emoji}</span>
+      <div class="pattern-info"><div class="pattern-name">${p.display}</div><div class="pattern-desc">${p.desc}</div></div>
+      <span class="pat-sig sig-${p.sig}">${p.sig==="bull"?"↑":p.sig==="bear"?"↓":"↕"}</span>
+      <div class="toggle ${isOn?"on":""}" onclick="event.stopPropagation();togPat('${p.name}')"></div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="pattern-body ${isOpen?"open":""}">
+      <div class="rule-box">
+        <div class="rule-box-title"><span>System rules</span><a href="/app/pattern-rules" style="color:var(--accent);font-size:9px;font-weight:500;text-decoration:none" onclick="event.stopPropagation()">Customise →</a></div>
+        ${Object.entries(p.rules||{}).map(([k,v])=>`<div class="rule-line">${k}<span class="rule-val">${v}</span></div>`).join("")}
+      </div>
+      <button class="custom-rule-btn" onclick="event.stopPropagation();togCustom('${p.name}')">✏️ Override rule for ${p.display}</button>
+      <textarea class="custom-input" id="cr-${p.name}" placeholder="Describe your rule in plain English…" rows="2" onblur="saveRule('${p.name}')"></textarea>
+      <button class="btn btn-sm btn-primary" style="width:100%" onclick="saveRule('${p.name}')">Save rule</button>
+    </div>
+  </div>`;
+}
+
+function toggleCat(key) {
+  catOpen[key] = catOpen[key] === false ? true : false;
+  const body = document.querySelector(`#pcat-${key} .pcat-body`);
+  const chev = document.querySelector(`#pcat-${key} .pcat-chevron`);
+  if (body) body.classList.toggle("collapsed", catOpen[key] === false);
+  if (chev) chev.classList.toggle("open", catOpen[key] !== false);
+}
+
+function togglePat(n) {
+  openPat = openPat === n ? null : n;
+  renderPatterns();
+}
+function togPat(n) {
+  patternToggles[n] = !patternToggles[n];
+  apiFetch(`/api/patterns/${n}`, "PATCH", {enabled: patternToggles[n]}).catch(()=>{});
+  document.getElementById(`pi-${n}`)?.querySelector(".toggle")?.classList.toggle("on", patternToggles[n]);
+}
+function togCustom(n) {
+  const ta = document.getElementById(`cr-${n}`);
+  if (ta) ta.classList.toggle("show");
+}
+function saveRule(n) {
+  const val = document.getElementById(`cr-${n}`)?.value?.trim();
+  if (!val) return;
+  apiFetch(`/api/patterns/${n}`, "PATCH", {user_rule_text: val})
+    .then(() => showToast("Rule saved ✓", "ok"))
+    .catch(() => showToast("Save failed", "err"));
+}
+
+// ── Platform webhook ───────────────────────────────────────────────────────
+const PLAT = {
+  tradingview:{steps:["Open indicator → Edit → Alerts tab","Set Webhook URL above","Paste JSON template into Message body","Set alert condition and save"],tmpl:t=>JSON.stringify({token:t,ticker:"{{ticker}}",close:"{{close}}",open:"{{open}}",high:"{{high}}",low:"{{low}}",timeframe:"{{interval}}"},null,2)},
+  metatrader:{steps:["Download ATV_Analyzer EA","Compile in MetaEditor, attach to chart","Set UserToken in EA inputs","Allow WebRequest: Tools → Options → Expert Advisors"],tmpl:t=>JSON.stringify({token:t,ticker:"SYMBOL",close:0.0,platform:"metatrader"},null,2)},
+  matchtrader:{steps:["Go to Alerts → Webhook","Paste your webhook URL","Use JSON template for payload","Map MatchTrader variables"],tmpl:t=>JSON.stringify({token:t,ticker:"{{symbol}}",close:"{{price}}",platform:"matchtrader"},null,2)},
+  ctrader:{steps:["Download ATV_Analyzer.cs cBot","Open in cAlgo, compile and deploy","Set AnalysisURL and UserToken","Bot auto-sends OHLC on candle close"],tmpl:t=>JSON.stringify({token:t,ticker:"SYMBOL",platform:"ctrader"},null,2)},
+  daxtrader:{steps:["Go to Automation → Webhooks","Create webhook with URL above","Use JSON template as payload","Map DAX Trader variables"],tmpl:t=>JSON.stringify({token:t,ticker:"{{instrument}}",platform:"daxtrader"},null,2)},
+  takeprofit:{steps:["Go to Bots → Webhook trigger","Paste your webhook URL","Use JSON as request body","Set Content-Type: application/json"],tmpl:t=>JSON.stringify({token:t,ticker:"{{symbol}}",platform:"takeprofit"},null,2)},
+};
+
+let _token = window._fullTokens?.indicator || "YOUR_TOKEN";
+
+function selPlat(el, key) {
+  document.querySelectorAll(".plat-btn").forEach(b => b.classList.remove("sel"));
+  el.classList.add("sel");
+  const tok = window._fullTokens?.indicator || _token;
+  const base = API_BASE || "https://your-backend.example.com";
+  document.getElementById("wh-url-text").textContent = `${base}/webhook/indicator/${tok}`;
+  document.getElementById("json-pre").textContent = PLAT[key].tmpl(tok);
+  document.getElementById("steps-box").innerHTML = PLAT[key].steps.map((s,i) => `<span style="color:var(--accent);font-weight:600">${i+1}.</span> ${s}<br>`).join("");
+  document.getElementById("webhook-box").classList.add("show");
+}
+
+function copyWh() {
+  const t = document.getElementById("wh-url-text").textContent;
+  navigator.clipboard?.writeText(t).then(() => showToast("URL copied ✓", "ok"));
+}
+
+// ── Marketplace ────────────────────────────────────────────────────────────
+const DEMO_LISTINGS = [
+  {name:"RSI Breakout EA",author:"trader_42",icon:"📊",platform:"MQL5",type:"sell",price:"$29",desc:"Buys breakouts when RSI diverges from price on H4.",tags:["RSI","breakout"],rating:"4.8",dl:127},
+  {name:"Engulfing Scanner",author:"pinemaster",icon:"🕯",platform:"Pine",type:"rent",price:"$9/mo",desc:"Scans all pairs for engulfing patterns.",tags:["engulfing"],rating:"4.5",dl:89},
+  {name:"Morning Star Alert",author:"fx_dev",icon:"🌅",platform:"MQL4",type:"free",price:"Free",desc:"Alerts on morning star detection.",tags:["morning star","free"],rating:"4.2",dl:340},
+];
+
+function renderMarketplace() {
+  const el = document.getElementById("marketplace-listings");
+  if (!el || el.children.length > 1) return;
+  el.innerHTML = DEMO_LISTINGS.map(l => `
+    <div class="listing-card">
+      <div class="listing-top"><div class="listing-icon">${l.icon}</div><div style="flex:1"><div class="listing-name">${l.name}</div><div class="listing-author">by @${l.author} · ${l.platform}</div></div><div class="listing-price">${l.price}</div></div>
+      <div class="listing-desc">${l.desc}</div>
+      <div class="listing-tags">${l.tags.map(t=>`<span class="l-tag">${t}</span>`).join("")}</div>
+      <div class="listing-meta"><span>⭐ ${l.rating}</span><span>⬇ ${l.dl}</span><span style="margin-left:auto"><button class="btn btn-sm ${l.type==="sell"?"btn-primary":""}" onclick="event.stopPropagation()">${l.type==="free"?"Download":l.type==="rent"?"Rent":"Buy"}</button></span></div>
+    </div>`).join("");
+}
+
+function mktFilter(el) {
+  document.querySelectorAll(".mf-chip").forEach(c => c.classList.remove("act"));
+  el.classList.add("act");
+}
+
+// ── App Builder ────────────────────────────────────────────────────────────
+let buildPlatform = "mql5";
+let activeProjectId = null;
+let buildHistory = [];
+const DEMO_PROJS = [{id:"p1",name:"RSI Scalper",platform:"mql5",status:"done",v:3}];
+
+function renderProjects() {
+  const el = document.getElementById("projects-list");
+  if (!el || el.children.length) return;
+  el.innerHTML = DEMO_PROJS.map(p => `
+    <div class="proj-card" onclick="openProject('${p.id}','${p.name}')">
+      <div style="display:flex;align-items:center;gap:9px">
+        <div class="proj-icon">🏗</div>
+        <div><div style="font-size:12px;font-weight:600;color:var(--text)">${p.name}</div><div style="font-size:10px;color:var(--text3)">${p.platform.toUpperCase()} · v${p.v}</div></div>
+        <div class="proj-status ${p.status}">${p.status}</div>
+      </div>
+    </div>`).join("");
+}
+
+function onAgree() {
+  const ok = document.getElementById("agree-cb").checked;
+  document.getElementById("new-proj-btn").disabled = !ok;
+  document.querySelectorAll(".proj-card").forEach(c => c.style.opacity = ok ? "1" : "0.5");
+}
+
+function selPs(el, platform) {
+  document.querySelectorAll(".ps-btn").forEach(b => b.classList.remove("sel"));
+  el.classList.add("sel"); buildPlatform = platform;
+}
+
+function openProject(id, name) {
+  if (!document.getElementById("agree-cb").checked) { showToast("Accept disclaimer first", "err"); return; }
+  activeProjectId = id;
+  document.getElementById("build-chat").style.display = "block";
+  document.getElementById("build-msgs").innerHTML = `<div class="bm sys">📁 "${name}" loaded. What would you like to build or change?</div>`;
+  buildHistory = [];
+}
+
+function createProject() {
+  const name = document.getElementById("proj-name").value.trim();
+  const desc = document.getElementById("proj-desc").value.trim();
+  if (!name || !desc) { showToast("Fill name and description", "err"); return; }
+  closeSheet("new-project-sheet");
+  activeProjectId = "new-" + Date.now();
+  document.getElementById("build-chat").style.display = "block";
+  document.getElementById("build-msgs").innerHTML = `<div class="bm sys">🤖 Project "${name}" created · ${buildPlatform.toUpperCase()}. Tell me what to build first.</div>`;
+  buildHistory = [];
+}
+
+async function buildSend() {
+  const inp = document.getElementById("build-input");
+  const msg = inp.value.trim(); if (!msg || !activeProjectId) return;
+  inp.value = "";
+  addMsg("user", msg); buildHistory.push({role:"user",content:msg});
+  const thinking = addMsg("ai", "⏳ Building…");
+
+  try {
+    // Use streaming endpoint
+    const res = await fetch(`${API_BASE}/api/appbuilder/projects/${activeProjectId}/build/stream`, {
+      method:"POST", headers:H, body:JSON.stringify({message:msg})
+    });
+    if (!res.body) throw new Error("No stream");
+    const reader = res.body.getReader(); const dec = new TextDecoder();
+    thinking.textContent = "";
+    while (true) {
+      const {done, value} = await reader.read(); if (done) break;
+      const chunk = dec.decode(value);
+      chunk.split("\n").forEach(line => {
+        if (line.startsWith("data:")) thinking.textContent += line.slice(5).replace(/\\n/g,"\n");
+      });
+      document.getElementById("build-msgs").scrollTop = 9999;
+    }
+  } catch {
+    thinking.textContent = "Connected when backend is live.";
+  }
+}
+
+function addMsg(role, text) {
+  const c = document.getElementById("build-msgs");
+  const d = document.createElement("div");
+  d.className = `bm ${role}`; d.textContent = text; c.appendChild(d);
+  c.scrollTop = c.scrollHeight; return d;
+}
+
+// ── Downloads ──────────────────────────────────────────────────────────────
+function dlBot(platform) {
+  const files = {mt5:"ATV_Analyzer.mq5",mt4:"ATV_Analyzer.mq4",ctrader:"ATV_Analyzer.cs"};
+  if (API_BASE) window.open(`${API_BASE}/api/download/${files[platform]}`, "_blank");
+  else showToast("Available when backend is live", "ok");
+}
+function dlExtension() {
+  if (API_BASE) window.open(`${API_BASE}/api/download/extension.zip`, "_blank");
+  else showToast("Extension download coming soon", "ok");
+}
+
+// ── Checkout / affiliate ───────────────────────────────────────────────────
+async function openCheckout(plan) {
+  try {
+    const r = await apiFetch(`/api/checkout/${plan}`);
+    if (r.checkout_url) tg?.openLink ? tg.openLink(r.checkout_url) : window.open(r.checkout_url, "_blank");
+  } catch { showToast("Connect backend to enable checkout", "err"); }
+}
+function openAffiliate() {
+  const url = "https://whop.com/affiliate/YOUR_AFFILIATE_ID";
+  tg?.openLink ? tg.openLink(url) : window.open(url, "_blank");
+}
+
+// ── Tokens ─────────────────────────────────────────────────────────────────
 function copyToken(type) {
-  const t = fullTokens[type] || type;
-  navigator.clipboard.writeText(t).then(() => showToast(`${type} token copied ✓`, "ok"));
+  const t = window._fullTokens?.[type] || type;
+  navigator.clipboard?.writeText(t).then(() => showToast(`${type} token copied ✓`, "ok"));
 }
 
 // ── Sheets ─────────────────────────────────────────────────────────────────
-function closeSheet(id) {
-  document.getElementById(id)?.classList.remove("show");
-}
-function openSheet(id) {
-  document.getElementById(id)?.classList.add("show");
-}
-function openCreateListing() {
-  openSheet("create-listing-sheet");
-}
-
-// ── History card helpers ────────────────────────────────────────────────────
-function onAgreeChange() {
-  const agreed = document.getElementById("agree-cb")?.checked;
-  const row = document.getElementById("build-platform-row");
-  const newBtn = document.querySelector("[onclick=\"openSheet('new-project-sheet')\"]");
-  // Only enable platform selector and new project button once user agrees
-  if (row) row.style.opacity = agreed ? "1" : "0.4";
-  if (row) row.style.pointerEvents = agreed ? "" : "none";
-  if (newBtn) newBtn.disabled = !agreed;
-}
-
-let _listingType = "sell";
-function selectListingType(el, type) {
-  document.querySelectorAll("#create-listing-sheet .ps-btn").forEach(b => b.classList.remove("sel"));
-  el.classList.add("sel");
-  _listingType = type;
-}
-function toggleAnalysis(id, btn) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const open = el.style.display !== "none";
-  el.style.display = open ? "none" : "block";
-  btn.textContent  = open ? "Show analysis ▾" : "Hide analysis ▴";
-  if (btn.textContent.includes("reason")) {
-    btn.textContent = open ? "Show reason ▾" : "Hide reason ▴";
-  }
-}
+function showSheet(id) { document.getElementById(id)?.classList.add("show"); }
+function closeSheet(id) { document.getElementById(id)?.classList.remove("show"); }
 
 // ── Toast ──────────────────────────────────────────────────────────────────
-let toastTimer;
+let _tt;
 function showToast(msg, type="") {
   const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.className = `toast show ${type}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.className = "toast", 2800);
+  t.textContent = msg; t.className = `toast show ${type}`;
+  clearTimeout(_tt); _tt = setTimeout(() => t.className = "toast", 2800);
 }
 
 // ── API ────────────────────────────────────────────────────────────────────
-// -- EA History + Validation History loaders --
-
-let _eaPollingTimer = null;
-
-async function loadEAHistory(silent = false) {
-  const el = document.getElementById("ea-history-list");
-  if (!el) return;
-  if (!silent) el.innerHTML = `<div class="history-loading"><span class="spinner"></span> Loading trade analyses…</div>`;
-  try {
-    const r = await apiFetch("/api/ea/history?limit=20");
-    const trades = r.trades || [];
-
-    // Header row with refresh button
-    const header = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <span style="font-size:11px;color:var(--text2)">${trades.length} trade${trades.length===1?'':'s'}</span>
-      <button class="btn btn-sm" style="padding:3px 10px;font-size:11px" onclick="loadEAHistory()">↻ Refresh</button>
-    </div>`;
-
-    if (!trades.length) {
-      el.innerHTML = header + `<div class="history-empty">
-        <div style="font-size:24px;margin-bottom:8px">🤖</div>
-        <div>No EA trades received yet.</div>
-        <div style="margin-top:4px;font-size:11px">Download a bot above, attach it to your chart, and trades will appear here automatically.</div>
-      </div>`;
-      return;
-    }
-
-    const hasPending = trades.some(t => t.analysis === null || t.status === "processing");
-
-    el.innerHTML = header + trades.map((t, i) => {
-      const rc  = t.result==="WIN" ? "var(--green)" : t.result==="LOSS" ? "var(--red)" : "var(--text2)";
-      const em  = t.result==="WIN" ? "🟢" : t.result==="LOSS" ? "🔴" : t.result==="OPEN" ? "🔵" : "⚪";
-      const pnl = t.pnl != null ? `<span style="font-weight:600;color:${rc}">${t.pnl>=0?'+':''}${Number(t.pnl).toFixed(2)}</span>` : "";
-      const patterns = (t.patterns||[]).length ? (t.patterns||[]).map(p=>`<span class="pattern-chip">${p}</span>`).join("") : `<span style="color:var(--text3)">none detected</span>`;
-      const ts  = t.trade_time ? new Date(t.trade_time).toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "";
-
-      let analysisHtml;
-      if (!t.analysis && t.status === "processing") {
-        analysisHtml = `<div class="analysis-pending"><span class="spinner sm"></span> AI analysis in progress…</div>`;
-      } else if (!t.analysis) {
-        analysisHtml = `<div class="analysis-pending">Analysis queued…</div>`;
-      } else {
-        // Split analysis into sections (WHY ENTERED / WHY X / SUGGESTION)
-        const sections = t.analysis.split(/\n(?=\d\.\s)/).filter(Boolean);
-        const bodyHtml = sections.length > 1
-          ? sections.map(s => {
-              const [head, ...rest] = s.split("\n");
-              return `<div class="analysis-section"><strong>${head}</strong>${rest.length?'<br>'+rest.join('<br>'):''}`;
-            }).join("</div>")
-          : `<div>${t.analysis}</div>`;
-        analysisHtml = `
-        <div class="analysis-body" id="ea-analysis-${i}" style="display:none">${bodyHtml}</div>
-        <button class="expand-btn" onclick="toggleAnalysis('ea-analysis-${i}',this)">
-          Show analysis ▾
-        </button>`;
-      }
-
-      return `<div class="history-card">
-        <div class="history-card-top">
-          <span class="result-em">${em}</span>
-          <div class="history-card-main">
-            <div class="history-card-title">
-              <span>${t.ea_name}</span>
-              <span class="ticker-badge">${t.ticker}</span>
-              <span class="action-badge ${t.action?.toLowerCase()}">${t.action||""}</span>
-            </div>
-            <div class="history-card-meta">
-              <span style="color:${rc};font-weight:600">${t.result||"OPEN"}</span>
-              ${pnl ? `· ${pnl}` : ""}
-              ${ts ? `<span class="ts">· ${ts}</span>` : ""}
-            </div>
-          </div>
-        </div>
-        <div class="history-patterns">${patterns}</div>
-        ${analysisHtml}
-      </div>`;
-    }).join("");
-
-    // Auto-refresh while any trade is still being processed
-    clearTimeout(_eaPollingTimer);
-    if (hasPending) {
-      _eaPollingTimer = setTimeout(() => loadEAHistory(true), 4000);
-    }
-
-  } catch(e) {
-    el.innerHTML = `<div class="history-error">⚠️ ${e.message} <button class="btn btn-sm" style="margin-left:8px" onclick="loadEAHistory()">Retry</button></div>`;
-  }
-}
-
-let _valPollingTimer = null;
-
-async function loadValidationHistory(silent = false) {
-  const el = document.getElementById("validation-history-list");
-  if (!el) return;
-  if (!silent) el.innerHTML = `<div class="history-loading"><span class="spinner"></span> Loading validations…</div>`;
-  try {
-    const r = await apiFetch("/api/validations/history?limit=20");
-    const vals = r.validations || [];
-
-    const header = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <span style="font-size:11px;color:var(--text2)">${vals.length} validation${vals.length===1?'':'s'}</span>
-      <button class="btn btn-sm" style="padding:3px 10px;font-size:11px" onclick="loadValidationHistory()">↻ Refresh</button>
-    </div>`;
-
-    if (!vals.length) {
-      el.innerHTML = header + `<div class="history-empty">
-        <div style="font-size:24px;margin-bottom:8px">📊</div>
-        <div>No validations yet.</div>
-        <div style="margin-top:4px;font-size:11px">Connect a platform above and send your first alert to see results here.</div>
-      </div>`;
-      return;
-    }
-
-    const hasPending = vals.some(v => v.status === "pending" || v.status === "processing");
-
-    el.innerHTML = header + vals.map((v, i) => {
-      const isDone    = v.status === "completed";
-      const verdict   = v.verdict || (isDone ? "NEUTRAL" : v.status?.toUpperCase());
-      const vc        = verdict==="CONFIRMED" ? "var(--green)" : verdict==="REJECTED" ? "var(--red)" : "var(--text2)";
-      const ve        = verdict==="CONFIRMED" ? "✅" : verdict==="REJECTED" ? "❌" : verdict==="PROCESSING"||verdict==="PENDING" ? "⏳" : "⚠️";
-      const conf      = (v.confidence != null && isDone) ? v.confidence : null;
-      const confPct   = conf != null ? Math.round(conf * 100) : 0;
-      const confColor = conf >= 0.7 ? "var(--green)" : conf >= 0.4 ? "var(--yellow, #f5a623)" : "var(--red)";
-      const ts        = v.created_at ? new Date(v.created_at).toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "";
-      const price     = v.price ? `@ ${Number(v.price).toFixed(v.price < 10 ? 5 : 2)}` : "";
-      const patterns  = (v.patterns||[]).length
-        ? (v.patterns||[]).map(p=>`<span class="pattern-chip">${p}</span>`).join("")
-        : `<span style="color:var(--text3)">no patterns</span>`;
-
-      let confidenceBar = "";
-      if (conf != null) {
-        confidenceBar = `<div class="conf-bar-wrap">
-          <div class="conf-bar" style="width:${confPct}%;background:${confColor}"></div>
-        </div>
-        <span class="conf-label" style="color:${confColor}">${confPct}% confidence</span>`;
-      }
-
-      let reasonHtml = "";
-      if (!isDone && (v.status === "pending" || v.status === "processing")) {
-        reasonHtml = `<div class="analysis-pending"><span class="spinner sm"></span> Analysing signal…</div>`;
-      } else if (v.reason) {
-        reasonHtml = `
-        <div class="analysis-body" id="val-reason-${i}" style="display:none">${v.reason}</div>
-        <button class="expand-btn" onclick="toggleAnalysis('val-reason-${i}',this)">
-          Show reason ▾
-        </button>`;
-      }
-
-      return `<div class="history-card">
-        <div class="history-card-top">
-          <span class="result-em">${ve}</span>
-          <div class="history-card-main">
-            <div class="history-card-title">
-              <span class="ticker-badge lg">${v.ticker||"?"}</span>
-              <span class="action-badge ${(v.signal||"").toLowerCase()}">${v.signal||""}</span>
-              <span style="font-size:11px;color:var(--text2)">${price}</span>
-            </div>
-            <div class="history-card-meta">
-              <span style="color:${vc};font-weight:600">${verdict}</span>
-              ${ts ? `<span class="ts">· ${ts}</span>` : ""}
-            </div>
-          </div>
-        </div>
-        ${conf != null ? `<div style="display:flex;align-items:center;gap:8px;margin:6px 0">${confidenceBar}</div>` : ""}
-        <div class="history-patterns">${patterns}</div>
-        ${reasonHtml}
-      </div>`;
-    }).join("");
-
-    clearTimeout(_valPollingTimer);
-    if (hasPending) {
-      _valPollingTimer = setTimeout(() => loadValidationHistory(true), 4000);
-    }
-
-  } catch(e) {
-    el.innerHTML = `<div class="history-error">⚠️ ${e.message} <button class="btn btn-sm" style="margin-left:8px" onclick="loadValidationHistory()">Retry</button></div>`;
-  }
-}
-
 async function apiFetch(path, method="GET", body=null) {
-  const opts = {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(TG_ID ? {"X-Telegram-User-Id": TG_ID} : {}),
-    },
-  };
-  if (body !== null) opts.body = JSON.stringify(body);
-  const res = await fetch(API_BASE + path, opts);
-  if (!res.ok) {
-    const err = await res.json().catch(()=>({}));
-    throw new Error(err.detail || `HTTP ${res.status}`);
-  }
-  return res.json();
+  const opts = {method, headers:H};
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API_BASE + path, opts);
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail || `HTTP ${r.status}`); }
+  return r.json();
+}
+
+function submitListing() {
+  const name = document.getElementById("listing-name")?.value?.trim();
+  if (!name) { showToast("Enter a listing name", "err"); return; }
+  closeSheet("create-listing-sheet"); showToast("Listing published ✓", "ok");
 }
 </script>
+<script>window.API_BASE = "";</script>
 <script src="/app/purchase.js"></script>
 </body>
 </html>

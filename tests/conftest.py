@@ -49,6 +49,10 @@ async def db_session():
     from db.models_appbuilder import Base as AppBase  # noqa
     from db.models_marketplace import Base as MktBase  # noqa
     from db.models_pattern_rules import Base as RulesBase  # noqa
+    try:
+        from db.models_indicator_prefs import Base as IndBase  # noqa
+    except ImportError:
+        pass
 
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

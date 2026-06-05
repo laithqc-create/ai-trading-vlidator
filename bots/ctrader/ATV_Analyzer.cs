@@ -24,7 +24,7 @@ namespace cAlgo.Robots
         [Parameter("User Token", DefaultValue = "")]
         public string UserToken { get; set; }
 
-        [Parameter("OHLC Bars to Send", DefaultValue = 50, MinValue = 10, MaxValue = 200)]
+        [Parameter("OHLC Bars to Send", DefaultValue = 100, MinValue = 50, MaxValue = 500)]
         public int OHLCBars { get; set; }
 
         [Parameter("Auto Analyse on Candle Close", DefaultValue = true)]

@@ -11,7 +11,7 @@
 extern string WebhookURL   = "https://your-backend.example.com/webhook/ea/YOUR_TOKEN";
 extern string AnalysisURL  = "https://your-backend.example.com/api/ohlc/analyze";
 extern string UserToken    = "";
-extern int    OHLCBars     = 50;
+extern int    OHLCBars     = 100;  // 100+ recommended for accurate backend indicator calculations
 extern bool   AutoAnalyze  = true;
 extern bool   DrawResults  = true;
 extern color  BullishColor = clrLime;
