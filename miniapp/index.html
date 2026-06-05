@@ -590,9 +590,35 @@ textarea.custom-input.show{display:block}
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-handle"></div>
     <div class="sheet-title">List your app</div>
-    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">Create a product on <a href="https://whop.com" style="color:var(--accent)" target="_blank">Whop</a> first, then paste the checkout URL below.</div>
-    <input id="listing-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:10px" placeholder="App name">
-    <input id="listing-whop" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:12px" placeholder="https://whop.com/checkout/...">
+    <div style="font-size:11px;color:var(--text2);margin-bottom:12px;line-height:1.6">Create a product on <a href="https://whop.com" style="color:var(--accent)" target="_blank">Whop</a> first, then paste the checkout URL below.</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px">App name *</div>
+    <input id="listing-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:10px" placeholder="RSI Scalper EA">
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Description *</div>
+    <textarea id="listing-desc" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:12px;outline:none;resize:none;font-family:inherit;margin-bottom:10px" placeholder="What does your app do?"></textarea>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div style="flex:1">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Type</div>
+        <select id="listing-type" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:12px;outline:none;font-family:inherit">
+          <option value="sell">Sell (one-time)</option>
+          <option value="rent">Rent (monthly)</option>
+          <option value="free">Free</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Price (USD)</div>
+        <input id="listing-price" type="number" min="0" step="0.01" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit" placeholder="29.00">
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Platform</div>
+    <select id="listing-platform" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:12px;outline:none;font-family:inherit;margin-bottom:10px">
+      <option value="MQL5">MQL5 (MetaTrader 5)</option>
+      <option value="MQL4">MQL4 (MetaTrader 4)</option>
+      <option value="Pine Script">Pine Script (TradingView)</option>
+      <option value="Python">Python</option>
+      <option value="cTrader">cTrader</option>
+    </select>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Whop checkout URL *</div>
+    <input id="listing-whop" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:14px" placeholder="https://whop.com/checkout/...">
     <button class="btn btn-primary btn-full" onclick="submitListing()">Publish listing</button>
   </div>
 </div>
@@ -1075,22 +1101,66 @@ function copyWh() {
 }
 
 // ── Marketplace ────────────────────────────────────────────────────────────
-const DEMO_LISTINGS = [
-  {name:"RSI Breakout EA",author:"trader_42",icon:"📊",platform:"MQL5",type:"sell",price:"$29",desc:"Buys breakouts when RSI diverges from price on H4.",tags:["RSI","breakout"],rating:"4.8",dl:127},
-  {name:"Engulfing Scanner",author:"pinemaster",icon:"🕯",platform:"Pine",type:"rent",price:"$9/mo",desc:"Scans all pairs for engulfing patterns.",tags:["engulfing"],rating:"4.5",dl:89},
-  {name:"Morning Star Alert",author:"fx_dev",icon:"🌅",platform:"MQL4",type:"free",price:"Free",desc:"Alerts on morning star detection.",tags:["morning star","free"],rating:"4.2",dl:340},
-];
+// ── Marketplace ────────────────────────────────────────────────────────────
+let _mktFilter = "all";
 
-function renderMarketplace() {
+async function renderMarketplace() {
   const el = document.getElementById("marketplace-listings");
-  if (!el || el.children.length > 1) return;
-  el.innerHTML = DEMO_LISTINGS.map(l => `
-    <div class="listing-card">
-      <div class="listing-top"><div class="listing-icon">${l.icon}</div><div style="flex:1"><div class="listing-name">${l.name}</div><div class="listing-author">by @${l.author} · ${l.platform}</div></div><div class="listing-price">${l.price}</div></div>
-      <div class="listing-desc">${l.desc}</div>
-      <div class="listing-tags">${l.tags.map(t=>`<span class="l-tag">${t}</span>`).join("")}</div>
-      <div class="listing-meta"><span>⭐ ${l.rating}</span><span>⬇ ${l.dl}</span><span style="margin-left:auto"><button class="btn btn-sm ${l.type==="sell"?"btn-primary":""}" onclick="event.stopPropagation()">${l.type==="free"?"Download":l.type==="rent"?"Rent":"Buy"}</button></span></div>
-    </div>`).join("");
+  if (!el) return;
+  el.innerHTML = `<div style="text-align:center;color:var(--text3);padding:24px">Loading…</div>`;
+  try {
+    const res = await apiFetch(`/api/marketplace?limit=20`);
+    const listings = res.listings || [];
+    if (!listings.length) {
+      el.innerHTML = `<div style="text-align:center;color:var(--text3);padding:24px">No listings yet. Be the first to publish!</div>`;
+      return;
+    }
+    el.innerHTML = listings.map(l => {
+      const typeLabel = l.listing_type === "free" ? "Free" : l.listing_type === "rent" ? "Rent" : "Buy";
+      const btnClass  = l.listing_type === "sell" ? "btn-primary" : "";
+      const price     = l.listing_type === "free" ? "Free" : l.listing_type === "rent"
+        ? `$${l.price_usd}/mo` : `$${l.price_usd}`;
+      return `
+      <div class="listing-card" onclick="openListingDetail('${l.id}')">
+        <div class="listing-top">
+          <div class="listing-icon">📦</div>
+          <div style="flex:1">
+            <div class="listing-name">${escHtml(l.title || l.name || "")}</div>
+            <div class="listing-author">${escHtml(l.platform || "")} · ${l.purchases || 0} purchases</div>
+          </div>
+          <div class="listing-price">${price}</div>
+        </div>
+        <div class="listing-desc">${escHtml(l.description || "")}</div>
+        <div class="listing-meta">
+          <span>⭐ ${l.avg_rating ? l.avg_rating.toFixed(1) : "—"}</span>
+          <span style="margin-left:auto">
+            <button class="btn btn-sm ${btnClass}" onclick="event.stopPropagation();buyListing('${l.id}','${l.whop_checkout_url||""}','${l.listing_type}')">${typeLabel}</button>
+          </span>
+        </div>
+      </div>`;
+    }).join("");
+  } catch(e) {
+    el.innerHTML = `<div style="text-align:center;color:var(--text3);padding:24px">Could not load marketplace.</div>`;
+  }
+}
+
+async function openListingDetail(id) {
+  try {
+    const l = await apiFetch(`/api/marketplace/${id}`);
+    showToast(`${l.name} — $${l.price_usd || "Free"}`, "ok");
+  } catch {}
+}
+
+function buyListing(id, checkoutUrl, listingType) {
+  if (listingType === "free") {
+    showToast("Free — downloading…", "ok");
+    return;
+  }
+  if (checkoutUrl) {
+    tg?.openLink ? tg.openLink(checkoutUrl) : window.open(checkoutUrl, "_blank");
+  } else {
+    showToast("Checkout not yet configured for this listing", "err");
+  }
 }
 
 function mktFilter(el) {
@@ -1098,23 +1168,43 @@ function mktFilter(el) {
   el.classList.add("act");
 }
 
+function escHtml(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
 // ── App Builder ────────────────────────────────────────────────────────────
 let buildPlatform = "mql5";
 let activeProjectId = null;
 let buildHistory = [];
-const DEMO_PROJS = [{id:"p1",name:"RSI Scalper",platform:"mql5",status:"done",v:3}];
 
-function renderProjects() {
+async function renderProjects() {
   const el = document.getElementById("projects-list");
-  if (!el || el.children.length) return;
-  el.innerHTML = DEMO_PROJS.map(p => `
-    <div class="proj-card" onclick="openProject('${p.id}','${p.name}')">
-      <div style="display:flex;align-items:center;gap:9px">
-        <div class="proj-icon">🏗</div>
-        <div><div style="font-size:12px;font-weight:600;color:var(--text)">${p.name}</div><div style="font-size:10px;color:var(--text3)">${p.platform.toUpperCase()} · v${p.v}</div></div>
-        <div class="proj-status ${p.status}">${p.status}</div>
-      </div>
-    </div>`).join("");
+  if (!el) return;
+  if (!TG_ID) {
+    el.innerHTML = `<div style="text-align:center;color:var(--text3);padding:16px;font-size:12px">Open via Telegram to see your projects.</div>`;
+    return;
+  }
+  try {
+    const res = await apiFetch("/api/appbuilder/projects");
+    const projects = res.projects || [];
+    if (!projects.length) {
+      el.innerHTML = `<div style="text-align:center;color:var(--text3);padding:16px;font-size:12px">No projects yet. Create your first app below.</div>`;
+      return;
+    }
+    el.innerHTML = projects.map(p => `
+      <div class="proj-card" onclick="openProject('${p.id}','${escHtml(p.name)}')">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div class="proj-icon">🏗</div>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text)">${escHtml(p.name)}</div>
+            <div style="font-size:10px;color:var(--text3)">${(p.platform||"").toUpperCase()} · v${p.current_version||0}</div>
+          </div>
+          <div class="proj-status ${p.status||"done"}">${p.status||"done"}</div>
+        </div>
+      </div>`).join("");
+  } catch {
+    el.innerHTML = `<div style="text-align:center;color:var(--text3);padding:16px;font-size:12px">Could not load projects.</div>`;
+  }
 }
 
 function onAgree() {
@@ -1136,15 +1226,27 @@ function openProject(id, name) {
   buildHistory = [];
 }
 
-function createProject() {
+async function createProject() {
   const name = document.getElementById("proj-name").value.trim();
   const desc = document.getElementById("proj-desc").value.trim();
   if (!name || !desc) { showToast("Fill name and description", "err"); return; }
-  closeSheet("new-project-sheet");
-  activeProjectId = "new-" + Date.now();
-  document.getElementById("build-chat").style.display = "block";
-  document.getElementById("build-msgs").innerHTML = `<div class="bm sys">🤖 Project "${name}" created · ${buildPlatform.toUpperCase()}. Tell me what to build first.</div>`;
-  buildHistory = [];
+  try {
+    // 1 — create project
+    const proj = await apiFetch("/api/appbuilder/projects", "POST", {
+      name, description: desc, platform: buildPlatform
+    });
+    // 2 — agree disclaimer automatically (user ticked checkbox)
+    await apiFetch(`/api/appbuilder/projects/${proj.id}/agree`, "POST", {}).catch(()=>{});
+    closeSheet("new-project-sheet");
+    activeProjectId = proj.id;
+    document.getElementById("build-chat").style.display = "block";
+    document.getElementById("build-msgs").innerHTML =
+      `<div class="bm sys">🤖 Project "${escHtml(name)}" created · ${buildPlatform.toUpperCase()}. Tell me what to build first.</div>`;
+    buildHistory = [];
+    await renderProjects();
+  } catch(e) {
+    showToast(e.message || "Could not create project", "err");
+  }
 }
 
 async function buildSend() {
@@ -1155,24 +1257,51 @@ async function buildSend() {
   const thinking = addMsg("ai", "⏳ Building…");
 
   try {
-    // Use streaming endpoint
     const res = await fetch(`${API_BASE}/api/appbuilder/projects/${activeProjectId}/build/stream`, {
       method:"POST", headers:H, body:JSON.stringify({message:msg})
     });
     if (!res.body) throw new Error("No stream");
     const reader = res.body.getReader(); const dec = new TextDecoder();
     thinking.textContent = "";
+    let lastMeta = null;
+    let buf = "";
+
     while (true) {
       const {done, value} = await reader.read(); if (done) break;
-      const chunk = dec.decode(value);
-      chunk.split("\n").forEach(line => {
-        if (line.startsWith("data:")) thinking.textContent += line.slice(5).replace(/\\n/g,"\n");
-      });
+      buf += dec.decode(value);
+      const lines = buf.split("\n");
+      buf = lines.pop(); // keep incomplete line
+      for (const line of lines) {
+        if (line.startsWith("event: done")) {
+          // next line has data
+        } else if (line.startsWith("event: error_event")) {
+          thinking.textContent = "⚠️ Build error.";
+        } else if (line.startsWith("data:")) {
+          const raw = line.slice(5).replace(/\\n/g,"\n");
+          try { lastMeta = JSON.parse(raw); }
+          catch { thinking.textContent += raw; }
+        }
+      }
       document.getElementById("build-msgs").scrollTop = 9999;
     }
-  } catch {
-    thinking.textContent = "Connected when backend is live.";
+
+    // Show download button if code was produced
+    if (lastMeta?.has_code) {
+      const dlDiv = document.createElement("div");
+      dlDiv.style.cssText = "margin-top:8px";
+      dlDiv.innerHTML = `<button class="btn btn-sm btn-primary" onclick="downloadCode('${activeProjectId}')">⬇ Download code</button>`;
+      thinking.parentNode.appendChild(dlDiv);
+    }
+    if (lastMeta?.warnings?.length) {
+      addMsg("sys", "⚠️ " + lastMeta.warnings.join(" · "));
+    }
+  } catch(e) {
+    thinking.textContent = e.message || "Build error — backend may not be running.";
   }
+}
+
+async function downloadCode(projectId) {
+  window.open(`${API_BASE}/api/appbuilder/projects/${projectId}/download`, "_blank");
 }
 
 function addMsg(role, text) {
@@ -1232,10 +1361,32 @@ async function apiFetch(path, method="GET", body=null) {
   return r.json();
 }
 
-function submitListing() {
-  const name = document.getElementById("listing-name")?.value?.trim();
+async function submitListing() {
+  const name     = document.getElementById("listing-name")?.value?.trim();
+  const desc     = document.getElementById("listing-desc")?.value?.trim();
+  const type     = document.getElementById("listing-type")?.value || "sell";
+  const price    = parseFloat(document.getElementById("listing-price")?.value || "0") || 0;
+  const platform = document.getElementById("listing-platform")?.value || "MQL5";
+  const whopUrl  = document.getElementById("listing-whop")?.value?.trim();
+
   if (!name) { showToast("Enter a listing name", "err"); return; }
-  closeSheet("create-listing-sheet"); showToast("Listing published ✓", "ok");
+  if (!desc) { showToast("Add a description", "err"); return; }
+  if (type !== "free" && !whopUrl) { showToast("Paste your Whop checkout URL", "err"); return; }
+
+  try {
+    await apiFetch("/api/marketplace/listings", "POST", {
+      title: name, description: desc,
+      listing_type: type,
+      price_usd: type === "free" ? 0 : price,
+      platform,
+      whop_checkout_url: whopUrl || null,
+    });
+    closeSheet("create-listing-sheet");
+    showToast("Listing published ✓", "ok");
+    await renderMarketplace();
+  } catch(e) {
+    showToast(e.message || "Could not publish listing", "err");
+  }
 }
 </script>
 <script>window.API_BASE = "";</script>
