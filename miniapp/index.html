@@ -1395,7 +1395,11 @@ async function submitListing() {
   }
 }
 </script>
-<script>window.API_BASE = "";</script>
+<script>
+  // API_BASE is injected by serve.py when accessed via /app (FastAPI).
+  // For static deployments (Cloudflare Workers), set your backend URL here:
+  if (!window.API_BASE) window.API_BASE = "https://ai-trading-vlidator.onrender.com";
+</script>
 <script src="/app/purchase.js"></script>
 </body>
 </html>
