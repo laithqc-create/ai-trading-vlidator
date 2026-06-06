@@ -1320,11 +1320,11 @@ function addMsg(role, text) {
 function dlBot(platform) {
   const files = {mt5:"ATV_Analyzer.mq5", mt4:"ATV_Analyzer.mq4", ctrader:"ATV_Analyzer.cs"};
   const base = API_BASE || window.location.origin;
-  window.open(`${base}/api/download/${files[platform]}`, "_blank");
+  window.open(`${base}/download/${files[platform]}`, "_blank");
 }
 function dlExtension() {
   const base = API_BASE || window.location.origin;
-  window.open(`${base}/api/download/extension.zip`, "_blank");
+  window.open(`${base}/download/extension.zip`, "_blank");
 }
 
 // ── Checkout / affiliate ───────────────────────────────────────────────────

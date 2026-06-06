@@ -31,7 +31,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import FastAPI, Request, HTTPException, Header, Depends, BackgroundTasks
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from pydantic import BaseModel
@@ -182,8 +182,7 @@ app.include_router(ohlc_router)
 
 @app.get("/api/download/{filename}")
 async def download_bot_file(filename: str):
-    """Serve bot files for download from the bots/ directory."""
-    from fastapi.responses import FileResponse
+    """Serve bot/extension files as forced downloads."""
     from pathlib import Path
     allowed = {
         "ATV_Analyzer.mq5": "bots/mt5/ATV_Analyzer.mq5",
@@ -195,9 +194,36 @@ async def download_bot_file(filename: str):
         raise HTTPException(404, "File not found")
     path = Path(__file__).parent / allowed[filename]
     if not path.exists():
-        raise HTTPException(404, "File not built yet")
+        raise HTTPException(404, f"File not found on server: {filename}")
     media = "application/zip" if filename.endswith(".zip") else "application/octet-stream"
-    return FileResponse(path=str(path), filename=filename, media_type=media)
+    return FileResponse(
+        path=str(path),
+        filename=filename,
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/download/{filename}", response_class=HTMLResponse)
+async def download_page(filename: str):
+    """Human-friendly download page — auto-triggers download via JS."""
+    safe = filename.replace('"', '').replace("'", "").replace("/", "").replace("..", "")
+    allowed = {"ATV_Analyzer.mq5", "ATV_Analyzer.mq4", "ATV_Analyzer.cs", "extension.zip"}
+    if safe not in allowed:
+        raise HTTPException(404, "File not found")
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Downloading {safe}…</title>
+<style>body{{background:#0a0b0f;color:#e8eaf0;font-family:sans-serif;display:flex;
+align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px}}
+a{{color:#58a6ff;font-size:14px}}</style></head>
+<body>
+<div style="font-size:32px">⬇️</div>
+<div style="font-size:18px;font-weight:600">Downloading {safe}…</div>
+<div style="font-size:13px;color:#8b949e">If download doesn't start automatically,
+<a href="/api/download/{safe}">click here</a></div>
+<script>setTimeout(()=>window.location='/api/download/{safe}', 500);</script>
+</body></html>""")
 
 # ─── Root redirect → Mini App ─────────────────────────────────────────────────
 
