@@ -17,7 +17,7 @@ All detectors return PatternMatch objects with name, bullish, confidence, descri
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 
 
 @dataclass
@@ -588,7 +588,7 @@ class PatternEngine:
     # ── Session / Time ────────────────────────────────────────────
 
     def _current_hour_utc(self):
-        return datetime.utcnow().hour
+        return datetime.now(timezone.utc).replace(tzinfo=None).hour
 
     def _check_killzone(self, rules, matches, timestamps=None):
         r = rules.get("killzone")

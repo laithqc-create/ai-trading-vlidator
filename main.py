@@ -27,7 +27,7 @@ for _env_file in (_root / ".env", _root / "local_dev.env"):
 import json
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import FastAPI, Request, HTTPException, Header, Depends, BackgroundTasks
@@ -62,7 +62,7 @@ WEBHOOK_RATE_WINDOW = 60     # per 60 seconds
 
 def _check_webhook_rate(token: str) -> bool:
     """Returns True if request is allowed, False if rate limited."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     cutoff = now - timedelta(seconds=WEBHOOK_RATE_WINDOW)
     _webhook_buckets[token] = [t for t in _webhook_buckets[token] if t > cutoff]
     if len(_webhook_buckets[token]) >= WEBHOOK_RATE_LIMIT:
@@ -904,7 +904,7 @@ async def ea_webhook(
             action=action_upper,
             result=result_upper if result_upper in ("WIN", "LOSS") else "OPEN",
             pnl=payload.pnl,
-            trade_time=datetime.fromisoformat(payload.trade_time) if payload.trade_time else datetime.utcnow(),
+            trade_time=datetime.fromisoformat(payload.trade_time) if payload.trade_time else datetime.now(timezone.utc).replace(tzinfo=None),
             raw_payload=payload.model_dump(),
         )
         db.add(ea_log)
@@ -1198,7 +1198,7 @@ async def _whop_handle_marketplace_activated(data: dict):
                 lt = ListingType.SELL
 
             # Set expiry for rentals (30 days default)
-            expires_at = datetime.utcnow() + timedelta(days=30) if lt == ListingType.RENT else None
+            expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30) if lt == ListingType.RENT else None
 
             purchase = MarketplacePurchase(
                 listing_id=listing_uuid,

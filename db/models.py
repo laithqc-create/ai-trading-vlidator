@@ -2,7 +2,7 @@
 Database models for AI Trade Validator.
 Tables: users, subscriptions, validations, user_rules, ea_logs
 """
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum as PyEnum
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Text, Float, Boolean,
@@ -84,19 +84,24 @@ class User(Base):
     validations = relationship("Validation", back_populates="user", lazy="select")
     rules = relationship("UserRule", back_populates="user", lazy="select")
 
+    def _now_utc(self) -> datetime:
+        """Current UTC time as offset-naive (matches DB-stored values)."""
+        return datetime.now(timezone.utc).replace(tzinfo=None)
+
     def is_trial_active(self) -> bool:
         """True if user is in an unexpired 14-day trial."""
         if self.plan != PlanTier.TRIAL:
             return False
         if self.trial_expires_at is None:
             return False
-        from datetime import timezone
-        return datetime.utcnow() < self.trial_expires_at
+        exp = self.trial_expires_at.replace(tzinfo=None) if self.trial_expires_at.tzinfo else self.trial_expires_at
+        return self._now_utc() < exp
 
     def trial_days_remaining(self) -> int:
         if not self.is_trial_active():
             return 0
-        delta = self.trial_expires_at - datetime.utcnow()
+        exp = self.trial_expires_at.replace(tzinfo=None) if self.trial_expires_at.tzinfo else self.trial_expires_at
+        delta = exp - self._now_utc()
         return max(0, delta.days)
 
     def has_product_access(self, product_num: int) -> bool:

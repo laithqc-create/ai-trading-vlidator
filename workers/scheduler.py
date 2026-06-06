@@ -12,7 +12,7 @@ Or combined with worker:
   celery -A workers.celery_app worker --beat --loglevel=info
 """
 import asyncio
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from celery.utils.log import get_task_logger
 from celery.schedules import crontab
 
@@ -93,7 +93,7 @@ def expire_stale_validations():
         from db.models import Validation, ValidationStatus
         from sqlalchemy import update
 
-        cutoff = datetime.utcnow() - timedelta(minutes=10)
+        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=10)
 
         async with get_db_context() as db:
             result = await db.execute(
@@ -108,7 +108,7 @@ def expire_stale_validations():
                 .values(
                     status=ValidationStatus.FAILED,
                     error_message="Timed out — worker did not process within 10 minutes.",
-                    completed_at=datetime.utcnow(),
+                    completed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
                 .returning(Validation.id)
             )

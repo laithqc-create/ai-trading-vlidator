@@ -1,6 +1,6 @@
 """User service — all database operations for users."""
 import secrets
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, delete, update
@@ -139,7 +139,7 @@ class UserService:
         user = await self.get_or_create_user(telegram_id=telegram_id)
         if user.plan != PlanTier.FREE or user.trial_started_at is not None:
             return user
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC to match DB
         user.plan             = PlanTier.TRIAL
         user.trial_started_at = now
         user.trial_expires_at = now + timedelta(days=TRIAL_DURATION_DAYS)
@@ -149,7 +149,7 @@ class UserService:
 
     async def expire_trials(self) -> int:
         """Downgrade expired trials to FREE. Called by nightly Celery beat."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC to match DB
         result = await self.db.execute(
             update(User)
             .where(User.plan == PlanTier.TRIAL)
