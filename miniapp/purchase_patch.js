@@ -38,7 +38,7 @@ async function initTrialAndPurchase() {
 
     renderPlanBanner(planRes, trialRes, tgId);
     renderPurchaseButtons(planRes, trialRes, tgId);
-    renderAffiliateLink(tgId);
+    await renderAffiliateLink(tgId);
   } catch (e) {
     console.warn("[Purchase] Could not load plan/trial:", e);
   }
@@ -165,11 +165,22 @@ function checkAccess(plan, trial, productKey) {
 }
 
 // ── Affiliate link ────────────────────────────────────────────────────────────
-function renderAffiliateLink(tgId) {
+async function renderAffiliateLink(tgId) {
   // Find affiliate placeholder elements
-  document.querySelectorAll("[data-affiliate-placeholder]").forEach((el) => {
+  const els = document.querySelectorAll("[data-affiliate-placeholder]");
+  if (!els.length) return;
+
+  let url = `https://whop.com/affiliate?ref=${tgId}`;
+  try {
+    const r = await fetch(`${API_BASE}/api/affiliate/link`, {
+      headers: { "X-Telegram-User-Id": tgId },
+    }).then(res => res.json());
+    if (r.url) url = r.url;
+  } catch {}
+
+  els.forEach((el) => {
     el.innerHTML = `
-      <a href="https://whop.com/affiliate/YOUR_AFFILIATE_LINK?ref=${tgId}"
+      <a href="${url}"
          target="_blank"
          style="color:#58a6ff; font-size:13px; text-decoration:none; display:flex; align-items:center; gap:5px;">
         🤝 Earn with our affiliate program →

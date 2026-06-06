@@ -1082,14 +1082,16 @@ const PLAT = {
   takeprofit:{steps:["Go to Bots → Webhook trigger","Paste your webhook URL","Use JSON as request body","Set Content-Type: application/json"],tmpl:t=>JSON.stringify({token:t,ticker:"{{symbol}}",platform:"takeprofit"},null,2)},
 };
 
-let _token = window._fullTokens?.indicator || "YOUR_TOKEN";
+let _token = window._fullTokens?.indicator || "—";
 
 function selPlat(el, key) {
   document.querySelectorAll(".plat-btn").forEach(b => b.classList.remove("sel"));
   el.classList.add("sel");
   const tok = window._fullTokens?.indicator || _token;
-  const base = API_BASE || "https://your-backend.example.com";
-  document.getElementById("wh-url-text").textContent = `${base}/webhook/indicator/${tok}`;
+  const base = API_BASE || "";
+  document.getElementById("wh-url-text").textContent = base
+    ? `${base}/webhook/indicator/${tok}`
+    : `(load in Telegram to see your URL)`;
   document.getElementById("json-pre").textContent = PLAT[key].tmpl(tok);
   document.getElementById("steps-box").innerHTML = PLAT[key].steps.map((s,i) => `<span style="color:var(--accent);font-weight:600">${i+1}.</span> ${s}<br>`).join("");
   document.getElementById("webhook-box").classList.add("show");
@@ -1329,9 +1331,13 @@ async function openCheckout(plan) {
     if (r.checkout_url) tg?.openLink ? tg.openLink(r.checkout_url) : window.open(r.checkout_url, "_blank");
   } catch { showToast("Connect backend to enable checkout", "err"); }
 }
-function openAffiliate() {
-  const url = "https://whop.com/affiliate/YOUR_AFFILIATE_ID";
-  tg?.openLink ? tg.openLink(url) : window.open(url, "_blank");
+async function openAffiliate() {
+  try {
+    const r = await apiFetch("/api/affiliate/link");
+    const url = r.affiliate_url || r.url;
+    if (url) tg?.openLink ? tg.openLink(url) : window.open(url, "_blank");
+    else showToast("Affiliate link not configured yet", "err");
+  } catch { showToast("Connect backend to enable affiliate link", "err"); }
 }
 
 // ── Tokens ─────────────────────────────────────────────────────────────────

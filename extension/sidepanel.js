@@ -695,10 +695,10 @@ async function extSelectPlatform(platform) {
   if (!box) return;
 
   // Get token
-  let token = state.token || "YOUR_TOKEN";
+  let token = state.token || "—";
   try {
     const r = await apiGet("/api/user/tokens");
-    token = r.indicator || token;
+    token = r.indicator || r.screenshot || token;
   } catch(e) {}
 
   const pd = EXT_PLATFORM_DATA[platform];
