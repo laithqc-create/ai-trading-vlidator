@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>AI Trade Validator</title>
+<!-- API_BASE: injected by serve.py when accessed via Render /app route.
+     For static hosting (Cloudflare Workers), falls back to Render URL. -->
+<script>window.API_BASE = window.API_BASE || "https://ai-trading-vlidator.onrender.com";</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1315,13 +1318,13 @@ function addMsg(role, text) {
 
 // ── Downloads ──────────────────────────────────────────────────────────────
 function dlBot(platform) {
-  const files = {mt5:"ATV_Analyzer.mq5",mt4:"ATV_Analyzer.mq4",ctrader:"ATV_Analyzer.cs"};
-  if (API_BASE) window.open(`${API_BASE}/api/download/${files[platform]}`, "_blank");
-  else showToast("Available when backend is live", "ok");
+  const files = {mt5:"ATV_Analyzer.mq5", mt4:"ATV_Analyzer.mq4", ctrader:"ATV_Analyzer.cs"};
+  const base = API_BASE || window.location.origin;
+  window.open(`${base}/api/download/${files[platform]}`, "_blank");
 }
 function dlExtension() {
-  if (API_BASE) window.open(`${API_BASE}/api/download/extension.zip`, "_blank");
-  else showToast("Extension download coming soon", "ok");
+  const base = API_BASE || window.location.origin;
+  window.open(`${base}/api/download/extension.zip`, "_blank");
 }
 
 // ── Checkout / affiliate ───────────────────────────────────────────────────
@@ -1394,11 +1397,6 @@ async function submitListing() {
     showToast(e.message || "Could not publish listing", "err");
   }
 }
-</script>
-<script>
-  // API_BASE is injected by serve.py when accessed via /app (FastAPI).
-  // For static deployments (Cloudflare Workers), set your backend URL here:
-  if (!window.API_BASE) window.API_BASE = "https://ai-trading-vlidator.onrender.com";
 </script>
 <script src="/app/purchase.js"></script>
 </body>
