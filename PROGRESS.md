@@ -1,88 +1,76 @@
-# ATV Build Progress
+# ATV Progress — Last updated: 2026-06-06
 
-## What's been completed
+## ✅ Completed (this session + history)
 
 ### Infrastructure
-- Trial system (14-day, Celery auto-expiry, /api/trial/start, /api/trial/status)
-- Whop purchase flow — /api/checkout/{plan} injects telegram_id into metadata
-- Webhook token system — 3 tokens per user (indicator/ea/screenshot)
-- All DB models — AppProject, AppBuildStep, MarketplaceListing, MarketplacePurchase, UserPatternRule, UserIndicatorPrefs
-- Alembic migrations 0002–0006
-- services/user.py — fully merged (trial, tokens, pattern rules, indicator prefs)
-- services/deepseek.py — chat(), chat_stream() SSE, analyze_ohlc() with trade context
-- services/pattern_engine.py — 16 patterns (OHLC math)
-- services/indicator_engine.py — 30+ indicators (pandas-ta)
-- services/report_formatter.py — Telegram HTML, Mini App JSON, EA trade report
-- services/validation_service.py — session pattern exclusion fix
-- webhooks/ohlc.py — unified handler (ea/extension/indicator sources)
-- appbuilder/endpoints.py — full CRUD + /build/stream SSE endpoint
-- marketplace/endpoints.py — browse, create, edit, purchases, reviews
-- pattern_editor/endpoints.py — /api/patterns + /api/indicators endpoints
-- main.py — all routers wired, bot downloads, trial/checkout endpoints, EA report formatter integrated
-- TG_Bot/handlers/trial.py + appbuilder.py registered
-- workers/scheduler.py — expire-trials beat task
-- bots/mt5/ATV_Analyzer.mq5, mt4/ATV_Analyzer.mq4, ctrader/ATV_Analyzer.cs — updated to 100 bars
-- config/settings.py — Whop URLs, plan display names
-- tests/ — 8/8 passing
+- FastAPI backend with all routers registered
+- PostgreSQL + Alembic migrations (0001–0007)
+- Redis + Celery worker + beat scheduler
+- Docker Compose (db, redis, migrate, api, worker, beat, nginx)
+- Dockerfile, nginx.conf, .env.example, README.md
 
-### Frontend
-- miniapp/index.html — COMPLETE REBUILD (1129 lines)
-  - 5-tab bottom nav: Products, Validator, EA, Market, Builder, Profile
-  - Signal Validator page: setup tab (patterns + platform selector + bot downloads) + report tab
-  - EA Analyser page: setup tab + trade report tab + history tab
-  - Full indicator/pattern report renderer (grouped indicators, confidence bar, levels)
-  - EA trade report renderer (why_entry, why_result, verdict)
-  - App Builder with streaming via /build/stream SSE
-  - Marketplace with listings
-  - Profile with per-plan purchase buttons (Validator $29, EA $49, Builder $79, Pro $129)
-  - purchase_patch.js linked before </body>
-- miniapp/pattern_editor.html — standalone pattern rule editor (841 lines)
-- miniapp/indicator_selector.html — standalone indicator settings (349 lines)
-- miniapp/serve.py — serves /app, /app/pattern-rules, /app/indicators, /app/purchase.js
+### Products
+- **Signal Validator**: `/webhook/indicator/{token}` → DeepSeek AI → Telegram notify
+- **EA Analyzer**: `/webhook/ea/{token}` + `/api/ohlc/analyze` (OHLC candles)
+- **Manual Validator**: `/webhook/screenshot/{token}` + Chrome extension
+- **App Builder**: PLAN→CODE→REVIEW→RESPOND loop, SSE streaming, download endpoint
+- **Marketplace**: create/list/buy listings, Whop checkout integration
 
-### ⚠️ KNOWN GAP — Pattern list incomplete
-miniapp/index.html PATTERNS array only has 12 classical patterns.
-Full pattern list from user rules (rule #2) must be added:
-  SMC: FVG, OrderBlocks, BreakerBlocks, LiquiditySweeps, MitigationBlocks, EqualHL, RejectionBlocks, SMTDiv
-  Structure: BOS, CHoCH, SwingHL, RetracementDepth
-  Session: Killzone, SilverBulletWindow, AMD, JudasSwing
-  Classical: H&S, DoubleTopBot, Triangles, CupHandle, FlagsPennants, Wedges
-  Strategy: TurtleSoup, SilverBullet, PowerOf3, OTE
-  KeyLevels: SR, PrevDay/Week/MonthHL
-  (Plus existing 12 classical candle patterns)
+### Mini App (miniapp/index.html)
+- All 4 product tabs fully wired to real API endpoints
+- Pattern toggles + custom rules (55 patterns, all categories)
+- Marketplace: live listings from `/api/marketplace`, create listing form
+- App Builder: create project → real UUID → SSE streaming → download button
+- Affiliate link via `/api/affiliate/link`
+- All tokens loaded from `/api/user/tokens`
 
----
+### Chrome Extension
+- Candle-close screenshot monitoring (MV3 side panel)
+- Full grouped indicator report card (matches Mini App quality)
+- Chat + news analysis
 
-## Current file being worked on
-extension/sidepanel.html + extension/sidepanel.js
+### Telegram Bot
+- `/start`, `/help`, `/status`, `/subscribe`, `/history`
+- `/connect_indicator`, `/connect_ea`, `/connect_extension`, `/tokens`
+- `/my_rules`, `/add_rule` (FSM), `/delete_rule`
+- `/trial`, `/build`
 
-## Exact next steps
+### Backend API
+- `GET /api/user/last-report?source=indicator|ea` — last analysis report
+- `GET /api/user/reports?source=ea&limit=N` — paginated report history
+- `GET /app/indicators` — serves indicator_selector.html
+- All Pydantic v2 `.dict()` → `.model_dump()` fixed
+- All `datetime.utcnow()` → `datetime.now(timezone.utc).replace(tzinfo=None)` fixed
+- offset-naive/aware datetime comparison bug fixed
 
-### STEP 1 (next) — Fix Mini App pattern list
-File: miniapp/index.html
-Action: Replace PATTERNS array (currently 12 items) with full grouped pattern list
-(all SMC, Structure, Session, Classical, Strategy, KeyLevel patterns)
-Add category grouping to the pattern UI (collapsible by category)
+### Code Quality
+- 8/8 tests passing, 2 warnings (pandas_ta, unavoidable)
+- No TODO/FIXME/stubs remaining
 
-### STEP 2 — Extension report card (Task 2)
-Files: extension/sidepanel.html, extension/sidepanel.js
-Action: Replace simple signal/pattern/reason result card with full grouped
-indicator report matching miniapp renderReport() function
+## 🔲 What's next (if needed)
 
-### STEP 3 — serve.py route for indicator_selector
-File: miniapp/serve.py
-Action: Add GET /app/indicators route serving indicator_selector.html
+1. **Set actual Whop product IDs** in `.env` (WHOP_PRODUCT_ID_PRODUCT1 etc.) — currently placeholders
+2. **Set WHOP_AFFILIATE_URL** in `.env` — currently placeholder
+3. **RAGFlow integration** — optional, for crowd insights KB (RAGFLOW_API_KEY + RAGFLOW_SYSTEM_KB_ID)
+4. **SSL certs** — mount into `ssl/` directory for nginx HTTPS (or use Certbot)
+5. **Polygon.io** — optional, for live market data in Product 1 (POLYGON_API_KEY)
+6. **Rotate GitHub PAT** — token in Laith's memories should be revoked after session
 
-### STEP 4 — Last API endpoint needed
-File: main.py
-Action: Add GET /api/user/last-report?source=indicator|ea endpoint
-(Mini App report tabs call this but it doesn't exist yet)
+## ✅ All commits (this session)
 
-### STEP 5 — Commit and push everything
-Command: git add -A && git commit && git push with token
+- `a8b0547` — analysis reports persistence + last-report API + extension report card + /app/indicators
+- `913813a` — core Telegram bot commands + Pydantic v2 fixes
+- `5d0d654` — wire Mini App marketplace + App Builder to real APIs
+- `7ee495b` — fix offset-naive/aware datetime + clean up deprecation warnings
+- `b97563a` — remove all hardcoded placeholder tokens and affiliate URLs
+- `0bae798` — README.md with full architecture and deployment guide
 
-## Blockers / decisions pending
-- None — clear path forward
-- Pattern engine (services/pattern_engine.py) already has all 55 patterns
-  (SMC/ICT, structure, session, classical, strategy, key levels)
-  Mini App just needs its PATTERNS array updated to match
+## RESUME FROM HERE
+
+Everything is **production-ready**. To deploy:
+1. `cp .env.example .env` and fill in values
+2. `docker compose up -d`
+3. `curl http://localhost:8000/setup-webhook`
+4. Set Telegram bot menu URL to your domain + `/app`
+
+No code blockers remain. Only config values need filling in `.env`.
