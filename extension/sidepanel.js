@@ -22,17 +22,20 @@ let state = {
   currentSymbol: null,
 };
 
+// Null-safe getElementById — prevents crashes when an element is missing
+const $id = (id) => document.getElementById(id);
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadSettings();
-  initTabs();
-  initMonitorTab();
-  initChatTab();
-  initNewsTab();
-  initSettingsTab();
-  await loadPlanBanner();
-  await loadStats();
-  listenFromBackground();
+  try { await loadSettings(); } catch(e) { console.error("loadSettings:", e); }
+  try { initTabs(); } catch(e) { console.error("initTabs:", e); }
+  try { initMonitorTab(); } catch(e) { console.error("initMonitorTab:", e); }
+  try { initChatTab(); } catch(e) { console.error("initChatTab:", e); }
+  try { initNewsTab(); } catch(e) { console.error("initNewsTab:", e); }
+  try { initSettingsTab(); } catch(e) { console.error("initSettingsTab:", e); }
+  try { await loadPlanBanner(); } catch(e) { console.error("loadPlanBanner:", e); }
+  try { await loadStats(); } catch(e) { console.error("loadStats:", e); }
+  try { listenFromBackground(); } catch(e) { console.error("listenFromBackground:", e); }
 });
 
 // ── Settings persistence ──────────────────────────────────────────────────────
@@ -529,9 +532,10 @@ async function loadStats() {
   if (!state.token && !state.telegramId) return;
   try {
     const stats = await apiGet("/api/user/stats");
-    document.getElementById("stat-validations").textContent = stats.validations ?? "—";
-    document.getElementById("stat-accuracy").textContent = stats.accuracy ? `${stats.accuracy}%` : "—";
-    document.getElementById("stat-generations").textContent = stats.generations ?? "—";
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set("stat-validations", stats.validations ?? "—");
+    set("stat-accuracy",    stats.accuracy ? `${stats.accuracy}%` : "—");
+    set("stat-generations", stats.generations ?? "—");
   } catch (e) { /* silent */ }
 }
 
