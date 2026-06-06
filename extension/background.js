@@ -9,7 +9,7 @@
 
 // API_BASE is read from chrome.storage.local so users can configure it in Settings.
 // Default points to production; overridden at install time or via the extension settings tab.
-const DEFAULT_API_BASE = "https://api.aitradevalidator.com";
+const DEFAULT_API_BASE = "https://ai-trading-vlidator.onrender.com";
 let _apiBase = DEFAULT_API_BASE;
 
 // Load the stored backend URL once at service-worker startup

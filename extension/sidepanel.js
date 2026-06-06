@@ -15,7 +15,7 @@
 let state = {
   token: null,
   telegramId: null,
-  backendUrl: "https://api.aitradevalidator.com",
+  backendUrl: "https://ai-trading-vlidator.onrender.com",
   monitoring: false,
   lastScreenshotId: null,
   chatHistory: [],
@@ -40,7 +40,7 @@ async function loadSettings() {
   const data = await chrome.storage.local.get(["token", "telegramId", "backendUrl"]);
   state.token = data.token || null;
   state.telegramId = data.telegramId || null;
-  state.backendUrl = data.backendUrl || "https://api.aitradevalidator.com";
+  state.backendUrl = data.backendUrl || "https://ai-trading-vlidator.onrender.com";
 }
 
 async function saveSettings() {
@@ -584,8 +584,7 @@ async function handleNewsSelection(text, detectedSymbol) {
 
 // ── Mini App opener ───────────────────────────────────────────────────────────
 function openMiniApp(section) {
-  // Open Telegram Mini App or hosted web app
-  const base = state.backendUrl.replace(":8000", ":3000") + "/miniapp";
+  const base = state.backendUrl + "/app";
   chrome.tabs.create({ url: `${base}#${section}` });
 }
 
