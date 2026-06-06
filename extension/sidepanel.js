@@ -66,8 +66,8 @@ function initTabs() {
 
 // ── Plan banner ───────────────────────────────────────────────────────────────
 async function loadPlanBanner() {
-  if (!state.telegramId || !state.backendUrl) {
-    setPlanBanner("Not connected", "Set your Telegram ID in Settings", true);
+  if (!state.token && !state.telegramId) {
+    setPlanBanner("Not connected", "Enter your API token in Settings to get started", true);
     return;
   }
   try {
@@ -124,7 +124,7 @@ function setPlanBanner(name, sub, showUpgrade) {
 }
 
 async function startTrial() {
-  if (!state.telegramId) { alert("Set your Telegram ID in Settings first."); return; }
+  if (!state.token && !state.telegramId) { alert("Enter your API token in Settings first."); return; }
   try {
     const r = await apiPost("/api/trial/start", {});
     if (r.ok) {
@@ -526,7 +526,7 @@ function renderSettingsValues() {
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 async function loadStats() {
-  if (!state.telegramId) return;
+  if (!state.token && !state.telegramId) return;
   try {
     const stats = await apiGet("/api/user/stats");
     document.getElementById("stat-validations").textContent = stats.validations ?? "—";
@@ -591,6 +591,7 @@ function openMiniApp(section) {
 // ── API helpers ───────────────────────────────────────────────────────────────
 async function apiGet(path) {
   const headers = {};
+  if (state.token)      headers["X-ATV-Token"]        = state.token;
   if (state.telegramId) headers["X-Telegram-User-Id"] = state.telegramId;
   const res = await fetch(state.backendUrl + path, { headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -599,6 +600,7 @@ async function apiGet(path) {
 
 async function apiPost(path, body) {
   const headers = { "Content-Type": "application/json" };
+  if (state.token)      headers["X-ATV-Token"]        = state.token;
   if (state.telegramId) headers["X-Telegram-User-Id"] = state.telegramId;
   const res = await fetch(state.backendUrl + path, {
     method: "POST",

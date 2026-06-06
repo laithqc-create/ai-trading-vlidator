@@ -71,6 +71,37 @@ def _check_webhook_rate(token: str) -> bool:
     return True
 
 
+async def _resolve_user(request: Request, db, require: bool = True):
+    """
+    Dual-auth helper — accepts either:
+      • X-Telegram-User-Id: <int>   (Mini App / Telegram)
+      • X-ATV-Token: <token>        (Chrome Extension — standalone, no Telegram needed)
+
+    Returns User object or None (if require=False) / raises 401 (if require=True).
+    """
+    from services.user import UserService
+    user_svc = UserService(db)
+
+    # 1. Try token-based auth first (extension standalone mode)
+    token = request.headers.get("X-ATV-Token", "").strip()
+    if token:
+        user = await user_svc.get_user_by_token(token, token_type="any")
+        if user:
+            return user
+        if require:
+            raise HTTPException(401, "Invalid token")
+        return None
+
+    # 2. Fall back to Telegram ID (Mini App)
+    tid_str = request.headers.get("X-Telegram-User-Id", "").strip()
+    if tid_str and tid_str.isdigit():
+        return await user_svc.get_or_create_user(telegram_id=int(tid_str))
+
+    if require:
+        raise HTTPException(401, "Missing auth: provide X-ATV-Token or X-Telegram-User-Id")
+    return None
+
+
 # ─── Lifespan ─────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
@@ -215,81 +246,53 @@ async def health_check():
 
 @app.get("/api/user/stats")
 async def api_user_stats(request: Request):
-    """
-    Return live stats for the Mini App hero section.
-    Identifies user via X-Telegram-User-Id header (set by Mini App JS).
-    Falls back to zeros if user not found.
-    """
-    telegram_id_str = request.headers.get("X-Telegram-User-Id", "")
-    if not telegram_id_str or not telegram_id_str.isdigit():
-        return {"validations": 0, "generations": 0, "accuracy": 0}
-
-    telegram_id = int(telegram_id_str)
+    """Return live stats. Accepts X-ATV-Token (extension) or X-Telegram-User-Id (Mini App)."""
     async with AsyncSessionLocal() as db:
-        user_svc = UserService(db)
-        user = await user_svc.get_user_by_telegram_id(telegram_id=telegram_id)
-        if user is None:
+        user = await _resolve_user(request, db, require=False)
+        if not user:
             return {"validations": 0, "generations": 0, "accuracy": 0}
 
-        # Count total validations from DB
         from sqlalchemy import func
         from db.models import Validation
-        total_q = await db.execute(
-            select(func.count()).where(Validation.user_id == user.id)
-        )
+        total_q = await db.execute(select(func.count()).where(Validation.user_id == user.id))
         total_validations = total_q.scalar() or 0
-
-        # Count wins for accuracy using user_outcome field
-        wins_q = await db.execute(
-            select(func.count()).where(
-                Validation.user_id == user.id,
-                Validation.user_outcome == "WIN",
-            )
-        )
+        wins_q = await db.execute(select(func.count()).where(
+            Validation.user_id == user.id, Validation.user_outcome == "WIN"))
         wins = wins_q.scalar() or 0
         accuracy = round((wins / total_validations * 100) if total_validations > 0 else 0)
 
-        generations = user.total_generations or 0
-
     return {
         "validations": total_validations,
-        "generations": generations,
+        "generations": user.total_generations or 0,
         "accuracy": accuracy,
     }
 
 
 @app.get("/api/user/plan")
 async def api_user_plan(request: Request):
-    """
-    Return the user's current plan for the Mini App profile tab.
-    Identifies user via X-Telegram-User-Id header.
-    """
-    telegram_id_str = request.headers.get("X-Telegram-User-Id", "")
-    if not telegram_id_str or not telegram_id_str.isdigit():
-        return {"plan": "free", "plan_label": "Free", "expires_at": None}
-
-    telegram_id = int(telegram_id_str)
+    """Return the user's current plan. Accepts X-ATV-Token or X-Telegram-User-Id."""
     async with AsyncSessionLocal() as db:
-        user_svc = UserService(db)
-        user = await user_svc.get_user_by_telegram_id(telegram_id=telegram_id)
-        if user is None:
+        user = await _resolve_user(request, db, require=False)
+        if not user:
             return {"plan": "free", "plan_label": "Free", "expires_at": None}
 
         plan_labels = {
             "free":     "Free",
+            "trial":    "Trial",
             "product1": "Indicator Validator",
             "product2": "EA Analyzer",
             "product3": "Manual Validator",
             "pro":      "Pro Bundle",
         }
-        expires = user.plan_expires_at.isoformat() if user.plan_expires_at else None
-        plan_val   = user.plan.value
-        plan_label = plan_labels.get(plan_val, "Free")
+        plan_val = user.plan.value if user.plan else "free"
+        expires  = user.plan_expires_at.isoformat() if user.plan_expires_at else None
 
     return {
         "plan":       plan_val,
-        "plan_label": plan_label,
+        "plan_label": plan_labels.get(plan_val, "Free"),
         "expires_at": expires,
+        "trial_active": user.is_trial_active(),
+        "trial_days":   user.trial_days_remaining(),
     }
 
 
@@ -518,41 +521,32 @@ async def api_indicator_webhook_setup(request: Request, platform: str):
 
 @app.post("/api/trial/start")
 async def api_trial_start(request: Request):
-    """Start a 14-day free trial. Idempotent — safe to call multiple times."""
-    tid = request.headers.get("X-Telegram-User-Id", "")
-    if not tid.isdigit():
-        raise HTTPException(401, "Missing Telegram user context")
-    telegram_id = int(tid)
+    """Start a 14-day free trial. Accepts X-ATV-Token or X-Telegram-User-Id."""
     async with AsyncSessionLocal() as db:
+        user = await _resolve_user(request, db, require=True)
         user_svc = UserService(db)
-        status = await user_svc.get_trial_status(telegram_id)
+        status = await user_svc.get_trial_status(user.telegram_id)
         if status["used"]:
-            return {
-                "ok": False,
-                "already_used": True,
-                "message": "Trial already used. Subscribe to continue.",
-                "active": status["active"],
-                "days_remaining": status.get("days_remaining", 0),
-            }
-        user = await user_svc.start_trial(telegram_id)
+            return {"ok": False, "already_used": True,
+                    "message": "Trial already used. Subscribe to continue.",
+                    "active": status["active"], "days_remaining": status.get("days_remaining", 0)}
+        user = await user_svc.start_trial(user.telegram_id)
         await db.commit()
-        return {
-            "ok": True,
-            "message": f"14-day trial started! Full access until {user.trial_expires_at.strftime('%b %d, %Y')}.",
-            "expires_at": user.trial_expires_at.isoformat(),
-            "days_remaining": user.trial_days_remaining(),
-        }
+        return {"ok": True,
+                "message": f"14-day trial started! Full access until {user.trial_expires_at.strftime('%b %d, %Y')}.",
+                "expires_at": user.trial_expires_at.isoformat(),
+                "days_remaining": user.trial_days_remaining()}
 
 
 @app.get("/api/trial/status")
 async def api_trial_status(request: Request):
-    """Return trial status for the Mini App and extension trial banner."""
-    tid = request.headers.get("X-Telegram-User-Id", "")
-    if not tid.isdigit():
-        return {"has_trial": False, "active": False, "days_remaining": 0, "used": False}
+    """Return trial status. Accepts X-ATV-Token or X-Telegram-User-Id."""
     async with AsyncSessionLocal() as db:
+        user = await _resolve_user(request, db, require=False)
+        if not user:
+            return {"has_trial": False, "active": False, "days_remaining": 0, "used": False}
         user_svc = UserService(db)
-        return await user_svc.get_trial_status(int(tid))
+        return await user_svc.get_trial_status(user.telegram_id)
 
 
 # ─── Checkout / purchase ──────────────────────────────────────────────────────
@@ -588,22 +582,14 @@ async def api_checkout_url(plan: str, request: Request):
 
 @app.get("/api/user/tokens")
 async def api_user_tokens(request: Request):
-    """Return all three webhook tokens for the Mini App profile tab."""
-    tid = request.headers.get("X-Telegram-User-Id", "")
-    if not tid.isdigit():
-        raise HTTPException(401, "Missing Telegram user context")
-    telegram_id = int(tid)
+    """Return all three webhook tokens. Accepts X-ATV-Token or X-Telegram-User-Id."""
     async with AsyncSessionLocal() as db:
+        user = await _resolve_user(request, db, require=True)
         user_svc = UserService(db)
-        user = await user_svc.get_or_create_user(telegram_id=telegram_id)
         tokens = await user_svc.ensure_all_webhook_tokens(user.id)
         await db.commit()
-    return {
-        "ok": True,
-        "indicator":  tokens["indicator"],
-        "ea":         tokens["ea"],
-        "screenshot": tokens["screenshot"],
-    }
+    return {"ok": True, "indicator": tokens["indicator"],
+            "ea": tokens["ea"], "screenshot": tokens["screenshot"]}
 
 
 # ─── Chart chat ───────────────────────────────────────────────────────────────
@@ -1363,21 +1349,10 @@ async def validation_history(request: Request, limit: int = 20):
 
 @app.get("/api/user/last-report")
 async def last_report(request: Request, source: str = "indicator"):
-    """
-    Returns the most recent analysis report for the user by source.
-    source: indicator | ea | extension
-    Called by Mini App report tabs (loadSVReport, loadEAReport).
-    """
-    tid_str = request.headers.get("X-Telegram-User-Id", "")
-    if not tid_str:
-        raise HTTPException(401, "Missing X-Telegram-User-Id header")
-    tid = int(tid_str)
-
+    """Returns the most recent analysis report. Accepts X-ATV-Token or X-Telegram-User-Id."""
+    from sqlalchemy import desc
     async with AsyncSessionLocal() as db:
-        user_svc = UserService(db)
-        user = await user_svc.get_or_create_user(tid)
-
-        from sqlalchemy import desc
+        user = await _resolve_user(request, db, require=True)
         result = await db.execute(
             select(AnalysisReport)
             .where(AnalysisReport.user_id == user.id, AnalysisReport.source == source)
@@ -1388,32 +1363,16 @@ async def last_report(request: Request, source: str = "indicator"):
 
     if not row:
         return {"ok": True, "report": None}
-
-    return {
-        "ok": True,
-        "report": row.report,
-        "symbol": row.symbol,
-        "timeframe": row.timeframe,
-        "created_at": row.created_at.isoformat(),
-    }
+    return {"ok": True, "report": row.report, "symbol": row.symbol,
+            "timeframe": row.timeframe, "created_at": row.created_at.isoformat()}
 
 
 @app.get("/api/user/reports")
 async def user_reports(request: Request, source: str = "ea", limit: int = 10):
-    """
-    Returns paginated analysis reports for the user by source.
-    Called by Mini App EA history tab (loadEAHistory).
-    """
-    tid_str = request.headers.get("X-Telegram-User-Id", "")
-    if not tid_str:
-        raise HTTPException(401, "Missing X-Telegram-User-Id header")
-    tid = int(tid_str)
-
+    """Returns paginated reports. Accepts X-ATV-Token or X-Telegram-User-Id."""
+    from sqlalchemy import desc
     async with AsyncSessionLocal() as db:
-        user_svc = UserService(db)
-        user = await user_svc.get_or_create_user(tid)
-
-        from sqlalchemy import desc
+        user = await _resolve_user(request, db, require=True)
         result = await db.execute(
             select(AnalysisReport)
             .where(AnalysisReport.user_id == user.id, AnalysisReport.source == source)
@@ -1422,21 +1381,11 @@ async def user_reports(request: Request, source: str = "ea", limit: int = 10):
         )
         rows = result.scalars().all()
 
-    reports = [
-        {
-            "id": r.id,
-            "symbol": r.symbol,
-            "timeframe": r.timeframe,
-            "source": r.source,
-            "report": r.report,
-            "created_at": r.created_at.isoformat(),
-            # Convenience fields surfaced from the report dict
-            "signal": (r.report or {}).get("signal"),
-            "trade": (r.report or {}).get("trade"),
-        }
-        for r in rows
-    ]
-
+    reports = [{"id": r.id, "symbol": r.symbol, "timeframe": r.timeframe,
+                "source": r.source, "report": r.report,
+                "created_at": r.created_at.isoformat(),
+                "signal": (r.report or {}).get("signal"),
+                "trade": (r.report or {}).get("trade")} for r in rows]
     return {"ok": True, "reports": reports, "total": len(reports)}
 
 
