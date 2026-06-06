@@ -214,15 +214,30 @@ async def download_page(filename: str):
     return HTMLResponse(f"""<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><title>Downloading {safe}…</title>
-<style>body{{background:#0a0b0f;color:#e8eaf0;font-family:sans-serif;display:flex;
-align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px}}
-a{{color:#58a6ff;font-size:14px}}</style></head>
+<style>
+body{{background:#0a0b0f;color:#e8eaf0;font-family:sans-serif;display:flex;
+align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;margin:0}}
+.btn{{background:#58a6ff;color:#fff;border:none;border-radius:8px;padding:12px 24px;
+font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;margin-top:8px}}
+.btn:hover{{background:#79b8ff}}
+p{{font-size:13px;color:#8b949e;margin:0}}
+</style></head>
 <body>
-<div style="font-size:32px">⬇️</div>
-<div style="font-size:18px;font-weight:600">Downloading {safe}…</div>
-<div style="font-size:13px;color:#8b949e">If download doesn't start automatically,
-<a href="/api/download/{safe}">click here</a></div>
-<script>setTimeout(()=>window.location='/api/download/{safe}', 500);</script>
+<div style="font-size:48px">⬇️</div>
+<div style="font-size:20px;font-weight:700">{safe}</div>
+<a class="btn" href="/api/download/{safe}" download="{safe}">Download now</a>
+<p>If the button doesn't work, <a href="/api/download/{safe}" style="color:#58a6ff">try this direct link</a></p>
+<script>
+  // Auto-trigger after 800ms
+  setTimeout(() => {{
+    const a = document.createElement('a');
+    a.href = '/api/download/{safe}';
+    a.download = '{safe}';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }}, 800);
+</script>
 </body></html>""")
 
 # ─── Root redirect → Mini App ─────────────────────────────────────────────────
