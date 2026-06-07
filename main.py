@@ -204,41 +204,14 @@ async def download_bot_file(filename: str):
     )
 
 
-@app.get("/download/{filename}", response_class=HTMLResponse)
+@app.get("/download/{filename}")
 async def download_page(filename: str):
-    """Human-friendly download page — auto-triggers download via JS."""
+    """Redirect directly to the file download — no iframe sandbox issues."""
     safe = filename.replace('"', '').replace("'", "").replace("/", "").replace("..", "")
     allowed = {"ATV_Analyzer.mq5", "ATV_Analyzer.mq4", "ATV_Analyzer.cs", "extension.zip"}
     if safe not in allowed:
         raise HTTPException(404, "File not found")
-    return HTMLResponse(f"""<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>Downloading {safe}…</title>
-<style>
-body{{background:#0a0b0f;color:#e8eaf0;font-family:sans-serif;display:flex;
-align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;margin:0}}
-.btn{{background:#58a6ff;color:#fff;border:none;border-radius:8px;padding:12px 24px;
-font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;margin-top:8px}}
-.btn:hover{{background:#79b8ff}}
-p{{font-size:13px;color:#8b949e;margin:0}}
-</style></head>
-<body>
-<div style="font-size:48px">⬇️</div>
-<div style="font-size:20px;font-weight:700">{safe}</div>
-<a class="btn" href="/api/download/{safe}" download="{safe}">Download now</a>
-<p>If the button doesn't work, <a href="/api/download/{safe}" style="color:#58a6ff">try this direct link</a></p>
-<script>
-  // Auto-trigger after 800ms
-  setTimeout(() => {{
-    const a = document.createElement('a');
-    a.href = '/api/download/{safe}';
-    a.download = '{safe}';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }}, 800);
-</script>
-</body></html>""")
+    return RedirectResponse(url=f"/api/download/{safe}", status_code=302)
 
 # ─── Root redirect → Mini App ─────────────────────────────────────────────────
 

@@ -129,7 +129,13 @@
   .monitor-info { font-size: 12px; color: var(--text2); flex: 1; }
 
   /* ── Chat interface ── */
-  .chat-area {
+  .chip { background:var(--bg3); border:1px solid var(--border); color:var(--text2); border-radius:20px; padding:4px 10px; font-size:11px; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+  .chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .news-item { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; cursor:pointer; }
+  .news-item:hover { border-color:var(--accent); }
+  .news-title { font-size:12px; font-weight:600; color:var(--text); line-height:1.4; margin-bottom:4px; }
+  .news-meta { font-size:10px; color:var(--text3); display:flex; gap:8px; }
+  .news-tag { padding:1px 6px; border-radius:10px; background:rgba(88,166,255,.12); color:var(--accent); font-size:10px; }
     height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
     padding: 8px; background: var(--bg3); border: 1px solid var(--border);
     border-radius: var(--radius); margin-bottom: 8px;
@@ -315,30 +321,27 @@
 
   <!-- ── TAB: News ── -->
   <div class="tab-panel" id="tab-news">
-    <div class="card">
-      <div class="card-title">News impact analyser</div>
-      <div class="news-instructions">
-        <strong>How to use:</strong><br>
-        1. Open any news website in this tab<br>
-        2. Select (highlight) the news text you want to analyse<br>
-        3. Click the <strong>📰 Analyse news impact</strong> button that appears<br><br>
-        The AI will search historical data to show how similar news affected your chosen symbol in the past.
-      </div>
-      <div class="row">
-        <label>Symbol</label>
-        <input type="text" id="news-symbol" placeholder="EURUSD" style="flex:1">
-      </div>
+    <!-- Feed filter chips -->
+    <div style="display:flex;gap:6px;padding:10px 0 8px;overflow-x:auto;scrollbar-width:none;flex-shrink:0">
+      <button class="chip active" onclick="setNewsFilter('all',this)">All</button>
+      <button class="chip" onclick="setNewsFilter('forex',this)">Forex</button>
+      <button class="chip" onclick="setNewsFilter('crypto',this)">Crypto</button>
+      <button class="chip" onclick="setNewsFilter('stocks',this)">Stocks</button>
+      <button class="chip" onclick="setNewsFilter('macro',this)">Macro</button>
     </div>
 
-    <div class="news-result" id="news-result">
-      <div style="font-weight:600; margin-bottom:6px; color:var(--accent)" id="news-result-title">Impact analysis</div>
-      <div id="news-result-body"></div>
+    <!-- AI Impact analysis bar -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:10px;display:flex;gap:8px;align-items:center">
+      <input id="news-symbol" type="text" placeholder="Symbol (EURUSD)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 8px;color:var(--text);font-size:11px;outline:none">
+      <button class="btn btn-sm btn-primary" onclick="analyseSelectedNews()" style="white-space:nowrap;font-size:11px">⚡ AI Impact</button>
     </div>
+    <div id="news-result" style="display:none;background:var(--bg2);border:1px solid var(--accent);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px;font-size:11px;line-height:1.6;color:var(--text)"></div>
 
-    <div class="card" id="news-history-card">
-      <div class="card-title">Recent analyses</div>
-      <div id="news-history-list" style="color:var(--text3); font-size:12px;">No analyses yet.</div>
+    <!-- News feed -->
+    <div id="news-feed" style="display:flex;flex-direction:column;gap:8px">
+      <div style="text-align:center;color:var(--text3);font-size:12px;padding:20px">Loading news…</div>
     </div>
+    <button class="btn btn-sm" style="width:100%;margin-top:10px" onclick="loadNewsFeed()">🔄 Refresh</button>
   </div><!-- /tab-news -->
 
   <!-- ── TAB: App (mini app mirror) ── -->
@@ -467,25 +470,30 @@
   <!-- ── TAB: Settings ── -->
   <div class="tab-panel" id="tab-settings">
     <div class="card">
-      <div class="card-title">Account</div>
-
-      <div class="setting-row">
-        <div>
-          <div class="setting-label">Telegram User ID</div>
-          <div class="setting-sub" id="setting-tg-id">Not set</div>
-        </div>
-        <button class="btn btn-sm" id="btn-set-tgid">Set</button>
+      <div class="card-title">🔑 Connect your account</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+        Get your API token from:<br>
+        • Telegram bot → send <b>/tokens</b><br>
+        • Mini App → Profile tab → Tokens section
       </div>
 
       <div class="setting-row">
         <div>
           <div class="setting-label">API Token</div>
-          <div class="setting-sub" id="setting-token">Not set</div>
+          <div class="setting-sub" id="setting-token">Not set — tap Set to connect</div>
         </div>
-        <button class="btn btn-sm" id="btn-set-token">Set</button>
+        <button class="btn btn-sm btn-primary" id="btn-set-token">Set</button>
       </div>
 
-      <div class="setting-row">
+      <div class="setting-row" style="margin-top:6px">
+        <div>
+          <div class="setting-label">Telegram User ID <span style="color:var(--text3)">(optional)</span></div>
+          <div class="setting-sub" id="setting-tg-id">Not set</div>
+        </div>
+        <button class="btn btn-sm" id="btn-set-tgid">Set</button>
+      </div>
+
+      <div class="setting-row" style="margin-top:6px">
         <div>
           <div class="setting-label">Backend URL</div>
           <div class="setting-sub" id="setting-backend">https://ai-trading-vlidator.onrender.com</div>

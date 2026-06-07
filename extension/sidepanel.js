@@ -427,46 +427,131 @@ function addChatMessage(role, text) {
 }
 
 // ── News tab ──────────────────────────────────────────────────────────────────
+// ── News tab — real trader RSS feed ──────────────────────────────────────────
+const NEWS_FEEDS = [
+  { url: "https://www.forexlive.com/feed/news",          tag: "forex",  label: "ForexLive" },
+  { url: "https://www.dailyfx.com/feeds/all",            tag: "forex",  label: "DailyFX" },
+  { url: "https://cointelegraph.com/rss",                tag: "crypto", label: "CoinTelegraph" },
+  { url: "https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines", tag: "macro", label: "MarketWatch" },
+  { url: "https://www.investing.com/rss/news.rss",       tag: "macro",  label: "Investing.com" },
+  { url: "https://www.fxstreet.com/rss/news",            tag: "forex",  label: "FXStreet" },
+];
+
+let _newsItems = [];
+let _newsFilter = "all";
+
+function setNewsFilter(filter, el) {
+  _newsFilter = filter;
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  renderNewsFeed();
+}
+
 function initNewsTab() {
-  // Receive selected news from content.js via background
+  loadNewsFeed();
 }
 
-function showNewsResult(result, text) {
+async function loadNewsFeed() {
+  const el = document.getElementById("news-feed");
+  if (!el) return;
+  el.innerHTML = `<div style="text-align:center;color:var(--text3);font-size:12px;padding:20px">Loading news…</div>`;
+
+  const proxy = "https://api.allorigins.win/get?url=";
+  const results = [];
+
+  await Promise.allSettled(NEWS_FEEDS.map(async feed => {
+    try {
+      const res = await fetch(proxy + encodeURIComponent(feed.url));
+      const data = await res.json();
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(data.contents, "text/xml");
+      const items = Array.from(xml.querySelectorAll("item")).slice(0, 8);
+      items.forEach(item => {
+        const title = item.querySelector("title")?.textContent?.trim();
+        const link  = item.querySelector("link")?.textContent?.trim();
+        const pubDate = item.querySelector("pubDate")?.textContent?.trim();
+        const desc  = item.querySelector("description")?.textContent?.replace(/<[^>]*>/g,"").trim().slice(0,120);
+        if (title) results.push({ title, link, desc, tag: feed.tag, source: feed.label,
+          ts: pubDate ? new Date(pubDate).getTime() : Date.now() });
+      });
+    } catch {}
+  }));
+
+  // Sort newest first
+  _newsItems = results.sort((a, b) => b.ts - a.ts);
+  renderNewsFeed();
+}
+
+function renderNewsFeed() {
+  const el = document.getElementById("news-feed");
+  if (!el) return;
+  const items = _newsFilter === "all" ? _newsItems : _newsItems.filter(i => i.tag === _newsFilter);
+  if (!items.length) {
+    el.innerHTML = `<div style="text-align:center;color:var(--text3);font-size:12px;padding:20px">No news loaded. Check your connection.</div>`;
+    return;
+  }
+  el.innerHTML = items.map(i => `
+    <div class="news-item" onclick="openNewsLink('${encodeURIComponent(i.link)}')">
+      <div class="news-title">${i.title}</div>
+      ${i.desc ? `<div style="font-size:10px;color:var(--text3);margin:3px 0;line-height:1.4">${i.desc}…</div>` : ""}
+      <div class="news-meta">
+        <span class="news-tag">${i.tag}</span>
+        <span>${i.source}</span>
+        <span>${timeAgo(i.ts)}</span>
+      </div>
+    </div>`).join("");
+}
+
+function openNewsLink(encodedUrl) {
+  const url = decodeURIComponent(encodedUrl);
+  if (chrome?.tabs?.create) {
+    chrome.tabs.create({ url });
+  } else {
+    window.open(url, "_blank");
+  }
+}
+
+function timeAgo(ts) {
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs/24)}d ago`;
+}
+
+async function analyseSelectedNews() {
+  const symbol = (document.getElementById("news-symbol")?.value || "").trim() || "EURUSD";
+  // Get selected text from the page
+  let selectedText = "";
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => window.getSelection()?.toString() || "",
+    });
+    selectedText = res?.[0]?.result || "";
+  } catch {}
+
+  if (!selectedText && _newsItems.length) {
+    // Use latest headline if nothing selected
+    selectedText = _newsItems[0].title;
+  }
+  if (!selectedText) { alert("Select a news headline on the page first."); return; }
+
   const el = document.getElementById("news-result");
-  document.getElementById("news-result-title").textContent = `Impact on ${result.symbol || "—"}`;
-  document.getElementById("news-result-body").innerHTML =
-    `<p style="margin-bottom:8px; color:#8b949e; font-size:11px; border-left:2px solid #30363d; padding-left:8px">"${text.slice(0, 120)}${text.length > 120 ? "…" : ""}"</p>` +
-    `<p>${result.analysis || result.message || "No historical impact data found."}</p>`;
-  el.classList.add("show");
+  if (!el) return;
+  el.style.display = "block";
+  el.innerHTML = `<span style="color:var(--text3)">⏳ Analysing impact on ${symbol}…</span>`;
 
-  // Switch to news tab
-  document.querySelector('[data-tab="news"]').click();
-
-  // Save to local history
-  saveNewsHistory({ symbol: result.symbol, text: text.slice(0, 80), ts: Date.now() });
-}
-
-async function saveNewsHistory(entry) {
-  const { newsHistory = [] } = await chrome.storage.local.get("newsHistory");
-  newsHistory.unshift(entry);
-  await chrome.storage.local.set({ newsHistory: newsHistory.slice(0, 20) });
-  renderNewsHistory(newsHistory);
-}
-
-async function loadNewsHistory() {
-  const { newsHistory = [] } = await chrome.storage.local.get("newsHistory");
-  renderNewsHistory(newsHistory);
-}
-
-function renderNewsHistory(history) {
-  const el = document.getElementById("news-history-list");
-  if (!history.length) { el.textContent = "No analyses yet."; return; }
-  el.innerHTML = history.map((h) =>
-    `<div style="padding:6px 0; border-bottom:1px solid var(--border); color:var(--text2)">
-      <span style="color:var(--accent)">${h.symbol}</span> · ${h.text}…
-      <span style="color:var(--text3); font-size:10px; float:right">${new Date(h.ts).toLocaleDateString()}</span>
-    </div>`
-  ).join("");
+  try {
+    const result = await apiPost("/api/news/analyze", { text: selectedText, symbol,
+      token: state.token, telegram_id: state.telegramId });
+    el.innerHTML = `<strong style="color:var(--accent)">${symbol} Impact</strong><br>
+      <span style="font-size:10px;color:var(--text3);font-style:italic">"${selectedText.slice(0,100)}…"</span><br><br>
+      ${result.analysis || result.message || "No data."}`;
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--red)">Error: ${e.message}</span>`;
+  }
 }
 
 // ── Settings tab ──────────────────────────────────────────────────────────────
@@ -485,7 +570,7 @@ function initSettingsTab() {
   });
 
   document.getElementById("btn-set-token").addEventListener("click", async () => {
-    const val = prompt("Enter your webhook API token (from /start in the bot):", state.token || "");
+    const val = prompt("Enter your ATV API token:\n\nGet it from:\n• Telegram bot → /tokens\n• Mini App → Profile tab → Tokens", state.token || "");
     if (val?.trim()) {
       state.token = val.trim();
       await saveSettings();
