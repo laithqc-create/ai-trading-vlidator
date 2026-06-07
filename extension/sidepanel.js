@@ -56,15 +56,44 @@ async function saveSettings() {
 
 // ── Tab navigation ────────────────────────────────────────────────────────────
 function initTabs() {
+  const mainContent     = document.getElementById("main-content");
+  const appPanel        = document.getElementById("tab-app");
+  const settingsContent = document.getElementById("settings-content");
+
+  function showOnly(active) {
+    mainContent.style.display     = active === "main"     ? "flex"   : "none";
+    appPanel.style.display        = active === "app"      ? "flex"   : "none";
+    settingsContent.style.display = active === "settings" ? "flex"   : "none";
+  }
+
   document.querySelectorAll(".nav-tab").forEach((tab) => {
     tab.addEventListener("click", () => {
       const name = tab.dataset.tab;
       document.querySelectorAll(".nav-tab").forEach((t) => t.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
       tab.classList.add("active");
-      document.getElementById(`tab-${name}`).classList.add("active");
+
+      if (name === "app") {
+        showOnly("app");
+        loadMiniAppFrame();
+      } else if (name === "settings") {
+        showOnly("settings");
+      } else {
+        showOnly("main");
+        mainContent.querySelectorAll(".tab-panel").forEach((p) => p.style.display = "none");
+        const panel = document.getElementById(`tab-${name}`);
+        if (panel) panel.style.display = "block";
+      }
     });
   });
+}
+
+function loadMiniAppFrame() {
+  const frame = document.getElementById("miniapp-frame");
+  if (!frame) return;
+  const base  = state.backendUrl || "https://ai-trading-vlidator.onrender.com";
+  const token = state.token || "";
+  const url   = `${base}/app${token ? "#ext-token=" + encodeURIComponent(token) : ""}`;
+  if (frame.src !== url) frame.src = url;
 }
 
 // ── Plan banner ───────────────────────────────────────────────────────────────

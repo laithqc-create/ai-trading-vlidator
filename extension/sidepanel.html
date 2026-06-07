@@ -35,7 +35,6 @@
     flex-direction: column;
     overflow: hidden;
   }
-
   /* ── Header ── */
   .header {
     display: flex;
@@ -77,9 +76,16 @@
     flex: 1;
     overflow-y: auto;
     padding: 14px;
+    display: flex;
+    flex-direction: column;
   }
-  .tab-panel { display: none; }
+  .tab-panel { display: none; flex: 1; }
   .tab-panel.active { display: block; }
+  .tab-panel.active.iframe-tab { display: flex; flex-direction: column; padding: 0; }
+
+  /* iframe tab needs no padding and full height */
+  #tab-app { padding: 0; overflow: hidden; }
+  #tab-app iframe { flex: 1; width: 100%; border: none; min-height: 0; }
 
   /* ── Components ── */
   .card {
@@ -236,8 +242,8 @@
   <div class="nav-tab" data-tab="settings">⚙️ Settings</div>
 </div>
 
-<!-- Content -->
-<div class="content">
+<!-- Content (padded tabs) -->
+<div class="content" id="main-content">
 
   <!-- ── TAB: Monitor ── -->
   <div class="tab-panel active" id="tab-monitor">
@@ -344,131 +350,21 @@
     <button class="btn btn-sm" style="width:100%;margin-top:10px" onclick="loadNewsFeed()">🔄 Refresh</button>
   </div><!-- /tab-news -->
 
-  <!-- ── TAB: App (mini app mirror) ── -->
-  <div class="tab-panel" id="tab-app">
+</div><!-- /content -->
 
-    <!-- App sub-nav -->
-    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--bg);margin:0 -14px;padding:0 14px;gap:0;overflow-x:auto;scrollbar-width:none">
-      <div class="app-sub-tab active" data-subtab="validator" onclick="switchSubTab(this,'validator')" style="flex-shrink:0;padding:8px 12px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">📊 Validator</div>
-      <div class="app-sub-tab" data-subtab="ea" onclick="switchSubTab(this,'ea')" style="flex-shrink:0;padding:8px 12px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">🤖 EA Analyser</div>
-      <div class="app-sub-tab" data-subtab="builder" onclick="switchSubTab(this,'builder')" style="flex-shrink:0;padding:8px 12px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">🏗 Builder</div>
-      <div class="app-sub-tab" data-subtab="market" onclick="switchSubTab(this,'market')" style="flex-shrink:0;padding:8px 12px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap">🏪 Market</div>
-    </div>
+<!-- ── TAB: App (Mini App iframe — full height, outside padded content) ── -->
+<div id="tab-app" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0">
+  <iframe
+    id="miniapp-frame"
+    src="about:blank"
+    style="width:100%;height:100%;border:none;flex:1"
+    allow="clipboard-write"
+  ></iframe>
+</div><!-- /tab-app -->
 
-    <!-- ── SUB: Indicator Validator ── -->
-    <div class="app-sub-panel active" id="subtab-validator" style="padding-top:10px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5">
-        Select patterns and connect your platform to get AI validation on every signal.
-        <br><span style="color:var(--yellow)">⚠️ Analytical tool only. Not financial advice.</span>
-      </div>
-
-      <!-- Pattern toggles -->
-      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Patterns to monitor</div>
-      <div id="ext-pattern-list" style="margin-bottom:12px">
-        <!-- Rendered by JS -->
-      </div>
-
-      <!-- Platform picker -->
-      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Platform</div>
-      <select id="ext-platform-select" onchange="extSelectPlatform(this.value)" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:7px 9px;font-size:12px;margin-bottom:10px">
-        <option value="">-- Choose platform --</option>
-        <option value="tradingview">TradingView</option>
-        <option value="metatrader">MetaTrader</option>
-        <option value="matchtrader">MatchTrader</option>
-        <option value="ctrader">cTrader</option>
-        <option value="daxtrader">DAX Trader</option>
-        <option value="takeprofit">TakeProfit.com</option>
-      </select>
-
-      <!-- Webhook box -->
-      <div id="ext-webhook-box" style="display:none">
-        <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px">Your webhook URL</div>
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
-          <div id="ext-webhook-url" style="font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent)">—</div>
-          <button class="btn btn-sm" onclick="extCopyWebhook()" style="flex-shrink:0;padding:4px 8px">Copy</button>
-        </div>
-        <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px">JSON template</div>
-        <pre id="ext-json-template" style="font-size:9px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px;overflow-x:auto;color:var(--text2);white-space:pre-wrap;word-break:break-all">—</pre>
-        <div id="ext-platform-steps" style="font-size:11px;color:var(--text2);line-height:1.7;margin-top:8px"></div>
-      </div>
-
-      <!-- Recent validations -->
-      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px">Recent signals</div>
-      <div id="ext-validation-list">
-        <div style="color:var(--text2);font-size:11px;text-align:center;padding:12px">No signals yet</div>
-      </div>
-    </div>
-
-    <!-- ── SUB: EA Analyser ── -->
-    <div class="app-sub-panel" id="subtab-ea" style="display:none;padding-top:10px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.5">
-        Download a bot for your platform. It sends trade data automatically when an EA opens or closes a trade.
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border-radius:var(--radius-sm);padding:8px 10px">
-          <div><div style="font-size:12px;font-weight:600">MT5 Expert Advisor</div><div style="font-size:10px;color:var(--text3)">ATV_Analyzer.mq5</div></div>
-          <button class="btn btn-sm" onclick="extDownloadBot('mt5')">Download</button>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border-radius:var(--radius-sm);padding:8px 10px">
-          <div><div style="font-size:12px;font-weight:600">MT4 Expert Advisor</div><div style="font-size:10px;color:var(--text3)">ATV_Analyzer.mq4</div></div>
-          <button class="btn btn-sm" onclick="extDownloadBot('mt4')">Download</button>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border-radius:var(--radius-sm);padding:8px 10px">
-          <div><div style="font-size:12px;font-weight:600">cTrader cBot</div><div style="font-size:10px;color:var(--text3)">ATV_Analyzer.cs</div></div>
-          <button class="btn btn-sm" onclick="extDownloadBot('ctrader')">Download</button>
-        </div>
-      </div>
-      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Recent trade analyses</div>
-      <div id="ext-ea-list">
-        <div style="color:var(--text2);font-size:11px;text-align:center;padding:12px">No trades yet. Attach a bot to your chart.</div>
-      </div>
-      <button class="btn btn-sm" style="width:100%;margin-top:8px" onclick="extLoadEAHistory()">Refresh</button>
-    </div>
-
-    <!-- ── SUB: App Builder ── -->
-    <div class="app-sub-panel" id="subtab-builder" style="display:none;padding-top:10px">
-      <div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px">
-        Build trading apps (Pine Script, MQL5, MQL4) using agentic AI.<br>
-        <span style="color:var(--yellow)">⚠️ Technical tool only. You are responsible for all trading outcomes.</span>
-      </div>
-      <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;font-size:11px;color:var(--text2);cursor:pointer">
-        <input type="checkbox" id="ext-agree-cb" onchange="extAgreeChanged(this.checked)" style="margin-top:2px">
-        I understand this is a code writing tool only and I accept full responsibility for any use of generated code.
-      </label>
-      <div id="ext-builder-body" style="opacity:.4;pointer-events:none">
-        <select id="ext-build-lang" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:7px 9px;font-size:12px;margin-bottom:8px">
-          <option value="mql5">MQL5 (MT5)</option>
-          <option value="mql4">MQL4 (MT4)</option>
-          <option value="pine">Pine Script v6</option>
-          <option value="csharp">cAlgo C#</option>
-        </select>
-        <div id="ext-projects-list" style="margin-bottom:8px">
-          <div style="color:var(--text2);font-size:11px;text-align:center;padding:10px">Loading projects…</div>
-        </div>
-        <div id="ext-build-chat" style="display:none">
-          <div id="ext-build-messages" style="max-height:200px;overflow-y:auto;background:var(--bg2);border-radius:var(--radius-sm);padding:8px;margin-bottom:6px;font-size:11px"></div>
-          <div style="display:flex;gap:6px">
-            <input id="ext-build-input" type="text" placeholder="Describe what to build…" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 9px;color:var(--text);font-size:12px">
-            <button class="btn btn-sm" onclick="extSendBuildMsg()">Send</button>
-          </div>
-        </div>
-        <button class="btn btn-sm" style="width:100%;margin-top:6px" onclick="extNewProject()">+ New project</button>
-      </div>
-    </div>
-
-    <!-- ── SUB: Marketplace ── -->
-    <div class="app-sub-panel" id="subtab-market" style="display:none;padding-top:10px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Browse and purchase apps built by the community.</div>
-      <div id="ext-market-list">
-        <div style="color:var(--text2);font-size:11px;text-align:center;padding:14px">Loading…</div>
-      </div>
-      <button class="btn btn-sm" style="width:100%;margin-top:8px" onclick="extLoadMarket()">Refresh</button>
-    </div>
-
-  </div><!-- /tab-app -->
-
-  <!-- ── TAB: Settings ── -->
-  <div class="tab-panel" id="tab-settings">
+<!-- Settings is inside the padded content div -->
+<div class="content" id="settings-content" style="display:none">
+  <div class="tab-panel" id="tab-settings" style="display:block">
     <div class="card">
       <div class="card-title">🔑 Connect your account</div>
       <div style="font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:10px">
@@ -535,8 +431,7 @@
       </div>
     </div>
   </div><!-- /tab-settings -->
-
-</div><!-- /content -->
+</div><!-- /settings-content -->
 
 <script src="sidepanel.js"></script>
 </body>

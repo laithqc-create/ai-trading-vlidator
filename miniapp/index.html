@@ -633,7 +633,19 @@ const API_BASE = window.API_BASE || "";
 const tg = window.Telegram?.WebApp;
 const tgUser = tg?.initDataUnsafe?.user || {};
 const TG_ID = String(tgUser.id || "");
-const H = {"Content-Type":"application/json",...(TG_ID?{"X-Telegram-User-Id":TG_ID}:{})};
+
+// Extension iframe auth: read token from URL hash (#ext-token=xxx)
+const _hashToken = (() => {
+  const m = window.location.hash.match(/ext-token=([^&]+)/);
+  return m ? decodeURIComponent(m[1]) : "";
+})();
+
+// Build auth headers: prefer Telegram ID, fall back to extension token
+const H = {
+  "Content-Type": "application/json",
+  ...(TG_ID          ? {"X-Telegram-User-Id": TG_ID}   : {}),
+  ...(_hashToken     ? {"X-ATV-Token": _hashToken}      : {}),
+};
 
 // ── Nav ────────────────────────────────────────────────────────────────────
 const NAV_MAP = {products:"products",sv:"sv",ea:"ea",market:"market",build:"build",profile:"profile"};
