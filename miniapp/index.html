@@ -640,11 +640,16 @@ const _hashToken = (() => {
   return m ? decodeURIComponent(m[1]) : "";
 })();
 
-// Build auth headers: prefer Telegram ID, fall back to extension token
+// Web JWT auth: read from localStorage (set after email/Google login)
+const _jwt       = localStorage.getItem("atv_jwt") || "";
+const _atvToken  = _hashToken || localStorage.getItem("atv_token") || "";
+
+// Build auth headers — precedence: JWT > Telegram ID > ATV token
 const H = {
   "Content-Type": "application/json",
-  ...(TG_ID          ? {"X-Telegram-User-Id": TG_ID}   : {}),
-  ...(_hashToken     ? {"X-ATV-Token": _hashToken}      : {}),
+  ...(_jwt        ? {"Authorization": `Bearer ${_jwt}`}    : {}),
+  ...(TG_ID       ? {"X-Telegram-User-Id": TG_ID}          : {}),
+  ...(_atvToken   ? {"X-ATV-Token": _atvToken}              : {}),
 };
 
 // ── Nav ────────────────────────────────────────────────────────────────────

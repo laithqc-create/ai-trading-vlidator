@@ -49,6 +49,7 @@ from webhooks.screenshot import router as screenshot_router
 from miniapp.serve import router as miniapp_router
 from appbuilder.endpoints import router as appbuilder_router
 from marketplace.endpoints import router as marketplace_router
+from auth.router import router as auth_router
 from pattern_editor.endpoints import router as pattern_router
 from webhooks.ohlc import router as ohlc_router
 from sqlalchemy import select
@@ -73,16 +74,30 @@ def _check_webhook_rate(token: str) -> bool:
 
 async def _resolve_user(request: Request, db, require: bool = True):
     """
-    Dual-auth helper — accepts either:
-      • X-Telegram-User-Id: <int>   (Mini App / Telegram)
-      • X-ATV-Token: <token>        (Chrome Extension — standalone, no Telegram needed)
-
-    Returns User object or None (if require=False) / raises 401 (if require=True).
+    Triple-auth helper — accepts:
+      • Authorization: Bearer <jwt>   (web login — email/Google/Telegram OAuth)
+      • X-ATV-Token: <token>          (Chrome Extension standalone)
+      • X-Telegram-User-Id: <int>     (Telegram Mini App)
     """
     from services.user import UserService
     user_svc = UserService(db)
 
-    # 1. Try token-based auth first (extension standalone mode)
+    # 1. JWT Bearer (web login)
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        from auth.utils import decode_access_token
+        payload = decode_access_token(auth_header[7:])
+        if payload:
+            user_id = int(payload.get("sub", 0))
+            if user_id:
+                from sqlalchemy import select as sa_select
+                from db.models import User
+                result = await db.execute(sa_select(User).where(User.id == user_id))
+                user = result.scalars().first()
+                if user:
+                    return user
+
+    # 2. ATV token (extension)
     token = request.headers.get("X-ATV-Token", "").strip()
     if token:
         user = await user_svc.get_user_by_token(token, token_type="any")
@@ -92,13 +107,13 @@ async def _resolve_user(request: Request, db, require: bool = True):
             raise HTTPException(401, "Invalid token")
         return None
 
-    # 2. Fall back to Telegram ID (Mini App)
+    # 3. Telegram ID (Mini App)
     tid_str = request.headers.get("X-Telegram-User-Id", "").strip()
     if tid_str and tid_str.isdigit():
         return await user_svc.get_or_create_user(telegram_id=int(tid_str))
 
     if require:
-        raise HTTPException(401, "Missing auth: provide X-ATV-Token or X-Telegram-User-Id")
+        raise HTTPException(401, "Missing auth: provide Authorization Bearer, X-ATV-Token, or X-Telegram-User-Id")
     return None
 
 
@@ -159,6 +174,9 @@ app.add_middleware(
 
 # Screenshot endpoint (browser extension)
 app.include_router(screenshot_router)
+
+# Authentication (email/password, Google OAuth, Telegram)
+app.include_router(auth_router)
 
 # Telegram Mini App
 app.include_router(miniapp_router)

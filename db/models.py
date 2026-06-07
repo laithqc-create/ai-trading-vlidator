@@ -42,47 +42,71 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    telegram_id = Column(BigInteger, unique=True, nullable=False, index=True)
-    username = Column(String(64), nullable=True)
+
+    # ── Identity ──────────────────────────────────────────────────────────────
+    telegram_id = Column(BigInteger, unique=True, nullable=True, index=True)  # nullable: email users
+    email       = Column(String(255), unique=True, nullable=True, index=True)
+    email_verified = Column(Boolean, default=False, nullable=False)
+    password_hash  = Column(String(255), nullable=True)                       # null = OAuth-only
+
+    # ── Profile ───────────────────────────────────────────────────────────────
+    username   = Column(String(64), nullable=True)
     first_name = Column(String(64), nullable=True)
-    last_name = Column(String(64), nullable=True)
+    last_name  = Column(String(64), nullable=True)
+    full_name  = Column(String(128), nullable=True)                           # from Google/email reg
+
+    # ── OAuth ─────────────────────────────────────────────────────────────────
+    google_id   = Column(String(128), unique=True, nullable=True, index=True)
+    google_email = Column(String(255), nullable=True)
+    avatar_url  = Column(String(512), nullable=True)
+
+    # ── Billing address (for tax/invoicing) ───────────────────────────────────
+    billing_name    = Column(String(128), nullable=True)
+    billing_company = Column(String(128), nullable=True)
+    billing_address = Column(String(255), nullable=True)
+    billing_city    = Column(String(64),  nullable=True)
+    billing_state   = Column(String(64),  nullable=True)
+    billing_zip     = Column(String(20),  nullable=True)
+    billing_country = Column(String(2),   nullable=True)   # ISO-2 e.g. "IQ", "US"
+    tax_id          = Column(String(64),  nullable=True)   # VAT / tax number
+
+    # ── Plan ──────────────────────────────────────────────────────────────────
     plan = Column(Enum(PlanTier, values_callable=lambda x: [e.value for e in x]), default=PlanTier.FREE, nullable=False)
 
     # Whop billing
-    whop_user_id = Column(String(64), unique=True, nullable=True)
+    whop_user_id      = Column(String(64), unique=True, nullable=True)
     whop_membership_id = Column(String(64), unique=True, nullable=True)
-    plan_expires_at = Column(DateTime, nullable=True)
+    plan_expires_at   = Column(DateTime, nullable=True)
 
     # Browser extension user tracking
-    ext_user_id = Column(String(64), unique=True, nullable=True, index=True)
+    ext_user_id        = Column(String(64), unique=True, nullable=True, index=True)
     linked_telegram_id = Column(BigInteger, nullable=True)
 
     # RAGFlow integration
     ragflow_dataset_id = Column(String(128), nullable=True)
 
-    # Webhook tokens for all products
+    # ── Webhook tokens (auto-generated on signup) ─────────────────────────────
     indicator_webhook_token  = Column(String(64), unique=True, nullable=True)
     ea_webhook_token         = Column(String(64), unique=True, nullable=True)
     screenshot_webhook_token = Column(String(64), unique=True, nullable=True)
+    atv_api_token            = Column(String(64), unique=True, nullable=True, index=True)  # master token
 
-    # 14-day trial
+    # ── Trial ─────────────────────────────────────────────────────────────────
     trial_started_at = Column(DateTime, nullable=True)
     trial_expires_at = Column(DateTime, nullable=True)
 
-    # Usage tracking (free tier)
+    # ── Usage tracking ────────────────────────────────────────────────────────
     daily_validation_count = Column(Integer, default=0)
-    daily_validation_date = Column(Date, nullable=True)
-
-    # DeepSeek generation tracking (loss leader budget)
-    total_generations = Column(Integer, default=0)
-    total_generation_cost = Column(Float, default=0.0)
+    daily_validation_date  = Column(Date, nullable=True)
+    total_generations      = Column(Integer, default=0)
+    total_generation_cost  = Column(Float, default=0.0)
 
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    # Relationships
+    # ── Relationships ─────────────────────────────────────────────────────────
     validations = relationship("Validation", back_populates="user", lazy="select")
-    rules = relationship("UserRule", back_populates="user", lazy="select")
+    rules       = relationship("UserRule",   back_populates="user", lazy="select")
 
     def _now_utc(self) -> datetime:
         """Current UTC time as offset-naive (matches DB-stored values)."""

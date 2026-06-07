@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     MT5_DOWNLOAD_URL: str = "https://example.com/bots/ATV_Analyzer.mq5"
     CTRADER_DOWNLOAD_URL: str = "https://example.com/bots/ATV_Analyzer.cs"
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
     # Mini App serving
     MINIAPP_BASE_URL: str = "https://example.com"
     API_BASE_URL: str = "https://example.com"
