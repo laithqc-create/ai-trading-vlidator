@@ -1,26 +1,28 @@
 """
 auth/utils.py
 Password hashing, JWT creation/verification, secure token generation.
+Uses bcrypt directly (passlib 1.7.x is incompatible with bcrypt 4.x+).
 """
 import secrets
 import string
+import bcrypt
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from config.settings import settings
 
-# ── Password hashing ──────────────────────────────────────────────────────────
-_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
+# ── Password hashing (bcrypt direct) ─────────────────────────────────────────
 
 def hash_password(password: str) -> str:
-    return _pwd_ctx.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_ctx.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
 
 
 # ── JWT ───────────────────────────────────────────────────────────────────────
