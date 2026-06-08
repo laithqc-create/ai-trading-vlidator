@@ -515,9 +515,10 @@ textarea.custom-input.show{display:block}
 <!-- ════ PAGE: PROFILE ════ -->
 <div class="page" id="page-profile">
   <div style="text-align:center;padding:18px 0 13px">
-    <div class="prof-avatar">👤</div>
+    <div class="prof-avatar" id="prof-avatar-icon">👤</div>
     <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:2px" id="profile-name">Trader</div>
-    <div style="font-size:11px;color:var(--text2)" id="profile-sub">Free trial · 11 days remaining</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px" id="profile-sub">Free trial · 11 days remaining</div>
+    <div style="font-size:11px;color:var(--text3)" id="profile-email"></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
     <div class="card card-sm" style="text-align:center"><div class="stat-num" style="color:var(--accent)" id="stat-val">—</div><div style="font-size:9px;color:var(--text3)">Validations</div></div>
@@ -536,17 +537,34 @@ textarea.custom-input.show{display:block}
       <button class="btn btn-sm btn-primary" onclick="openCheckout('pro')">Upgrade</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px">
-      <button class="btn btn-sm" onclick="openCheckout('validator')" data-product="validator">Signal Validator $29</button>
-      <button class="btn btn-sm" onclick="openCheckout('ea')" data-product="ea">EA Analyser $49</button>
-      <button class="btn btn-sm" onclick="openCheckout('builder')" data-product="builder">App Builder $79</button>
-      <button class="btn btn-sm btn-primary" onclick="openCheckout('pro')" data-product="pro">Pro Bundle $129</button>
+      <button class="btn btn-sm" onclick="openCheckout('validator')">Signal Validator $29</button>
+      <button class="btn btn-sm" onclick="openCheckout('ea')">EA Analyser $49</button>
+      <button class="btn btn-sm" onclick="openCheckout('builder')">App Builder $79</button>
+      <button class="btn btn-sm btn-primary" onclick="openCheckout('pro')">Pro Bundle $129</button>
     </div>
   </div>
   <div class="section-label">Webhook tokens</div>
   <div class="card card-sm">
     <div class="settings-row"><div><div class="settings-label">Signal Validator token</div><div class="settings-value" id="token-indicator">—</div></div><button class="btn btn-sm" onclick="copyToken('indicator')">Copy</button></div>
     <div class="settings-row"><div><div class="settings-label">EA Analyser token</div><div class="settings-value" id="token-ea">—</div></div><button class="btn btn-sm" onclick="copyToken('ea')">Copy</button></div>
-    <div class="settings-row"><div><div class="settings-label">Extension token</div><div class="settings-value" id="token-screenshot">—</div></div><button class="btn btn-sm" onclick="copyToken('screenshot')">Copy</button></div>
+    <div class="settings-row"><div><div class="settings-label">Extension / API token</div><div class="settings-value" id="token-screenshot">—</div></div><button class="btn btn-sm" onclick="copyToken('screenshot')">Copy</button></div>
+  </div>
+  <div class="section-label">Account</div>
+  <div class="card card-sm">
+    <div class="settings-row">
+      <div><div class="settings-label">Billing & tax details</div><div class="settings-sub">For invoices and VAT purposes</div></div>
+      <button class="btn btn-sm" onclick="showBillingSheet()">Edit</button>
+    </div>
+    <div class="settings-row" style="margin-top:6px">
+      <div><div class="settings-label">Password</div><div class="settings-sub">Change your login password</div></div>
+      <button class="btn btn-sm" onclick="showChangePasswordSheet()">Change</button>
+    </div>
+  </div>
+  <div style="padding:4px 0 16px">
+    <button class="btn btn-full" onclick="doLogout()"
+      style="background:transparent;border:1px solid rgba(248,81,73,.3);color:var(--red);font-weight:600">
+      Sign out
+    </button>
   </div>
 </div>
 
@@ -563,6 +581,40 @@ textarea.custom-input.show{display:block}
 </div>
 
 <!-- Sheets -->
+<!-- Billing sheet -->
+<div class="sheet-overlay" id="billing-sheet" onclick="closeSheet('billing-sheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Billing & tax details</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:12px">Used for invoices and VAT purposes</div>
+    <input id="bs-name" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:8px" placeholder="Full billing name">
+    <input id="bs-company" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:8px" placeholder="Company (optional)">
+    <input id="bs-address" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:8px" placeholder="Address">
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="bs-city" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit" placeholder="City">
+      <input id="bs-state" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit" placeholder="State">
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="bs-zip" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit" placeholder="ZIP / Postal">
+      <input id="bs-country" maxlength="2" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;text-transform:uppercase" placeholder="Country (IQ)">
+    </div>
+    <input id="bs-tax" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:14px" placeholder="VAT / Tax ID (optional)">
+    <button class="btn btn-primary btn-full" onclick="saveBilling()">Save billing details</button>
+  </div>
+</div>
+
+<!-- Change password sheet -->
+<div class="sheet-overlay" id="change-password-sheet" onclick="closeSheet('change-password-sheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Change password</div>
+    <input id="cp-current" type="password" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:8px" placeholder="Current password">
+    <input id="cp-new" type="password" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:8px" placeholder="New password (min 8 chars)">
+    <input id="cp-confirm" type="password" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;margin-bottom:14px" placeholder="Confirm new password">
+    <button class="btn btn-primary btn-full" onclick="changePassword()">Update password</button>
+  </div>
+</div>
+
 <div class="sheet-overlay" id="system-rules-sheet" onclick="closeSheet('system-rules-sheet')">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-handle"></div>
@@ -740,7 +792,20 @@ function updatePlanBanner(plan, trial) {
 }
 
 function updateProfile(plan, trial, stats) {
-  if (tgUser.first_name) document.getElementById("profile-name").textContent = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ");
+  // Name — from JWT user, Telegram, or fallback
+  const storedUser = (() => { try { return JSON.parse(localStorage.getItem("atv_user")||"{}"); } catch { return {}; } })();
+  const name = storedUser.full_name || storedUser.email?.split("@")[0] ||
+               [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || "Trader";
+  document.getElementById("profile-name").textContent = name;
+
+  // Show email if available
+  const emailEl = document.getElementById("profile-email");
+  if (emailEl && storedUser.email) emailEl.textContent = storedUser.email;
+
+  // Show avatar initial if email user
+  const avatarEl = document.getElementById("prof-avatar-icon");
+  if (avatarEl && storedUser.full_name) avatarEl.textContent = storedUser.full_name[0].toUpperCase();
+
   document.getElementById("profile-sub").textContent = trial.active ? `Trial · ${trial.days_remaining}d remaining` : plan.plan_label || "Free";
   document.getElementById("sub-plan-label").textContent = trial.active ? `Trial · expires ${new Date(trial.expires_at).toLocaleDateString()}` : plan.plan_label || "Free";
   if (stats.validations !== undefined) {
@@ -748,6 +813,66 @@ function updateProfile(plan, trial, stats) {
     document.getElementById("stat-acc").textContent = stats.accuracy ? `${stats.accuracy}%` : "—";
     document.getElementById("stat-apps").textContent = stats.projects ?? "—";
   }
+}
+
+function doLogout() {
+  if (!confirm("Sign out of AI Trade Validator?")) return;
+  localStorage.removeItem("atv_jwt");
+  localStorage.removeItem("atv_token");
+  localStorage.removeItem("atv_user");
+  // For Telegram Mini App — just reload (Telegram re-auths automatically)
+  if (tg?.close) { tg.close(); return; }
+  window.location.href = "/app/login";
+}
+
+function showBillingSheet() {
+  // Populate existing billing if available
+  const user = (() => { try { return JSON.parse(localStorage.getItem("atv_user")||"{}"); } catch { return {}; } })();
+  const b = user.billing || {};
+  const el = id => document.getElementById(id);
+  if (el("bs-name"))    el("bs-name").value    = b.name    || "";
+  if (el("bs-company")) el("bs-company").value = b.company || "";
+  if (el("bs-address")) el("bs-address").value = b.address || "";
+  if (el("bs-city"))    el("bs-city").value    = b.city    || "";
+  if (el("bs-state"))   el("bs-state").value   = b.state   || "";
+  if (el("bs-zip"))     el("bs-zip").value     = b.zip     || "";
+  if (el("bs-country")) el("bs-country").value = b.country || "";
+  if (el("bs-tax"))     el("bs-tax").value     = user.billing?.tax_id || "";
+  openSheet("billing-sheet");
+}
+
+async function saveBilling() {
+  const id = s => document.getElementById(s)?.value?.trim() || "";
+  const body = {
+    billing_name:    id("bs-name"),
+    billing_company: id("bs-company"),
+    billing_address: id("bs-address"),
+    billing_city:    id("bs-city"),
+    billing_state:   id("bs-state"),
+    billing_zip:     id("bs-zip"),
+    billing_country: id("bs-country").toUpperCase(),
+    tax_id:          id("bs-tax"),
+  };
+  try {
+    await apiFetch("/auth/billing", "PATCH", body);
+    showToast("Billing details saved ✓", "ok");
+    closeSheet("billing-sheet");
+  } catch { showToast("Could not save billing details", "err"); }
+}
+
+function showChangePasswordSheet() { openSheet("change-password-sheet"); }
+
+async function changePassword() {
+  const current = document.getElementById("cp-current")?.value || "";
+  const newpw   = document.getElementById("cp-new")?.value || "";
+  const confirm_pw = document.getElementById("cp-confirm")?.value || "";
+  if (newpw.length < 8) { showToast("Password must be at least 8 characters", "err"); return; }
+  if (newpw !== confirm_pw) { showToast("Passwords don't match", "err"); return; }
+  try {
+    await apiFetch("/auth/change-password", "POST", { current_password: current, new_password: newpw });
+    showToast("Password changed ✓", "ok");
+    closeSheet("change-password-sheet");
+  } catch(e) { showToast(e.message || "Could not change password", "err"); }
 }
 
 function updateTokens(toks) {

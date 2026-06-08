@@ -418,6 +418,36 @@ async def update_billing(req: BillingRequest, request: Request):
     return {"ok": True, "message": "Billing address updated"}
 
 
+# ── POST /auth/change-password ────────────────────────────────────────────────
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+
+@router.post("/change-password")
+async def change_password(req: ChangePasswordRequest, request: Request):
+    """Change password for email-authenticated users."""
+    user = await _require_user(request)
+    if not user.password_hash:
+        raise HTTPException(400, "This account uses Google or Telegram login — no password to change")
+    if not verify_password(req.current_password, user.password_hash):
+        raise HTTPException(401, "Current password is incorrect")
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(User).where(User.id == user.id))
+        u = result.scalars().first()
+        u.password_hash = hash_password(req.new_password)
+        await db.commit()
+    return {"ok": True, "message": "Password updated successfully"}
+
+
 # ── POST /auth/logout ─────────────────────────────────────────────────────────
 
 @router.post("/logout")
