@@ -748,7 +748,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function loadUserData() {
-  if (!TG_ID) return;
+  // Works for all auth methods: JWT web login, Telegram Mini App, extension token
+  const hasAuth = TG_ID || _jwt || _atvToken;
+  if (!hasAuth) return;
   try {
     const [planRes, trialRes, statsRes, toksRes] = await Promise.all([
       apiFetch("/api/user/plan"),
@@ -760,7 +762,7 @@ async function loadUserData() {
     updateProfile(planRes, trialRes, statsRes);
     updateTokens(toksRes);
     updateIndLabel();
-  } catch(e) {}
+  } catch(e) { console.error("loadUserData:", e); }
 }
 
 function updatePlanBanner(plan, trial) {
@@ -876,11 +878,31 @@ async function changePassword() {
 }
 
 function updateTokens(toks) {
-  if (!toks.indicator) return;
+  if (!toks) return;
   window._fullTokens = toks;
-  document.getElementById("token-indicator").textContent = toks.indicator?.slice(0,8) + "…";
-  document.getElementById("token-ea").textContent = toks.ea?.slice(0,8) + "…";
-  document.getElementById("token-screenshot").textContent = toks.screenshot?.slice(0,8) + "…";
+  const show = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val) el.textContent = val.slice(0,8) + "••••••••";
+  };
+  show("token-indicator", toks.indicator);
+  show("token-ea",        toks.ea);
+  show("token-screenshot", toks.screenshot);
+}
+
+function copyToken(type) {
+  const toks = window._fullTokens || {};
+  const val  = toks[type];
+  if (!val) { showToast("Token not loaded yet", "err"); return; }
+  navigator.clipboard.writeText(val)
+    .then(() => showToast(`${type} token copied ✓`, "ok"))
+    .catch(() => {
+      // Fallback for Telegram WebApp
+      const ta = document.createElement("textarea");
+      ta.value = val; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta);
+      showToast(`${type} token copied ✓`, "ok");
+    });
 }
 
 async function updateIndLabel() {
@@ -1505,6 +1527,7 @@ function copyToken(type) {
 // ── Sheets ─────────────────────────────────────────────────────────────────
 function showSheet(id) { document.getElementById(id)?.classList.add("show"); }
 function closeSheet(id) { document.getElementById(id)?.classList.remove("show"); }
+function openSheet(id)  { document.getElementById(id)?.classList.add("show"); }
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 let _tt;

@@ -134,12 +134,17 @@ class UserService:
 
     # ── Trial system ──────────────────────────────────────────────────────────
 
-    async def start_trial(self, telegram_id: int) -> User:
-        """Start a 14-day trial for a FREE user who has never trialled."""
-        user = await self.get_or_create_user(telegram_id=telegram_id)
-        if user.plan != PlanTier.FREE or user.trial_started_at is not None:
+    async def start_trial(self, telegram_id: int = None, user_id: int = None) -> User:
+        """Start a 14-day trial. Accepts telegram_id OR user_id."""
+        if user_id:
+            from sqlalchemy import select as sa_select
+            result = await self.db.execute(sa_select(User).where(User.id == user_id))
+            user = result.scalars().first()
+        else:
+            user = await self.get_or_create_user(telegram_id=telegram_id)
+        if not user or user.plan != PlanTier.FREE or user.trial_started_at is not None:
             return user
-        now = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC to match DB
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         user.plan             = PlanTier.TRIAL
         user.trial_started_at = now
         user.trial_expires_at = now + timedelta(days=TRIAL_DURATION_DAYS)
@@ -161,11 +166,11 @@ class UserService:
         await self.db.flush()
         return len(ids)
 
-    async def get_trial_status(self, telegram_id: int) -> dict:
-        user = await self.get_user_by_telegram_id(telegram_id)
+    async def get_trial_status(self, telegram_id: int = None, user: "User" = None) -> dict:
+        if user is None and telegram_id:
+            user = await self.get_user_by_telegram_id(telegram_id)
         if user is None:
             return {"has_trial": False, "active": False, "days_remaining": 0, "used": False}
-
         if user.plan == PlanTier.TRIAL and user.is_trial_active():
             return {
                 "has_trial": True, "active": True,

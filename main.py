@@ -553,16 +553,27 @@ async def api_indicator_webhook_setup(request: Request, platform: str):
 
 @app.post("/api/trial/start")
 async def api_trial_start(request: Request):
-    """Start a 14-day free trial. Accepts X-ATV-Token or X-Telegram-User-Id."""
+    """Start a 14-day free trial. Accepts X-ATV-Token, JWT Bearer, or X-Telegram-User-Id."""
     async with AsyncSessionLocal() as db:
         user = await _resolve_user(request, db, require=True)
         user_svc = UserService(db)
-        status = await user_svc.get_trial_status(user.telegram_id)
+        # get_trial_status works by telegram_id OR user_id
+        if user.telegram_id:
+            status = await user_svc.get_trial_status(user.telegram_id)
+        else:
+            status = {
+                "used": user.trial_started_at is not None,
+                "active": user.is_trial_active(),
+                "days_remaining": user.trial_days_remaining(),
+            }
         if status["used"]:
             return {"ok": False, "already_used": True,
                     "message": "Trial already used. Subscribe to continue.",
                     "active": status["active"], "days_remaining": status.get("days_remaining", 0)}
-        user = await user_svc.start_trial(user.telegram_id)
+        user = await user_svc.start_trial(
+            telegram_id=user.telegram_id if user.telegram_id else None,
+            user_id=user.id if not user.telegram_id else None,
+        )
         await db.commit()
         return {"ok": True,
                 "message": f"14-day trial started! Full access until {user.trial_expires_at.strftime('%b %d, %Y')}.",
@@ -572,13 +583,13 @@ async def api_trial_start(request: Request):
 
 @app.get("/api/trial/status")
 async def api_trial_status(request: Request):
-    """Return trial status. Accepts X-ATV-Token or X-Telegram-User-Id."""
+    """Return trial status. Accepts X-ATV-Token, JWT Bearer, or X-Telegram-User-Id."""
     async with AsyncSessionLocal() as db:
         user = await _resolve_user(request, db, require=False)
         if not user:
             return {"has_trial": False, "active": False, "days_remaining": 0, "used": False}
         user_svc = UserService(db)
-        return await user_svc.get_trial_status(user.telegram_id)
+        return await user_svc.get_trial_status(user=user)
 
 
 # ─── Checkout / purchase ──────────────────────────────────────────────────────
