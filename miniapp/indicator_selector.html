@@ -92,7 +92,21 @@ html,body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMac
 <script>
 const API = window.API_BASE || "";
 const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "";
-const headers = {"Content-Type":"application/json", ...(tgId?{"X-Telegram-User-Id":String(tgId)}:{})};
+
+// Extension iframe auth: read token from URL hash (#ext-token=xxx)
+const _hashToken = (() => {
+  const m = window.location.hash.match(/ext-token=([^&]+)/);
+  return m ? decodeURIComponent(m[1]) : "";
+})();
+const _jwt      = localStorage.getItem("atv_jwt") || "";
+const _atvToken = _hashToken || localStorage.getItem("atv_token") || "";
+
+const headers = {
+  "Content-Type": "application/json",
+  ...(_jwt      ? {"Authorization": `Bearer ${_jwt}`} : {}),
+  ...(tgId      ? {"X-Telegram-User-Id": String(tgId)} : {}),
+  ...(_atvToken ? {"X-ATV-Token": _atvToken} : {}),
+};
 
 const GROUP_EMOJI = {momentum:"⚡",trend:"📈",volume:"📊",volatility:"🌊"};
 const GROUP_LABEL = {momentum:"Momentum & Oscillators",trend:"Trend & Moving Averages",volume:"Volume",volatility:"Volatility & Other"};

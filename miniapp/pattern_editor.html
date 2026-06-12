@@ -335,6 +335,14 @@
 const API_BASE = window.API_BASE || "";
 const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "";
 
+// Extension iframe auth: read token from URL hash (#ext-token=xxx)
+const _hashToken = (() => {
+  const m = window.location.hash.match(/ext-token=([^&]+)/);
+  return m ? decodeURIComponent(m[1]) : "";
+})();
+const _jwt      = localStorage.getItem("atv_jwt") || "";
+const _atvToken = _hashToken || localStorage.getItem("atv_token") || "";
+
 // ── State ──────────────────────────────────────────────────────────────────
 let allPatterns = [];
 let activeFilter = "all";
@@ -825,7 +833,9 @@ async function apiFetch(path, method = "GET", body = null) {
     method,
     headers: {
       "Content-Type": "application/json",
-      ...(tgId ? { "X-Telegram-User-Id": String(tgId) } : {}),
+      ...(_jwt      ? { "Authorization": `Bearer ${_jwt}` } : {}),
+      ...(tgId      ? { "X-Telegram-User-Id": String(tgId) } : {}),
+      ...(_atvToken ? { "X-ATV-Token": _atvToken } : {}),
     },
   };
   if (body !== null) opts.body = JSON.stringify(body);
