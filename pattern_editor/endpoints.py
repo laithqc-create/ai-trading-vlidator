@@ -8,22 +8,16 @@ from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 from db.database import AsyncSessionLocal
 from services.user import UserService
+from services.auth_helpers import resolve_user
 from services.pattern_engine import SYSTEM_RULES, PATTERN_DESCRIPTIONS, PATTERN_CATEGORIES
 
 router = APIRouter(prefix="/api/patterns", tags=["patterns"])
 
-def _require_tg_id(request: Request) -> int:
-    tid = request.headers.get("X-Telegram-User-Id", "")
-    if not tid.isdigit():
-        raise HTTPException(401, "Missing X-Telegram-User-Id header")
-    return int(tid)
-
 @router.get("")
 async def get_patterns(request: Request):
-    telegram_id = _require_tg_id(request)
     async with AsyncSessionLocal() as db:
+        user = await resolve_user(request, db, require=True)
         user_svc = UserService(db)
-        user = await user_svc.get_or_create_user(telegram_id=telegram_id)
         personal_rules = await user_svc.get_personal_rules_structured(user.id)
 
     patterns = []
@@ -64,12 +58,11 @@ class PatternUpdateRequest(BaseModel):
 
 @router.patch("/{pattern_name}")
 async def update_pattern_rule(pattern_name: str, req: PatternUpdateRequest, request: Request):
-    telegram_id = _require_tg_id(request)
     if pattern_name not in SYSTEM_RULES:
         raise HTTPException(404, f"Unknown pattern: {pattern_name}")
     async with AsyncSessionLocal() as db:
+        user = await resolve_user(request, db, require=True)
         user_svc = UserService(db)
-        user = await user_svc.get_or_create_user(telegram_id=telegram_id)
         if req.reset_to_system:
             await user_svc.delete_pattern_rule(user.id, pattern_name)
             await db.commit()
@@ -85,10 +78,9 @@ async def update_pattern_rule(pattern_name: str, req: PatternUpdateRequest, requ
 
 @router.post("/reset")
 async def reset_all_patterns(request: Request):
-    telegram_id = _require_tg_id(request)
     async with AsyncSessionLocal() as db:
+        user = await resolve_user(request, db, require=True)
         user_svc = UserService(db)
-        user = await user_svc.get_or_create_user(telegram_id=telegram_id)
         await user_svc.delete_all_pattern_rules(user.id)
         await db.commit()
     return {"ok": True, "message": "All pattern rules reset to system defaults."}
@@ -100,17 +92,19 @@ async def reset_all_patterns(request: Request):
 from services.indicator_engine import INDICATOR_DEFAULTS, INDICATOR_GROUPS, INDICATOR_DISPLAY
 from typing import Optional as Opt
 
+# Separate router (no /api/patterns prefix) — mounted directly at /api/indicators*
+indicators_router = APIRouter(tags=["indicators"])
 
-@router.get("/api/indicators")
+
+@indicators_router.get("/api/indicators")
 async def get_indicators(request: Request):
     """
     Return all 30+ indicators with defaults and user settings.
     Called by Mini App indicator selector and extension settings tab.
     """
-    telegram_id = _require_tg_id(request)
     async with AsyncSessionLocal() as db:
+        user = await resolve_user(request, db, require=True)
         user_svc = UserService(db)
-        user = await user_svc.get_or_create_user(telegram_id=telegram_id)
         enabled  = await user_svc.get_enabled_indicators(user.id)
         settings = await user_svc.get_indicator_settings(user.id)
 
@@ -140,13 +134,12 @@ class IndicatorPrefRequest(BaseModel):
     settings: Opt[dict] = None     # {name: {period: 21}} etc.
 
 
-@router.post("/api/indicators/prefs")
+@indicators_router.post("/api/indicators/prefs")
 async def save_indicator_prefs(req: IndicatorPrefRequest, request: Request):
     """Save user's indicator enabled list and custom settings."""
-    telegram_id = _require_tg_id(request)
     async with AsyncSessionLocal() as db:
+        user = await resolve_user(request, db, require=True)
         user_svc = UserService(db)
-        user = await user_svc.get_or_create_user(telegram_id=telegram_id)
         await user_svc.upsert_indicator_prefs(user.id,
                                                enabled=req.enabled,
                                                settings=req.settings)
@@ -154,13 +147,12 @@ async def save_indicator_prefs(req: IndicatorPrefRequest, request: Request):
     return {"ok": True, "message": "Indicator preferences saved."}
 
 
-@router.post("/api/indicators/reset")
+@indicators_router.post("/api/indicators/reset")
 async def reset_indicator_prefs(request: Request):
     """Reset all indicator preferences to system defaults."""
-    telegram_id = _require_tg_id(request)
     async with AsyncSessionLocal() as db:
+        user = await resolve_user(request, db, require=True)
         user_svc = UserService(db)
-        user = await user_svc.get_or_create_user(telegram_id=telegram_id)
         await user_svc.upsert_indicator_prefs(user.id, enabled=None, settings={})
         await db.commit()
     return {"ok": True, "message": "Indicator preferences reset to defaults."}

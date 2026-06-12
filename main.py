@@ -50,7 +50,7 @@ from miniapp.serve import router as miniapp_router
 from appbuilder.endpoints import router as appbuilder_router
 from marketplace.endpoints import router as marketplace_router
 from auth.router import router as auth_router
-from pattern_editor.endpoints import router as pattern_router
+from pattern_editor.endpoints import router as pattern_router, indicators_router
 from webhooks.ohlc import router as ohlc_router
 from sqlalchemy import select
 
@@ -72,49 +72,7 @@ def _check_webhook_rate(token: str) -> bool:
     return True
 
 
-async def _resolve_user(request: Request, db, require: bool = True):
-    """
-    Triple-auth helper — accepts:
-      • Authorization: Bearer <jwt>   (web login — email/Google/Telegram OAuth)
-      • X-ATV-Token: <token>          (Chrome Extension standalone)
-      • X-Telegram-User-Id: <int>     (Telegram Mini App)
-    """
-    from services.user import UserService
-    user_svc = UserService(db)
-
-    # 1. JWT Bearer (web login)
-    auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        from auth.utils import decode_access_token
-        payload = decode_access_token(auth_header[7:])
-        if payload:
-            user_id = int(payload.get("sub", 0))
-            if user_id:
-                from sqlalchemy import select as sa_select
-                from db.models import User
-                result = await db.execute(sa_select(User).where(User.id == user_id))
-                user = result.scalars().first()
-                if user:
-                    return user
-
-    # 2. ATV token (extension)
-    token = request.headers.get("X-ATV-Token", "").strip()
-    if token:
-        user = await user_svc.get_user_by_token(token, token_type="any")
-        if user:
-            return user
-        if require:
-            raise HTTPException(401, "Invalid token")
-        return None
-
-    # 3. Telegram ID (Mini App)
-    tid_str = request.headers.get("X-Telegram-User-Id", "").strip()
-    if tid_str and tid_str.isdigit():
-        return await user_svc.get_or_create_user(telegram_id=int(tid_str))
-
-    if require:
-        raise HTTPException(401, "Missing auth: provide Authorization Bearer, X-ATV-Token, or X-Telegram-User-Id")
-    return None
+from services.auth_helpers import resolve_user as _resolve_user
 
 
 # ─── Lifespan ─────────────────────────────────────────────────────────────────
@@ -189,6 +147,7 @@ app.include_router(marketplace_router)
 
 # Pattern rule editor
 app.include_router(pattern_router)
+app.include_router(indicators_router)
 
 # OHLC from MT4/MT5/cTrader bots
 app.include_router(ohlc_router)
@@ -197,6 +156,40 @@ app.include_router(ohlc_router)
 
 
 # ─── Bot / Extension Downloads ────────────────────────────────────────────────
+
+@app.get("/download/{filename}", response_class=HTMLResponse)
+async def download_page(filename: str):
+    """Confirmation page that triggers the download and shows status."""
+    from pathlib import Path
+    safe = filename.replace('"', '').replace("'", "").replace("/", "").replace("..", "")
+    allowed = {"ATV_Analyzer.mq5", "ATV_Analyzer.mq4", "ATV_Analyzer.cs", "extension.zip"}
+    if safe not in allowed:
+        raise HTTPException(404, "File not found")
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>{safe} — AI Trade Validator</title>
+<style>
+body{{background:#0a0b0f;color:#e8eaf0;font-family:-apple-system,sans-serif;display:flex;
+align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:14px;margin:0;text-align:center;padding:20px}}
+.icon{{font-size:48px}}
+h1{{font-size:18px;font-weight:700;margin:0}}
+p{{font-size:13px;color:#9da3b4;margin:0;max-width:320px;line-height:1.6}}
+.btn{{background:#58a6ff;color:#fff;border:none;border-radius:8px;padding:12px 28px;
+font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;margin-top:6px}}
+.btn:hover{{background:#79b8ff}}
+</style></head>
+<body>
+<div class="icon">✅</div>
+<h1>{safe}</h1>
+<p id="status">Your download should start automatically. Check your browser's downloads bar or Downloads folder.</p>
+<a class="btn" href="/api/download/{safe}" download="{safe}" id="dl-link">Download again</a>
+<p style="font-size:11px;color:#5a6070">You can close this tab once the download finishes.</p>
+<script>
+  // Auto-trigger download
+  const a = document.getElementById('dl-link');
+  setTimeout(() => a.click(), 300);
+</script>
+</body></html>""")
+
 
 @app.get("/api/download/{filename}")
 async def download_bot_file(filename: str):
@@ -221,15 +214,6 @@ async def download_bot_file(filename: str):
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
-
-@app.get("/download/{filename}")
-async def download_page(filename: str):
-    """Redirect directly to the file download — no iframe sandbox issues."""
-    safe = filename.replace('"', '').replace("'", "").replace("/", "").replace("..", "")
-    allowed = {"ATV_Analyzer.mq5", "ATV_Analyzer.mq4", "ATV_Analyzer.cs", "extension.zip"}
-    if safe not in allowed:
-        raise HTTPException(404, "File not found")
-    return RedirectResponse(url=f"/api/download/{safe}", status_code=302)
 
 # ─── Root redirect → Mini App ─────────────────────────────────────────────────
 

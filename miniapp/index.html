@@ -1484,7 +1484,7 @@ function addMsg(role, text) {
 function dlBot(platform) {
   const files = {mt5:"ATV_Analyzer.mq5", mt4:"ATV_Analyzer.mq4", ctrader:"ATV_Analyzer.cs"};
   const base = API_BASE || window.location.origin;
-  const url = `${base}/api/download/${files[platform]}`;
+  const url = `${base}/download/${files[platform]}`;
   // Use Telegram's openLink to escape iframe sandbox, fallback to window.open
   if (window.Telegram?.WebApp?.openLink) {
     window.Telegram.WebApp.openLink(url);
@@ -1494,7 +1494,7 @@ function dlBot(platform) {
 }
 function dlExtension() {
   const base = API_BASE || window.location.origin;
-  const url = `${base}/api/download/extension.zip`;
+  const url = `${base}/download/extension.zip`;
   if (window.Telegram?.WebApp?.openLink) {
     window.Telegram.WebApp.openLink(url);
   } else {
