@@ -128,15 +128,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function load() {
   try {
     const res = await fetch(API + "/api/indicators", {headers});
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`HTTP ${res.status}: ${err}`);
+    }
     const data = await res.json();
+    if (!data.ok) {
+      throw new Error(data.error || "API returned error");
+    }
     allIndicators = data.indicators || [];
+    if (allIndicators.length === 0) {
+      console.warn("⚠️ API returned 0 indicators. Response:", data);
+    }
     allIndicators.forEach(ind => {
       enabled[ind.name] = ind.enabled;
       customSettings[ind.name] = {...ind.settings};
     });
     render();
   } catch(e) {
-    document.getElementById("content").innerHTML = `<div class="empty" style="color:var(--rd)">Failed to load. Connect backend first.</div>`;
+    console.error("Error loading indicators:", e);
+    document.getElementById("content").innerHTML = `<div class="empty" style="color:var(--rd)">Failed to load: ${e.message}<br><small>Check console for details</small></div>`;
   }
 }
 
