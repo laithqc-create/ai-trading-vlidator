@@ -118,7 +118,12 @@ let activeGroup = "all";
 let openCard = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  window.Telegram?.WebApp?.expand?.();
+  // Wait for Telegram WebApp to be ready if it exists
+  if (window.Telegram?.WebApp) {
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand();
+  }
+  
   await load();
   initFilters();
   document.getElementById("btn-save").onclick = save;

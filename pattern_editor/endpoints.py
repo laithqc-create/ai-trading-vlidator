@@ -101,12 +101,20 @@ async def get_indicators(request: Request):
     """
     Return all 30+ indicators with defaults and user settings.
     Called by Mini App indicator selector and extension settings tab.
+    
+    If user is authenticated: return user's saved preferences
+    If not authenticated: return all indicators with system defaults
     """
     async with AsyncSessionLocal() as db:
-        user = await resolve_user(request, db, require=True)
-        user_svc = UserService(db)
-        enabled  = await user_svc.get_enabled_indicators(user.id)
-        settings = await user_svc.get_indicator_settings(user.id)
+        user = await resolve_user(request, db, require=False)  # Optional auth
+        
+        enabled = None
+        settings = {}
+        
+        if user:
+            user_svc = UserService(db)
+            enabled = await user_svc.get_enabled_indicators(user.id)
+            settings = await user_svc.get_indicator_settings(user.id)
 
     indicators = []
     for name, defaults in INDICATOR_DEFAULTS.items():
