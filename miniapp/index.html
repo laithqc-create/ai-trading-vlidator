@@ -831,7 +831,11 @@ function showBillingSheet() {
   // Populate existing billing if available
   const user = (() => { try { return JSON.parse(localStorage.getItem("atv_user")||"{}"); } catch { return {}; } })();
   const b = user.billing || {};
-  const el = id => document.getElementById(id);
+  const el = id => {
+    const elem = document.getElementById(id);
+    if (!elem) console.warn(`Billing input element '${id}' not found`);
+    return elem;
+  };
   if (el("bs-name"))    el("bs-name").value    = b.name    || "";
   if (el("bs-company")) el("bs-company").value = b.company || "";
   if (el("bs-address")) el("bs-address").value = b.address || "";
@@ -840,6 +844,7 @@ function showBillingSheet() {
   if (el("bs-zip"))     el("bs-zip").value     = b.zip     || "";
   if (el("bs-country")) el("bs-country").value = b.country || "";
   if (el("bs-tax"))     el("bs-tax").value     = user.billing?.tax_id || "";
+  console.log("Opening billing sheet with user data:", b);
   openSheet("billing-sheet");
 }
 
@@ -856,10 +861,17 @@ async function saveBilling() {
     tax_id:          id("bs-tax"),
   };
   try {
-    await apiFetch("/auth/billing", "PATCH", body);
-    showToast("Billing details saved ✓", "ok");
-    closeSheet("billing-sheet");
-  } catch { showToast("Could not save billing details", "err"); }
+    const res = await apiFetch("/auth/billing", "PATCH", body);
+    if (res.ok) {
+      showToast("Billing details saved ✓", "ok");
+      closeSheet("billing-sheet");
+    } else {
+      showToast(res.message || "Could not save billing details", "err");
+    }
+  } catch(e) {
+    console.error("saveBilling error:", e);
+    showToast(e.message || "Could not save billing details", "err");
+  }
 }
 
 function showChangePasswordSheet() { openSheet("change-password-sheet"); }
@@ -868,13 +880,32 @@ async function changePassword() {
   const current = document.getElementById("cp-current")?.value || "";
   const newpw   = document.getElementById("cp-new")?.value || "";
   const confirm_pw = document.getElementById("cp-confirm")?.value || "";
+  
+  // Validation
+  if (!current) { showToast("Enter your current password", "err"); return; }
+  if (!newpw) { showToast("Enter a new password", "err"); return; }
   if (newpw.length < 8) { showToast("Password must be at least 8 characters", "err"); return; }
   if (newpw !== confirm_pw) { showToast("Passwords don't match", "err"); return; }
+  
   try {
-    await apiFetch("/auth/change-password", "POST", { current_password: current, new_password: newpw });
-    showToast("Password changed ✓", "ok");
-    closeSheet("change-password-sheet");
-  } catch(e) { showToast(e.message || "Could not change password", "err"); }
+    const res = await apiFetch("/auth/change-password", "POST", { 
+      current_password: current, 
+      new_password: newpw 
+    });
+    if (res.ok) {
+      showToast("Password changed ✓", "ok");
+      closeSheet("change-password-sheet");
+      // Clear inputs
+      document.getElementById("cp-current").value = "";
+      document.getElementById("cp-new").value = "";
+      document.getElementById("cp-confirm").value = "";
+    } else {
+      showToast(res.message || "Could not change password", "err");
+    }
+  } catch(e) {
+    console.error("changePassword error:", e);
+    showToast(e.message || "Could not change password", "err");
+  }
 }
 
 function updateTokens(toks) {
@@ -1526,8 +1557,24 @@ function copyToken(type) {
 
 // ── Sheets ─────────────────────────────────────────────────────────────────
 function showSheet(id) { document.getElementById(id)?.classList.add("show"); }
-function closeSheet(id) { document.getElementById(id)?.classList.remove("show"); }
-function openSheet(id)  { document.getElementById(id)?.classList.add("show"); }
+function closeSheet(id) {
+  const el = document.getElementById(id);
+  if (!el) {
+    console.warn(`Sheet '${id}' not found`);
+    return;
+  }
+  el.classList.remove("show");
+}
+
+function openSheet(id) {
+  const el = document.getElementById(id);
+  if (!el) {
+    console.warn(`Sheet '${id}' not found`);
+    return;
+  }
+  el.classList.add("show");
+  console.log(`Opened sheet: ${id}`);
+}
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 let _tt;
