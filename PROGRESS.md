@@ -1,4 +1,4 @@
-# ATV Progress — Last updated: 2026-06-06
+# ATV Progress — Last updated: 2026-06-13
 
 ## ✅ Completed (this session + history)
 
@@ -49,15 +49,34 @@
 
 ## 🔲 What's next (if needed)
 
+### **FIXED (June 13, 2026)**
+✅ **Indicators window empty issue** — was failing due to auth requirement. Now:
+  - `/api/indicators` works without authentication (returns system defaults)
+  - Authenticated users can save preferences
+  - Frontend now shows actual error messages instead of silent failures
+  - Telegram WebApp init improved (calls `.ready()` before loading)
+
+### Outstanding issues from last session
+1. **`/auth/register` tokens** — appears to work correctly; need to test with actual registration
+2. **Profile sheet buttons** — Edit (billing) and Change (password) not responding (not yet investigated)
+3. **Registered accounts not appearing as distinct users** — not yet investigated
+4. **Security exposure** — Telegram token & DeepSeek API key exposed in GitHub (need rotation on Render)
+
+### Config values still needed
 1. **Set actual Whop product IDs** in `.env` (WHOP_PRODUCT_ID_PRODUCT1 etc.) — currently placeholders
 2. **Set WHOP_AFFILIATE_URL** in `.env` — currently placeholder
 3. **RAGFlow integration** — optional, for crowd insights KB (RAGFLOW_API_KEY + RAGFLOW_SYSTEM_KB_ID)
 4. **SSL certs** — mount into `ssl/` directory for nginx HTTPS (or use Certbot)
 5. **Polygon.io** — optional, for live market data in Product 1 (POLYGON_API_KEY)
-6. **Rotate GitHub PAT** — token in Laith's memories should be revoked after session
+6. **Rotate GitHub PAT** — token in memory should be revoked after session
 
-## ✅ All commits (this session)
+## ✅ All commits (this session + history)
 
+*This session (June 13):*
+- `4bb7880` — Improve error handling in indicator selector — show actual error messages
+- `7f2e7de` — Fix indicators endpoint to work with optional auth + improve Telegram WebApp init
+
+*Previous sessions:*
 - `a8b0547` — analysis reports persistence + last-report API + extension report card + /app/indicators
 - `913813a` — core Telegram bot commands + Pydantic v2 fixes
 - `5d0d654` — wire Mini App marketplace + App Builder to real APIs
@@ -67,10 +86,10 @@
 
 ## RESUME FROM HERE
 
-Everything is **production-ready**. To deploy:
-1. `cp .env.example .env` and fill in values
-2. `docker compose up -d`
-3. `curl http://localhost:8000/setup-webhook`
-4. Set Telegram bot menu URL to your domain + `/app`
+**IMMEDIATE NEXT STEP:** Test the indicators window in production/staging to verify the fix works.
 
-No code blockers remain. Only config values need filling in `.env`.
+Then investigate remaining issues:
+1. Test `/auth/register` flow to see if tokens are being generated properly
+2. Debug profile sheet buttons (Edit billing / Change password)
+3. Verify registered accounts create distinct user entries
+4. Rotate exposed secrets on Render dashboard
